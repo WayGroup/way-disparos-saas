@@ -59,8 +59,10 @@ export async function saveRecipeAction(id: string, payload: SaveRecipePayload): 
     .eq("id", id);
   if (upErr) throw new Error(`Falha ao salvar receita: ${upErr.message}`);
 
-  await supabase.from("recipe_inputs").delete().eq("recipe_id", id);
-  await supabase.from("recipe_slots").delete().eq("recipe_id", id);
+  const { error: delInputsErr } = await supabase.from("recipe_inputs").delete().eq("recipe_id", id);
+  if (delInputsErr) throw new Error(`Falha ao limpar inputs: ${delInputsErr.message}`);
+  const { error: delSlotsErr } = await supabase.from("recipe_slots").delete().eq("recipe_id", id);
+  if (delSlotsErr) throw new Error(`Falha ao limpar slots: ${delSlotsErr.message}`);
 
   if (payload.inputs.length > 0) {
     const { error } = await supabase.from("recipe_inputs").insert(
