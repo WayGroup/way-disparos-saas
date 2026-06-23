@@ -14,3 +14,13 @@ export type Community = {
   sort_order: number;
   created_at: string;
 };
+
+export type Asset = {
+  id: string;
+  filename: string;
+  storage_path: string;
+  kind: string;
+  mime_type: string;
+  size_bytes: number;
+  created_at: string;
+};
