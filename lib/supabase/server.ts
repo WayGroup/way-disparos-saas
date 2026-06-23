@@ -2,22 +2,17 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { getPublicEnv } from "@/lib/env";
 
-export async function createClient() {
+export async function createServerSupabase() {
   const cookieStore = await cookies();
-  const { url, anonKey } = getPublicEnv();
-
-  return createServerClient(url, anonKey, {
+  const { supabaseUrl, supabaseAnonKey } = getPublicEnv(process.env);
+  return createServerClient(supabaseUrl, supabaseAnonKey, {
     cookies: {
-      getAll() {
-        return cookieStore.getAll();
-      },
-      setAll(cookiesToSet) {
+      getAll: () => cookieStore.getAll(),
+      setAll: (toSet) => {
         try {
-          cookiesToSet.forEach(({ name, value, options }) =>
-            cookieStore.set(name, value, options)
-          );
+          toSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options));
         } catch {
-          // Server Component — cookies não podem ser alterados neste contexto.
+          // chamado de um Server Component — ignorado; middleware renova a sessão
         }
       },
     },

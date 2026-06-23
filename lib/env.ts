@@ -1,22 +1,7 @@
-export interface PublicEnv {
-  url: string;
-  anonKey: string;
-}
-
-export function getPublicEnv(): PublicEnv {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  if (!url) {
-    throw new Error(
-      "Variável de ambiente NEXT_PUBLIC_SUPABASE_URL não definida."
-    );
-  }
-
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!anonKey) {
-    throw new Error(
-      "Variável de ambiente NEXT_PUBLIC_SUPABASE_ANON_KEY não definida."
-    );
-  }
-
-  return { url, anonKey };
+export function getPublicEnv(source: Record<string, string | undefined>) {
+  const supabaseUrl = source.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = source.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!supabaseUrl) throw new Error("Faltando NEXT_PUBLIC_SUPABASE_URL");
+  if (!supabaseAnonKey) throw new Error("Faltando NEXT_PUBLIC_SUPABASE_ANON_KEY");
+  return { supabaseUrl, supabaseAnonKey };
 }
