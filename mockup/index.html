@@ -1,0 +1,551 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Disparos Way — mockup</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          ink:      "#15211C",
+          ink2:     "#2A3B34",
+          paper:    "#FBFAF7",
+          line:     "#E5E2D9",
+          emerald:  "#1F7A5A",
+          emeraldd: "#185F46",
+          utility:  "#2D6CDF",
+          marketing:"#C8701C",
+          risk:     "#B8860B",
+          muted:    "#6B7269",
+        },
+        fontFamily: {
+          display: ['Archivo', 'system-ui', 'sans-serif'],
+          sans:    ['Inter', 'system-ui', 'sans-serif'],
+          mono:    ['"IBM Plex Mono"', 'monospace'],
+        },
+      },
+    },
+  };
+</script>
+<style>
+  body { background: #FBFAF7; color: #15211C; font-family: Inter, system-ui, sans-serif; }
+  .view { display: none; }
+  .view.active { display: block; }
+  .navlink.active { background: #15211C; color: #FBFAF7; }
+  /* cadence rail */
+  .rail { position: relative; }
+  .rail::before {
+    content: ""; position: absolute; left: 27px; top: 8px; bottom: 8px;
+    width: 2px; background: linear-gradient(#1F7A5A, #E5E2D9);
+  }
+  .station-dot {
+    width: 14px; height: 14px; border-radius: 999px; background: #FBFAF7;
+    border: 3px solid #1F7A5A; z-index: 1;
+  }
+  .layer { border-left: 2px solid #E5E2D9; }
+  .layer-template { border-left-color: #2A3B34; }
+  .layer-janela   { border-left-color: #1F7A5A; }
+  .layer-fallback { border-left-color: #B9B4A6; }
+  .tmpl-var { background: #DCEFE7; color: #185F46; padding: 0 4px; border-radius: 3px; font-family: "IBM Plex Mono", monospace; font-size: 12px; }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { background: #D8D4C8; border-radius: 6px; }
+  *:focus-visible { outline: 2px solid #1F7A5A; outline-offset: 2px; }
+  @media (prefers-reduced-motion: no-preference) {
+    .fade { animation: fade .25s ease both; }
+    @keyframes fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+  }
+</style>
+</head>
+<body class="font-sans antialiased">
+
+<!-- ============ LOGIN ============ -->
+<section id="login-screen" class="min-h-screen grid lg:grid-cols-2">
+  <div class="hidden lg:flex flex-col justify-between bg-ink text-paper p-12">
+    <div class="font-mono text-xs tracking-widest text-emerald uppercase">Way Group · uso interno</div>
+    <div>
+      <div class="font-display font-extrabold text-5xl leading-[1.05]">Disparos<br/>Way</div>
+      <p class="mt-5 max-w-sm text-paper/70 leading-relaxed">
+        Gera campanhas de WhatsApp em cima da nossa base — webinário, promo, esteira —
+        com a estrutura de custo (template → janela → fallback) embutida. Sem hype. Vender a verdade.
+      </p>
+      <div class="mt-8 flex gap-6 font-mono text-sm text-paper/60">
+        <div><span class="block text-2xl text-paper font-semibold">+R$55mi</span>gerados</div>
+        <div><span class="block text-2xl text-paper font-semibold">9,58</span>satisfação</div>
+        <div><span class="block text-2xl text-paper font-semibold">+500</span>mentorados</div>
+      </div>
+    </div>
+    <div class="font-mono text-xs text-paper/40">Belo Horizonte · MG</div>
+  </div>
+  <div class="flex items-center justify-center p-8">
+    <form class="w-full max-w-sm space-y-5" onsubmit="enter(event)">
+      <div>
+        <h1 class="font-display font-bold text-2xl">Entrar</h1>
+        <p class="text-muted text-sm mt-1">Acesso do time de marketing/CRM.</p>
+      </div>
+      <label class="block">
+        <span class="text-xs font-medium text-ink2 font-mono uppercase tracking-wide">E-mail</span>
+        <input type="email" value="lucas@waygroup.com.br" class="mt-1 w-full rounded-lg border border-line bg-white p-2.5 text-sm" />
+      </label>
+      <label class="block">
+        <span class="text-xs font-medium text-ink2 font-mono uppercase tracking-wide">Senha</span>
+        <input type="password" value="••••••••" class="mt-1 w-full rounded-lg border border-line bg-white p-2.5 text-sm" />
+      </label>
+      <button class="w-full rounded-lg bg-emerald hover:bg-emeraldd transition text-white font-semibold p-2.5">Entrar</button>
+      <p class="text-center text-xs text-muted">Mockup — clique em Entrar para navegar.</p>
+    </form>
+  </div>
+</section>
+
+<!-- ============ APP ============ -->
+<div id="app" class="hidden min-h-screen grid grid-cols-[230px_1fr]">
+  <!-- sidebar -->
+  <aside class="bg-ink text-paper flex flex-col p-4 sticky top-0 h-screen">
+    <div class="px-2 py-3">
+      <div class="font-display font-extrabold text-xl leading-none">Disparos Way</div>
+      <div class="font-mono text-[10px] tracking-widest text-emerald uppercase mt-1">uso interno</div>
+    </div>
+    <nav class="mt-6 space-y-1 text-sm">
+      <button onclick="go('campanhas')" data-nav="campanhas" class="navlink active w-full text-left rounded-lg px-3 py-2 hover:bg-white/10 transition">Campanhas</button>
+      <button onclick="go('nova')"      data-nav="nova"      class="navlink w-full text-left rounded-lg px-3 py-2 hover:bg-white/10 transition">Nova campanha</button>
+      <button onclick="go('receitas')"  data-nav="receitas"  class="navlink w-full text-left rounded-lg px-3 py-2 hover:bg-white/10 transition">Receitas</button>
+      <button onclick="go('base')"      data-nav="base"      class="navlink w-full text-left rounded-lg px-3 py-2 hover:bg-white/10 transition">Base de conhecimento</button>
+    </nav>
+    <div class="mt-auto border-t border-white/10 pt-4 px-2">
+      <div class="text-sm font-medium">Lucas Arruda</div>
+      <div class="text-xs text-paper/50">lucas@waygroup.com.br</div>
+      <button onclick="logout()" class="mt-3 text-xs text-paper/60 underline hover:text-paper">Sair</button>
+    </div>
+  </aside>
+
+  <!-- main -->
+  <div class="overflow-y-auto h-screen">
+
+    <!-- ---- CAMPANHAS ---- -->
+    <section id="v-campanhas" class="view active p-8">
+      <header class="flex items-end justify-between mb-6">
+        <div>
+          <div class="font-mono text-xs uppercase tracking-widest text-muted">Visão geral</div>
+          <h1 class="font-display font-bold text-3xl mt-1">Campanhas</h1>
+        </div>
+        <button onclick="go('nova')" class="rounded-lg bg-emerald hover:bg-emeraldd transition text-white text-sm font-semibold px-4 py-2.5">+ Nova campanha</button>
+      </header>
+
+      <div class="grid grid-cols-4 gap-3 mb-6">
+        <div class="rounded-xl border border-line bg-white p-4">
+          <div class="font-mono text-xs text-muted uppercase">Rascunhos</div>
+          <div class="font-display font-bold text-2xl mt-1">3</div>
+        </div>
+        <div class="rounded-xl border border-line bg-white p-4">
+          <div class="font-mono text-xs text-muted uppercase">Aprovadas</div>
+          <div class="font-display font-bold text-2xl mt-1">8</div>
+        </div>
+        <div class="rounded-xl border border-line bg-white p-4">
+          <div class="font-mono text-xs text-muted uppercase">Toques gerados</div>
+          <div class="font-display font-bold text-2xl mt-1">112</div>
+        </div>
+        <div class="rounded-xl border border-line bg-white p-4">
+          <div class="font-mono text-xs text-muted uppercase">Receitas ativas</div>
+          <div class="font-display font-bold text-2xl mt-1">2</div>
+        </div>
+      </div>
+
+      <div class="rounded-xl border border-line bg-white overflow-hidden">
+        <table class="w-full text-sm">
+          <thead class="bg-paper text-muted font-mono text-xs uppercase tracking-wide">
+            <tr>
+              <th class="text-left font-medium px-4 py-3">Campanha</th>
+              <th class="text-left font-medium px-4 py-3">Receita</th>
+              <th class="text-left font-medium px-4 py-3">Toques</th>
+              <th class="text-left font-medium px-4 py-3">Status</th>
+              <th class="text-left font-medium px-4 py-3">Atualizada</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-line">
+            <tr onclick="go('editor')" class="cursor-pointer hover:bg-paper transition">
+              <td class="px-4 py-3 font-medium">Webinário 27/06 — Amazon do Zero</td>
+              <td class="px-4 py-3 text-muted">Webinário quinzenal</td>
+              <td class="px-4 py-3 font-mono">5</td>
+              <td class="px-4 py-3"><span class="rounded-full bg-risk/15 text-risk text-xs font-medium px-2.5 py-1">rascunho</span></td>
+              <td class="px-4 py-3 text-muted font-mono text-xs">23/06 14:05</td>
+            </tr>
+            <tr onclick="go('editor')" class="cursor-pointer hover:bg-paper transition">
+              <td class="px-4 py-3 font-medium">Promo relâmpago — Sessão grátis 48h</td>
+              <td class="px-4 py-3 text-muted">Promo via API</td>
+              <td class="px-4 py-3 font-mono">3</td>
+              <td class="px-4 py-3"><span class="rounded-full bg-emerald/15 text-emeraldd text-xs font-medium px-2.5 py-1">aprovada</span></td>
+              <td class="px-4 py-3 text-muted font-mono text-xs">21/06 09:12</td>
+            </tr>
+            <tr onclick="go('editor')" class="cursor-pointer hover:bg-paper transition">
+              <td class="px-4 py-3 font-medium">Webinário 13/06 — Importação da China</td>
+              <td class="px-4 py-3 text-muted">Webinário quinzenal</td>
+              <td class="px-4 py-3 font-mono">5</td>
+              <td class="px-4 py-3"><span class="rounded-full bg-emerald/15 text-emeraldd text-xs font-medium px-2.5 py-1">aprovada</span></td>
+              <td class="px-4 py-3 text-muted font-mono text-xs">09/06 16:40</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ---- NOVA CAMPANHA ---- -->
+    <section id="v-nova" class="view p-8 max-w-4xl">
+      <div class="font-mono text-xs uppercase tracking-widest text-muted">Passo 1 de 2</div>
+      <h1 class="font-display font-bold text-3xl mt-1 mb-6">Nova campanha</h1>
+
+      <p class="text-sm font-medium text-ink2 mb-3">Escolha a receita</p>
+      <div class="grid grid-cols-2 gap-4 mb-8">
+        <button onclick="pickRecipe(this,'webinario')" data-recipe class="text-left rounded-xl border-2 border-emerald bg-white p-5 ring-2 ring-emerald/20 transition">
+          <div class="font-display font-bold text-lg">Webinário quinzenal</div>
+          <p class="text-sm text-muted mt-1">Convite → lembretes → no ar → reprise, ancorado na data do webinário.</p>
+          <div class="font-mono text-xs text-emeraldd mt-3">5 toques · âncora: data do evento</div>
+        </button>
+        <button onclick="pickRecipe(this,'promo')" data-recipe class="text-left rounded-xl border-2 border-line bg-white p-5 transition hover:border-ink2">
+          <div class="font-display font-bold text-lg">Promo via API (pontual)</div>
+          <p class="text-sm text-muted mt-1">Disparo curto de oferta com prazo — relâmpago, com janela grátis.</p>
+          <div class="font-mono text-xs text-muted mt-3">3 toques · âncora: prazo da oferta</div>
+        </button>
+      </div>
+
+      <p class="text-sm font-medium text-ink2 mb-3">Dados da campanha</p>
+      <div class="rounded-xl border border-line bg-white p-6 grid grid-cols-2 gap-5">
+        <label class="block">
+          <span class="text-xs font-mono uppercase tracking-wide text-muted">Nome interno</span>
+          <input value="Webinário 27/06 — Amazon do Zero" class="mt-1 w-full rounded-lg border border-line p-2.5 text-sm" />
+        </label>
+        <label class="block">
+          <span class="text-xs font-mono uppercase tracking-wide text-muted">Data e hora do webinário</span>
+          <input value="27/06/2026 20:00" class="mt-1 w-full rounded-lg border border-line p-2.5 text-sm" />
+        </label>
+        <label class="block">
+          <span class="text-xs font-mono uppercase tracking-wide text-muted">Tema</span>
+          <input value="Como começar na Amazon do zero" class="mt-1 w-full rounded-lg border border-line p-2.5 text-sm" />
+        </label>
+        <label class="block">
+          <span class="text-xs font-mono uppercase tracking-wide text-muted">Link de inscrição</span>
+          <input value="way.com.br/webinario" class="mt-1 w-full rounded-lg border border-line p-2.5 text-sm" />
+        </label>
+        <label class="block col-span-2">
+          <span class="text-xs font-mono uppercase tracking-wide text-muted">Observações para a IA (opcional)</span>
+          <input placeholder="ex.: focar na persona CLT insatisfeito" class="mt-1 w-full rounded-lg border border-line p-2.5 text-sm" />
+        </label>
+      </div>
+      <div class="flex justify-end gap-3 mt-6">
+        <button onclick="go('campanhas')" class="rounded-lg border border-line px-4 py-2.5 text-sm font-medium hover:bg-white transition">Cancelar</button>
+        <button onclick="generate()" class="rounded-lg bg-emerald hover:bg-emeraldd transition text-white text-sm font-semibold px-5 py-2.5">Gerar campanha →</button>
+      </div>
+    </section>
+
+    <!-- ---- EDITOR (hero) ---- -->
+    <section id="v-editor" class="view">
+      <header class="sticky top-0 z-10 bg-paper/90 backdrop-blur border-b border-line px-8 py-4 flex items-center justify-between">
+        <div>
+          <button onclick="go('campanhas')" class="font-mono text-xs text-muted hover:text-ink">← Campanhas</button>
+          <h1 class="font-display font-bold text-2xl mt-0.5">Webinário 27/06 — Amazon do Zero</h1>
+          <div class="flex items-center gap-3 mt-1 font-mono text-xs text-muted">
+            <span>Webinário quinzenal</span><span>·</span><span>5 toques</span><span>·</span>
+            <span class="text-risk">rascunho</span>
+          </div>
+        </div>
+        <div class="flex gap-2">
+          <button class="rounded-lg border border-line bg-white px-3 py-2 text-sm font-medium hover:bg-paper transition">Exportar</button>
+          <button class="rounded-lg bg-emerald hover:bg-emeraldd transition text-white px-4 py-2 text-sm font-semibold">Aprovar campanha</button>
+        </div>
+      </header>
+
+      <div class="grid grid-cols-[1fr_360px]">
+        <!-- cadence rail -->
+        <div class="p-8 rail space-y-5">
+
+          <!-- legend -->
+          <div class="flex items-center gap-4 mb-2 text-xs font-mono pl-12">
+            <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-utility"></span>UTILITY (barato)</span>
+            <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-marketing"></span>MARKETING (caro)</span>
+            <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-risk"></span>risco de reclassificação</span>
+          </div>
+
+          <!-- TOUCH 1 -->
+          <div class="flex gap-4 fade">
+            <div class="flex flex-col items-center pt-2 w-[24px]"><div class="station-dot"></div><div class="font-mono text-xs text-emeraldd font-semibold mt-2">D-3</div></div>
+            <div class="flex-1 rounded-xl border border-line bg-white p-5">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <span class="font-mono text-xs text-muted">01</span>
+                  <span class="font-display font-bold">Convite ao webinário</span>
+                </div>
+                <span class="rounded-full bg-utility/12 text-utility text-xs font-mono font-medium px-2.5 py-1">UTILITY</span>
+              </div>
+              <!-- layers -->
+              <div class="mt-4 space-y-3">
+                <div class="layer layer-template pl-3">
+                  <div class="font-mono text-[10px] uppercase tracking-widest text-ink2">Template · pago</div>
+                  <p class="text-sm mt-1 leading-relaxed">Oi <span class="tmpl-var">{{1}}</span>, é o Lucas. Confirmei sua vaga no webinário de quarta (27/06, 20h). Quer que eu te mande o link e um resumo do que vou mostrar?</p>
+                  <div class="flex gap-2 mt-2">
+                    <span class="rounded-full border border-line text-xs px-3 py-1">Quero o link</span>
+                    <span class="rounded-full border border-line text-xs px-3 py-1">Agora não</span>
+                  </div>
+                </div>
+                <div class="layer layer-janela pl-3">
+                  <div class="font-mono text-[10px] uppercase tracking-widest text-emeraldd">Janela 24h · grátis</div>
+                  <p class="text-sm mt-1 leading-relaxed">🎥 Vídeo Lucas (20s) boas-vindas + link de inscrição. Legenda curta lembrando dia/horário.</p>
+                </div>
+                <div class="layer layer-fallback pl-3">
+                  <div class="font-mono text-[10px] uppercase tracking-widest text-muted">Fallback</div>
+                  <p class="text-sm mt-1 leading-relaxed text-ink2">Tranquilo, <span class="tmpl-var">{{1}}</span>. Deixo o link aqui e te lembro mais perto. Sem pressão.</p>
+                </div>
+              </div>
+              <div class="mt-4 pt-3 border-t border-line flex items-center justify-between">
+                <span class="font-mono text-xs text-muted">CRM: tag <b class="text-ink2">inscrito_webinario</b></span>
+                <button class="text-xs text-emeraldd font-medium hover:underline">Regenerar toque</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- TOUCH 2 -->
+          <div class="flex gap-4 fade">
+            <div class="flex flex-col items-center pt-2 w-[24px]"><div class="station-dot"></div><div class="font-mono text-xs text-emeraldd font-semibold mt-2">D-1</div></div>
+            <div class="flex-1 rounded-xl border border-line bg-white p-5">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2"><span class="font-mono text-xs text-muted">02</span><span class="font-display font-bold">Lembrete + quebra de objeção</span></div>
+                <span class="rounded-full bg-marketing/12 text-marketing text-xs font-mono font-medium px-2.5 py-1">MARKETING</span>
+              </div>
+              <div class="mt-4 space-y-3">
+                <div class="layer layer-template pl-3">
+                  <div class="font-mono text-[10px] uppercase tracking-widest text-ink2">Template · pago</div>
+                  <p class="text-sm mt-1 leading-relaxed"><span class="tmpl-var">{{1}}</span>, amanhã é o webinário. Preparei um caso de quem começou do zero igual a maioria. Quer ver antes?</p>
+                  <div class="flex gap-2 mt-2"><span class="rounded-full border border-line text-xs px-3 py-1">Quero ver</span><span class="rounded-full border border-line text-xs px-3 py-1">Depois</span></div>
+                </div>
+                <div class="layer layer-janela pl-3">
+                  <div class="font-mono text-[10px] uppercase tracking-widest text-emeraldd">Janela 24h · grátis</div>
+                  <p class="text-sm mt-1 leading-relaxed">🎥 Vídeo case Gustavo (R$23k→R$230k em 40 dias). Áudio curto do Lucas reforçando o horário.</p>
+                </div>
+                <div class="layer layer-fallback pl-3">
+                  <div class="font-mono text-[10px] uppercase tracking-widest text-muted">Fallback</div>
+                  <p class="text-sm mt-1 leading-relaxed text-ink2">Sem problema. Te mando o lembrete amanhã 1h antes de começar.</p>
+                </div>
+              </div>
+              <div class="mt-4 pt-3 border-t border-line flex items-center justify-between"><span class="font-mono text-xs text-muted">CRM: tag <b class="text-ink2">viu_case</b> se clicar</span><button class="text-xs text-emeraldd font-medium hover:underline">Regenerar toque</button></div>
+            </div>
+          </div>
+
+          <!-- TOUCH 3 (with risk flag) -->
+          <div class="flex gap-4 fade">
+            <div class="flex flex-col items-center pt-2 w-[24px]"><div class="station-dot"></div><div class="font-mono text-xs text-emeraldd font-semibold mt-2">D0</div></div>
+            <div class="flex-1 rounded-xl border border-risk/40 bg-white p-5">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2"><span class="font-mono text-xs text-muted">03</span><span class="font-display font-bold">Lembrete dia do evento (manhã)</span></div>
+                <div class="flex items-center gap-2">
+                  <span class="rounded-full bg-risk/15 text-risk text-xs font-mono font-medium px-2.5 py-1">⚠ risco reclassificação</span>
+                  <span class="rounded-full bg-utility/12 text-utility text-xs font-mono font-medium px-2.5 py-1">UTILITY</span>
+                </div>
+              </div>
+              <div class="mt-3 rounded-lg bg-risk/8 border border-risk/20 px-3 py-2 text-xs text-risk leading-relaxed">
+                O template tem prova social ("já fez +R$45mi"). A Meta pode reclassificar como MARKETING. Sugestão: mover a prova para a janela e deixar o template só com horário/link.
+                <button class="ml-1 underline font-medium">Aplicar correção</button>
+              </div>
+              <div class="mt-4 space-y-3">
+                <div class="layer layer-template pl-3">
+                  <div class="font-mono text-[10px] uppercase tracking-widest text-ink2">Template · pago</div>
+                  <p class="text-sm mt-1 leading-relaxed">Hoje é o dia, <span class="tmpl-var">{{1}}</span>! 20h, ao vivo. O método que já gerou +R$45mi pros nossos alunos. Confirma presença?</p>
+                  <div class="flex gap-2 mt-2"><span class="rounded-full border border-line text-xs px-3 py-1">Vou estar lá</span><span class="rounded-full border border-line text-xs px-3 py-1">Me lembra</span></div>
+                </div>
+                <div class="layer layer-janela pl-3">
+                  <div class="font-mono text-[10px] uppercase tracking-widest text-emeraldd">Janela 24h · grátis</div>
+                  <p class="text-sm mt-1 leading-relaxed">📰 Print CNN: "Amazon investe +R$75bi no Brasil". 🎥 Teaser de 15s do que será mostrado.</p>
+                </div>
+                <div class="layer layer-fallback pl-3">
+                  <div class="font-mono text-[10px] uppercase tracking-widest text-muted">Fallback</div>
+                  <p class="text-sm mt-1 leading-relaxed text-ink2">Te lembro 1h antes. Se não der ao vivo, garanto a reprise pra você.</p>
+                </div>
+              </div>
+              <div class="mt-4 pt-3 border-t border-line flex items-center justify-between"><span class="font-mono text-xs text-muted">CRM: tag <b class="text-ink2">confirmou_presenca</b></span><button class="text-xs text-emeraldd font-medium hover:underline">Regenerar toque</button></div>
+            </div>
+          </div>
+
+          <!-- TOUCH 4 -->
+          <div class="flex gap-4 fade">
+            <div class="flex flex-col items-center pt-2 w-[24px]"><div class="station-dot"></div><div class="font-mono text-xs text-emeraldd font-semibold mt-2">D0</div></div>
+            <div class="flex-1 rounded-xl border border-line bg-white p-5">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2"><span class="font-mono text-xs text-muted">04</span><span class="font-display font-bold">No ar — 1h antes</span></div>
+                <span class="rounded-full bg-utility/12 text-utility text-xs font-mono font-medium px-2.5 py-1">UTILITY</span>
+              </div>
+              <div class="mt-4 space-y-3">
+                <div class="layer layer-template pl-3">
+                  <div class="font-mono text-[10px] uppercase tracking-widest text-ink2">Template · pago</div>
+                  <p class="text-sm mt-1 leading-relaxed"><span class="tmpl-var">{{1}}</span>, começamos às 20h (em 1h). Quer o link da sala agora?</p>
+                  <div class="flex gap-2 mt-2"><span class="rounded-full border border-line text-xs px-3 py-1">Quero o link</span></div>
+                </div>
+                <div class="layer layer-janela pl-3">
+                  <div class="font-mono text-[10px] uppercase tracking-widest text-emeraldd">Janela 24h · grátis</div>
+                  <p class="text-sm mt-1 leading-relaxed">🔗 Link da sala + recado de 10s do Lucas: "tô te esperando".</p>
+                </div>
+                <div class="layer layer-fallback pl-3">
+                  <div class="font-mono text-[10px] uppercase tracking-widest text-muted">Fallback</div>
+                  <p class="text-sm mt-1 leading-relaxed text-ink2">Deixo o link aqui. Entra quando puder, mesmo que atrasado.</p>
+                </div>
+              </div>
+              <div class="mt-4 pt-3 border-t border-line flex items-center justify-between"><span class="font-mono text-xs text-muted">CRM: tag <b class="text-ink2">pediu_link</b></span><button class="text-xs text-emeraldd font-medium hover:underline">Regenerar toque</button></div>
+            </div>
+          </div>
+
+          <!-- TOUCH 5 -->
+          <div class="flex gap-4 fade">
+            <div class="flex flex-col items-center pt-2 w-[24px]"><div class="station-dot !border-line"></div><div class="font-mono text-xs text-muted font-semibold mt-2">D+1</div></div>
+            <div class="flex-1 rounded-xl border border-line bg-white p-5">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2"><span class="font-mono text-xs text-muted">05</span><span class="font-display font-bold">Reprise + ponte pra Sessão</span></div>
+                <span class="rounded-full bg-marketing/12 text-marketing text-xs font-mono font-medium px-2.5 py-1">MARKETING</span>
+              </div>
+              <div class="mt-4 space-y-3">
+                <div class="layer layer-template pl-3">
+                  <div class="font-mono text-[10px] uppercase tracking-widest text-ink2">Template · pago</div>
+                  <p class="text-sm mt-1 leading-relaxed"><span class="tmpl-var">{{1}}</span>, deixei a reprise gravada e separei um próximo passo pra quem leva a sério. Te mando?</p>
+                  <div class="flex gap-2 mt-2"><span class="rounded-full border border-line text-xs px-3 py-1">Quero a reprise</span><span class="rounded-full border border-line text-xs px-3 py-1">Depois</span></div>
+                </div>
+                <div class="layer layer-janela pl-3">
+                  <div class="font-mono text-[10px] uppercase tracking-widest text-emeraldd">Janela 24h · grátis</div>
+                  <p class="text-sm mt-1 leading-relaxed">🎥 Reprise + convite pra Sessão Estratégica gratuita. "Nosso especialista te liga pra ver se faz sentido." Sem preço, sem tier.</p>
+                </div>
+                <div class="layer layer-fallback pl-3">
+                  <div class="font-mono text-[10px] uppercase tracking-widest text-muted">Fallback</div>
+                  <p class="text-sm mt-1 leading-relaxed text-ink2">Reprise enviada. Quando quiser conversar sobre seu caso, é só responder aqui.</p>
+                </div>
+              </div>
+              <div class="mt-4 pt-3 border-t border-line flex items-center justify-between"><span class="font-mono text-xs text-muted">CRM: tag <b class="text-ink2">quente_sessao</b> → fila do vendedor</span><button class="text-xs text-emeraldd font-medium hover:underline">Regenerar toque</button></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- refine chat -->
+        <aside class="border-l border-line bg-white h-[calc(100vh-89px)] sticky top-[89px] flex flex-col">
+          <div class="px-5 py-4 border-b border-line">
+            <div class="font-display font-bold">Refinar</div>
+            <p class="text-xs text-muted mt-0.5">Peça ajustes em linguagem natural. Eu regenero só o que muda.</p>
+          </div>
+          <div class="flex-1 overflow-y-auto p-5 space-y-4 text-sm">
+            <div class="flex justify-end"><div class="bg-ink text-paper rounded-2xl rounded-br-sm px-3 py-2 max-w-[80%]">reescreve o toque 2 mais agressivo, mas sem hype</div></div>
+            <div class="flex"><div class="bg-paper border border-line rounded-2xl rounded-bl-sm px-3 py-2 max-w-[85%]">Feito. Deixei o gancho mais direto no toque 02 e troquei o case por um mais próximo da persona CLT. O fallback continua suave. <span class="text-emeraldd font-medium">Toque 02 atualizado ✓</span></div></div>
+            <div class="flex justify-end"><div class="bg-ink text-paper rounded-2xl rounded-br-sm px-3 py-2 max-w-[80%]">o toque 3 tá com risco de reclassificação, resolve</div></div>
+            <div class="flex"><div class="bg-paper border border-line rounded-2xl rounded-bl-sm px-3 py-2 max-w-[85%]">Movi a prova social ("+R$45mi") pra janela e deixei o template só com horário e link. Categoria volta a ser UTILITY com segurança. <span class="text-emeraldd font-medium">Toque 03 atualizado ✓</span></div></div>
+          </div>
+          <div class="p-4 border-t border-line">
+            <div class="flex gap-2">
+              <input placeholder="ex.: deixa o toque 5 com mais urgência" class="flex-1 rounded-lg border border-line p-2.5 text-sm" />
+              <button class="rounded-lg bg-emerald hover:bg-emeraldd transition text-white px-4 text-sm font-semibold">Enviar</button>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- ---- RECEITAS ---- -->
+    <section id="v-receitas" class="view p-8 max-w-5xl">
+      <div class="font-mono text-xs uppercase tracking-widest text-muted">Configuração</div>
+      <h1 class="font-display font-bold text-3xl mt-1 mb-6">Receitas</h1>
+      <div class="grid grid-cols-2 gap-4 mb-8">
+        <div class="rounded-xl border-2 border-emerald bg-white p-5">
+          <div class="flex items-center justify-between"><div class="font-display font-bold text-lg">Webinário quinzenal</div><span class="font-mono text-xs text-emeraldd">ativa</span></div>
+          <p class="text-sm text-muted mt-1">5 toques · âncora na data do evento</p>
+          <div class="mt-4 font-mono text-xs text-ink2 space-y-1">
+            <div>D-3 · convite · <span class="text-utility">UTILITY</span></div>
+            <div>D-1 · lembrete+objeção · <span class="text-marketing">MARKETING</span></div>
+            <div>D0 · lembrete manhã · <span class="text-utility">UTILITY</span></div>
+            <div>D0 · no ar 1h antes · <span class="text-utility">UTILITY</span></div>
+            <div>D+1 · reprise+ponte · <span class="text-marketing">MARKETING</span></div>
+          </div>
+          <button class="mt-4 text-sm text-emeraldd font-medium hover:underline">Editar receita →</button>
+        </div>
+        <div class="rounded-xl border border-line bg-white p-5">
+          <div class="flex items-center justify-between"><div class="font-display font-bold text-lg">Promo via API (pontual)</div><span class="font-mono text-xs text-emeraldd">ativa</span></div>
+          <p class="text-sm text-muted mt-1">3 toques · âncora no prazo da oferta</p>
+          <div class="mt-4 font-mono text-xs text-ink2 space-y-1">
+            <div>D0 · abertura · <span class="text-marketing">MARKETING</span></div>
+            <div>D+1 · reforço/prova · <span class="text-marketing">MARKETING</span></div>
+            <div>D+2 · última chamada · <span class="text-utility">UTILITY</span></div>
+          </div>
+          <button class="mt-4 text-sm text-emeraldd font-medium hover:underline">Editar receita →</button>
+        </div>
+      </div>
+      <button class="rounded-lg border border-dashed border-line w-full py-4 text-sm text-muted hover:border-ink2 hover:text-ink2 transition">+ Nova receita</button>
+    </section>
+
+    <!-- ---- BASE DE CONHECIMENTO ---- -->
+    <section id="v-base" class="view p-8 max-w-5xl">
+      <div class="font-mono text-xs uppercase tracking-widest text-muted">Contexto da marca · usado em toda geração</div>
+      <h1 class="font-display font-bold text-3xl mt-1 mb-6">Base de conhecimento — Way</h1>
+      <div class="grid grid-cols-2 gap-4">
+        <div class="rounded-xl border border-line bg-white p-5">
+          <div class="flex items-center justify-between"><h2 class="font-display font-bold">Marca & missão</h2><button class="text-xs text-emeraldd hover:underline">Editar</button></div>
+          <p class="text-sm text-ink2 mt-2 leading-relaxed">Way Group (BH/MG). Ajudar pessoas comuns a vender na Amazon Brasil com transparência. Pilar: "vender a verdade". Anti-guru, sem hype.</p>
+        </div>
+        <div class="rounded-xl border border-line bg-white p-5">
+          <div class="flex items-center justify-between"><h2 class="font-display font-bold">Mentor — Lucas Arruda</h2><button class="text-xs text-emeraldd hover:underline">Editar</button></div>
+          <p class="text-sm text-ink2 mt-2 leading-relaxed">Embaixador da Amazon no Brasil. +R$45–55mi gerados pra mentorados. Destaque no PEGN (Globo). 1ª pessoa em toda copy.</p>
+        </div>
+        <div class="rounded-xl border border-line bg-white p-5">
+          <div class="flex items-center justify-between"><h2 class="font-display font-bold">Números oficiais</h2><button class="text-xs text-emeraldd hover:underline">Editar</button></div>
+          <p class="text-sm text-ink2 mt-2 leading-relaxed font-mono text-xs">+R$55mi gerados · +500 mentorados · nota 9,58 · +R$75bi Amazon no BR · &lt;1% fatura +R$100k/mês</p>
+        </div>
+        <div class="rounded-xl border border-line bg-white p-5">
+          <div class="flex items-center justify-between"><h2 class="font-display font-bold">Personas</h2><button class="text-xs text-emeraldd hover:underline">Editar</button></div>
+          <p class="text-sm text-ink2 mt-2 leading-relaxed">CLT insatisfeito · Empreendedor frustrado · Investidor conservador · Profissional liberal.</p>
+        </div>
+        <div class="rounded-xl border border-line bg-white p-5">
+          <div class="flex items-center justify-between"><h2 class="font-display font-bold">Provas sociais</h2><button class="text-xs text-emeraldd hover:underline">Editar</button></div>
+          <p class="text-sm text-ink2 mt-2 leading-relaxed">Gustavo (23k→230k/40d), Fabrício (R$1mi/8m), Sérgio (500k/5m), Willer, Daniel… todos com vídeo.</p>
+        </div>
+        <div class="rounded-xl border-2 border-risk/40 bg-risk/5 p-5">
+          <div class="flex items-center justify-between"><h2 class="font-display font-bold text-risk">Restrições (travas)</h2><button class="text-xs text-risk hover:underline">Editar</button></div>
+          <ul class="text-sm text-ink2 mt-2 leading-relaxed list-disc pl-4 space-y-0.5">
+            <li><b>Sem Wesley</b> — remover 100% das menções.</li>
+            <li><b>Sem preço / sem tier</b> nos disparos.</li>
+            <li>CTA sempre = Sessão Estratégica gratuita.</li>
+            <li>Garantia citada de forma geral, sem cravar número.</li>
+          </ul>
+        </div>
+      </div>
+      <p class="text-xs text-muted mt-4 font-mono">Toda alteração aqui passa a valer nas próximas gerações.</p>
+    </section>
+
+  </div>
+</div>
+
+<script>
+  function enter(e){ e && e.preventDefault();
+    document.getElementById('login-screen').style.display='none';
+    document.getElementById('app').classList.remove('hidden');
+    go('campanhas');
+  }
+  function logout(){
+    document.getElementById('app').classList.add('hidden');
+    document.getElementById('login-screen').style.display='grid';
+  }
+  function go(view){
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+    document.getElementById('v-'+view).classList.add('active');
+    document.querySelectorAll('[data-nav]').forEach(n=>{
+      n.classList.toggle('active', n.getAttribute('data-nav')===view);
+    });
+    document.querySelector('#app .overflow-y-auto').scrollTop = 0;
+  }
+  function pickRecipe(el){
+    document.querySelectorAll('[data-recipe]').forEach(r=>{
+      r.classList.remove('border-emerald','ring-2','ring-emerald/20');
+      r.classList.add('border-line');
+    });
+    el.classList.add('border-emerald','ring-2','ring-emerald/20');
+    el.classList.remove('border-line');
+  }
+  function generate(){
+    const b=event.target; const t=b.textContent; b.textContent='Gerando…'; b.disabled=true;
+    setTimeout(()=>{ b.textContent=t; b.disabled=false; go('editor'); }, 700);
+  }
+</script>
+</body>
+</html>
