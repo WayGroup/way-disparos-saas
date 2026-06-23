@@ -110,14 +110,20 @@ Regras tratadas como **guardrails do gerador**, não decisão solta da IA:
 ## 6. Telas
 
 - **Login** — Supabase Auth (org única). Tudo atrás de login.
-- **Campanhas** — lista (status rascunho/aprovado) + "Nova campanha".
+- **Campanhas** — lista (status rascunho/aprovado) + "Nova campanha", com **filtros**
+  (busca, tipo de campanha, status e intervalo de datas).
 - **Nova campanha** — escolhe receita → formulário de inputs → "Gerar".
 - **Editor de campanha** — **abas de trilha** (API individual / Grupos); na trilha API,
   cards dos toques (Template/Janela/Fallback) com vínculo de mídia; na trilha Grupos,
-  posts únicos com comunidades-alvo e mídia. Chat de refino à direita;
-  editar/regenerar por toque/post; marcar como aprovada.
-- **Mídias** — biblioteca global: upload (vídeo/imagem/áudio/PDF), filtros por tipo,
-  baixar/copiar link e "usado em N campanhas". É de onde o Infra retira os arquivos.
+  posts únicos com comunidades-alvo e mídia. Chat de refino à direita. Cada card tem
+  **Editar** (edição manual direta) e **Regenerar**. Botão **Mídias da campanha** abre a
+  visão de assets escopada à campanha. Marcar como aprovada.
+- **Mídias** — biblioteca global: upload (vídeo/imagem/áudio/PDF), **filtros** (busca,
+  tipo, data, ordenação), baixar/copiar link e "usado em N campanhas". É de onde o Infra
+  retira os arquivos.
+- **Mídias da campanha** — subconjunto da biblioteca escopado a uma campanha: mostra cada
+  asset com o(s) toque(s)/post(s) que o usam, permite upload direto (vai pra biblioteca
+  global já vinculado) e "Baixar todas (.zip)" para o Infra.
 - **Base de conhecimento** — editar os blocos do Way; gerenciar as comunidades do funil.
 - **Receitas** — criar/editar receitas (metadados, esquema de inputs com âncora, e slots
   por trilha: API individual com categoria Meta, Grupos com comunidades-alvo).

@@ -156,6 +156,15 @@
         </div>
       </div>
 
+      <div class="flex flex-wrap items-center gap-3 mb-4">
+        <input placeholder="Buscar campanha…" class="rounded-lg border border-line bg-white px-3 py-2 text-sm w-64" />
+        <select class="rounded-lg border border-line bg-white px-3 py-2 text-sm"><option>Todos os tipos</option><option>Webinário quinzenal</option><option>Promo via API</option></select>
+        <select class="rounded-lg border border-line bg-white px-3 py-2 text-sm"><option>Todos os status</option><option>Rascunho</option><option>Aprovada</option></select>
+        <label class="flex items-center gap-2 text-sm text-muted">De <input type="date" class="rounded-lg border border-line bg-white px-2 py-2 text-sm" /></label>
+        <label class="flex items-center gap-2 text-sm text-muted">até <input type="date" class="rounded-lg border border-line bg-white px-2 py-2 text-sm" /></label>
+        <span class="text-xs text-muted font-mono ml-auto">3 campanhas</span>
+      </div>
+
       <div class="rounded-xl border border-line bg-white overflow-hidden">
         <table class="w-full text-sm">
           <thead class="bg-paper text-muted font-mono text-xs uppercase tracking-wide">
@@ -254,6 +263,7 @@
           </div>
         </div>
         <div class="flex gap-2">
+          <button onclick="go('campanha-midias')" class="rounded-lg border border-line bg-white px-3 py-2 text-sm font-medium hover:bg-paper transition">Mídias da campanha</button>
           <button class="rounded-lg border border-line bg-white px-3 py-2 text-sm font-medium hover:bg-paper transition">Exportar</button>
           <button class="rounded-lg bg-emerald hover:bg-emeraldd transition text-white px-4 py-2 text-sm font-semibold">Aprovar campanha</button>
         </div>
@@ -315,7 +325,7 @@
               </div>
               <div class="mt-4 pt-3 border-t border-line flex items-center justify-between">
                 <span class="font-mono text-xs text-muted">CRM: tag <b class="text-ink2">inscrito_webinario</b></span>
-                <button class="text-xs text-emeraldd font-medium hover:underline">Regenerar toque</button>
+                <span class="flex gap-3"><button class="text-xs text-ink2 font-medium hover:underline">Editar</button><button class="text-xs text-emeraldd font-medium hover:underline">Regenerar toque</button></span>
               </div>
             </div>
           </div>
@@ -343,7 +353,7 @@
                   <p class="text-sm mt-1 leading-relaxed text-ink2">Sem problema. Te mando o lembrete amanhã 1h antes de começar.</p>
                 </div>
               </div>
-              <div class="mt-4 pt-3 border-t border-line flex items-center justify-between"><span class="font-mono text-xs text-muted">CRM: tag <b class="text-ink2">viu_case</b> se clicar</span><button class="text-xs text-emeraldd font-medium hover:underline">Regenerar toque</button></div>
+              <div class="mt-4 pt-3 border-t border-line flex items-center justify-between"><span class="font-mono text-xs text-muted">CRM: tag <b class="text-ink2">viu_case</b> se clicar</span><span class="flex gap-3"><button class="text-xs text-ink2 font-medium hover:underline">Editar</button><button class="text-xs text-emeraldd font-medium hover:underline">Regenerar toque</button></span></div>
             </div>
           </div>
 
@@ -377,7 +387,7 @@
                   <p class="text-sm mt-1 leading-relaxed text-ink2">Te lembro 1h antes. Se não der ao vivo, garanto a reprise pra você.</p>
                 </div>
               </div>
-              <div class="mt-4 pt-3 border-t border-line flex items-center justify-between"><span class="font-mono text-xs text-muted">CRM: tag <b class="text-ink2">confirmou_presenca</b></span><button class="text-xs text-emeraldd font-medium hover:underline">Regenerar toque</button></div>
+              <div class="mt-4 pt-3 border-t border-line flex items-center justify-between"><span class="font-mono text-xs text-muted">CRM: tag <b class="text-ink2">confirmou_presenca</b></span><span class="flex gap-3"><button class="text-xs text-ink2 font-medium hover:underline">Editar</button><button class="text-xs text-emeraldd font-medium hover:underline">Regenerar toque</button></span></div>
             </div>
           </div>
 
@@ -404,7 +414,7 @@
                   <p class="text-sm mt-1 leading-relaxed text-ink2">Deixo o link aqui. Entra quando puder, mesmo que atrasado.</p>
                 </div>
               </div>
-              <div class="mt-4 pt-3 border-t border-line flex items-center justify-between"><span class="font-mono text-xs text-muted">CRM: tag <b class="text-ink2">pediu_link</b></span><button class="text-xs text-emeraldd font-medium hover:underline">Regenerar toque</button></div>
+              <div class="mt-4 pt-3 border-t border-line flex items-center justify-between"><span class="font-mono text-xs text-muted">CRM: tag <b class="text-ink2">pediu_link</b></span><span class="flex gap-3"><button class="text-xs text-ink2 font-medium hover:underline">Editar</button><button class="text-xs text-emeraldd font-medium hover:underline">Regenerar toque</button></span></div>
             </div>
           </div>
 
@@ -431,7 +441,7 @@
                   <p class="text-sm mt-1 leading-relaxed text-ink2">Reprise enviada. Quando quiser conversar sobre seu caso, é só responder aqui.</p>
                 </div>
               </div>
-              <div class="mt-4 pt-3 border-t border-line flex items-center justify-between"><span class="font-mono text-xs text-muted">CRM: tag <b class="text-ink2">quente_sessao</b> → fila do vendedor</span><button class="text-xs text-emeraldd font-medium hover:underline">Regenerar toque</button></div>
+              <div class="mt-4 pt-3 border-t border-line flex items-center justify-between"><span class="font-mono text-xs text-muted">CRM: tag <b class="text-ink2">quente_sessao</b> → fila do vendedor</span><span class="flex gap-3"><button class="text-xs text-ink2 font-medium hover:underline">Editar</button><button class="text-xs text-emeraldd font-medium hover:underline">Regenerar toque</button></span></div>
             </div>
           </div>
           </div><!-- /track-api -->
@@ -458,7 +468,7 @@
                   <p class="text-sm mt-1 leading-relaxed">Galera, quarta (27/06, 20h) tem aula ao vivo: como começar na Amazon do zero. Quem vai estar? Salva o vídeo aí 👇</p>
                   <div class="flex items-center gap-2 mt-2"><span class="inline-flex items-center gap-1.5 rounded-md border border-line bg-paper px-2 py-1 text-xs font-mono"><span class="text-emeraldd">▶</span> convite-webinario.mp4 <span class="text-muted">· 12MB</span></span><button onclick="go('midias')" class="text-xs text-emeraldd hover:underline">trocar mídia</button></div>
                 </div>
-                <div class="mt-4 pt-3 border-t border-line flex items-center justify-between"><span class="font-mono text-xs text-muted">Infra pega a mídia na biblioteca · agenda o post</span><button class="text-xs text-emeraldd font-medium hover:underline">Regenerar post</button></div>
+                <div class="mt-4 pt-3 border-t border-line flex items-center justify-between"><span class="font-mono text-xs text-muted">Infra pega a mídia na biblioteca · agenda o post</span><span class="flex gap-3"><button class="text-xs text-ink2 font-medium hover:underline">Editar</button><button class="text-xs text-emeraldd font-medium hover:underline">Regenerar post</button></span></div>
               </div>
             </div>
 
@@ -480,7 +490,7 @@
                   <p class="text-sm mt-1 leading-relaxed">Amanhã é o dia! Olha o que o Gustavo fez começando igual a maioria de vocês: R$23k → R$230k em 40 dias. Te espero 20h.</p>
                   <div class="flex items-center gap-2 mt-2"><span class="inline-flex items-center gap-1.5 rounded-md border border-line bg-paper px-2 py-1 text-xs font-mono"><span class="text-emeraldd">▶</span> case-gustavo.mp4 <span class="text-muted">· 24MB</span></span><button onclick="go('midias')" class="text-xs text-emeraldd hover:underline">trocar mídia</button></div>
                 </div>
-                <div class="mt-4 pt-3 border-t border-line flex items-center justify-between"><span class="font-mono text-xs text-muted">Infra pega a mídia na biblioteca · agenda o post</span><button class="text-xs text-emeraldd font-medium hover:underline">Regenerar post</button></div>
+                <div class="mt-4 pt-3 border-t border-line flex items-center justify-between"><span class="font-mono text-xs text-muted">Infra pega a mídia na biblioteca · agenda o post</span><span class="flex gap-3"><button class="text-xs text-ink2 font-medium hover:underline">Editar</button><button class="text-xs text-emeraldd font-medium hover:underline">Regenerar post</button></span></div>
               </div>
             </div>
 
@@ -502,7 +512,7 @@
                   <p class="text-sm mt-1 leading-relaxed">🔴 ESTAMOS AO VIVO! Entra agora: way.com.br/sala — começou faz pouco, dá tempo.</p>
                   <div class="flex items-center gap-2 mt-2"><span class="inline-flex items-center gap-1.5 rounded-md border border-line bg-paper px-2 py-1 text-xs font-mono">🖼 banner-ao-vivo.png <span class="text-muted">· 0.4MB</span></span><button onclick="go('midias')" class="text-xs text-emeraldd hover:underline">trocar mídia</button></div>
                 </div>
-                <div class="mt-4 pt-3 border-t border-line flex items-center justify-between"><span class="font-mono text-xs text-muted">Infra pega a mídia na biblioteca · agenda o post</span><button class="text-xs text-emeraldd font-medium hover:underline">Regenerar post</button></div>
+                <div class="mt-4 pt-3 border-t border-line flex items-center justify-between"><span class="font-mono text-xs text-muted">Infra pega a mídia na biblioteca · agenda o post</span><span class="flex gap-3"><button class="text-xs text-ink2 font-medium hover:underline">Editar</button><button class="text-xs text-emeraldd font-medium hover:underline">Regenerar post</button></span></div>
               </div>
             </div>
 
@@ -524,7 +534,7 @@
                   <p class="text-sm mt-1 leading-relaxed">Deixei a reprise gravada aqui 👇 Quem quiser falar com nosso especialista sobre o próprio caso (sem custo), me chama no PV.</p>
                   <div class="flex items-center gap-2 mt-2"><span class="inline-flex items-center gap-1.5 rounded-md border border-line bg-paper px-2 py-1 text-xs font-mono"><span class="text-emeraldd">▶</span> reprise-webinario.mp4 <span class="text-muted">· 180MB</span></span><button onclick="go('midias')" class="text-xs text-emeraldd hover:underline">trocar mídia</button></div>
                 </div>
-                <div class="mt-4 pt-3 border-t border-line flex items-center justify-between"><span class="font-mono text-xs text-muted">Infra pega a mídia na biblioteca · agenda o post</span><button class="text-xs text-emeraldd font-medium hover:underline">Regenerar post</button></div>
+                <div class="mt-4 pt-3 border-t border-line flex items-center justify-between"><span class="font-mono text-xs text-muted">Infra pega a mídia na biblioteca · agenda o post</span><span class="flex gap-3"><button class="text-xs text-ink2 font-medium hover:underline">Editar</button><button class="text-xs text-emeraldd font-medium hover:underline">Regenerar post</button></span></div>
               </div>
             </div>
           </div>
@@ -549,6 +559,69 @@
             </div>
           </div>
         </aside>
+      </div>
+    </section>
+
+    <!-- ---- MÍDIAS DA CAMPANHA ---- -->
+    <section id="v-campanha-midias" class="view p-8">
+      <button onclick="go('editor')" class="font-mono text-xs text-muted hover:text-ink">← Voltar ao editor</button>
+      <header class="flex items-end justify-between mt-1 mb-6">
+        <div>
+          <div class="font-mono text-xs uppercase tracking-widest text-muted">Mídias usadas nesta campanha</div>
+          <h1 class="font-display font-bold text-3xl mt-1">Webinário 27/06 — Amazon do Zero</h1>
+        </div>
+        <button class="rounded-lg border border-line bg-white px-3 py-2 text-sm font-medium hover:bg-paper transition">Baixar todas (.zip)</button>
+      </header>
+
+      <label class="block rounded-xl border-2 border-dashed border-line bg-white py-6 text-center cursor-pointer hover:border-emerald hover:bg-emerald/5 transition mb-6">
+        <div class="font-display font-semibold">Enviar mídia direto para esta campanha</div>
+        <p class="text-sm text-muted mt-1">Vai pra biblioteca global e já fica vinculada aqui.</p>
+        <input type="file" class="hidden" multiple />
+      </label>
+
+      <div class="grid grid-cols-4 gap-4">
+        <div class="rounded-xl border border-line bg-white overflow-hidden">
+          <div class="aspect-video bg-ink flex items-center justify-center text-paper text-3xl">▶</div>
+          <div class="p-3"><div class="font-mono text-sm truncate">lucas-boasvindas-20s.mp4</div>
+            <div class="mt-1 text-xs text-emeraldd font-mono">API · Toque 01</div>
+            <div class="flex gap-2 mt-3"><button class="flex-1 rounded-lg border border-line text-xs py-1.5 hover:bg-paper">Baixar</button><button class="flex-1 rounded-lg border border-line text-xs py-1.5 hover:bg-paper">Copiar link</button></div>
+          </div>
+        </div>
+        <div class="rounded-xl border border-line bg-white overflow-hidden">
+          <div class="aspect-video bg-ink flex items-center justify-center text-paper text-3xl">▶</div>
+          <div class="p-3"><div class="font-mono text-sm truncate">case-gustavo.mp4</div>
+            <div class="mt-1 text-xs text-emeraldd font-mono">API · Toque 02 · Grupo D-1</div>
+            <div class="flex gap-2 mt-3"><button class="flex-1 rounded-lg border border-line text-xs py-1.5 hover:bg-paper">Baixar</button><button class="flex-1 rounded-lg border border-line text-xs py-1.5 hover:bg-paper">Copiar link</button></div>
+          </div>
+        </div>
+        <div class="rounded-xl border border-line bg-white overflow-hidden">
+          <div class="aspect-video bg-utility/15 flex items-center justify-center text-utility text-3xl">🖼</div>
+          <div class="p-3"><div class="font-mono text-sm truncate">print-cnn-75bi.png</div>
+            <div class="mt-1 text-xs text-emeraldd font-mono">API · Toque 03</div>
+            <div class="flex gap-2 mt-3"><button class="flex-1 rounded-lg border border-line text-xs py-1.5 hover:bg-paper">Baixar</button><button class="flex-1 rounded-lg border border-line text-xs py-1.5 hover:bg-paper">Copiar link</button></div>
+          </div>
+        </div>
+        <div class="rounded-xl border border-line bg-white overflow-hidden">
+          <div class="aspect-video bg-emerald/15 flex items-center justify-center text-emeraldd text-3xl">🖼</div>
+          <div class="p-3"><div class="font-mono text-sm truncate">banner-ao-vivo.png</div>
+            <div class="mt-1 text-xs text-emeraldd font-mono">Grupo · D0</div>
+            <div class="flex gap-2 mt-3"><button class="flex-1 rounded-lg border border-line text-xs py-1.5 hover:bg-paper">Baixar</button><button class="flex-1 rounded-lg border border-line text-xs py-1.5 hover:bg-paper">Copiar link</button></div>
+          </div>
+        </div>
+        <div class="rounded-xl border border-line bg-white overflow-hidden">
+          <div class="aspect-video bg-ink flex items-center justify-center text-paper text-3xl">▶</div>
+          <div class="p-3"><div class="font-mono text-sm truncate">reprise-webinario.mp4</div>
+            <div class="mt-1 text-xs text-emeraldd font-mono">API · Toque 05 · Grupo D+1</div>
+            <div class="flex gap-2 mt-3"><button class="flex-1 rounded-lg border border-line text-xs py-1.5 hover:bg-paper">Baixar</button><button class="flex-1 rounded-lg border border-line text-xs py-1.5 hover:bg-paper">Copiar link</button></div>
+          </div>
+        </div>
+        <div class="rounded-xl border border-line bg-white overflow-hidden">
+          <div class="aspect-video bg-marketing/15 flex items-center justify-center text-marketing text-3xl">🔊</div>
+          <div class="p-3"><div class="font-mono text-sm truncate">audio-lucas-lembrete.mp3</div>
+            <div class="mt-1 text-xs text-emeraldd font-mono">API · Toque 02</div>
+            <div class="flex gap-2 mt-3"><button class="flex-1 rounded-lg border border-line text-xs py-1.5 hover:bg-paper">Baixar</button><button class="flex-1 rounded-lg border border-line text-xs py-1.5 hover:bg-paper">Copiar link</button></div>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -803,6 +876,13 @@
         <p class="text-sm text-muted mt-1">MP4, PNG, JPG, MP3, PDF · até 200MB por arquivo</p>
         <input type="file" class="hidden" multiple />
       </label>
+
+      <div class="flex flex-wrap items-center gap-3 mb-4">
+        <input placeholder="Buscar mídia…" class="rounded-lg border border-line bg-white px-3 py-2 text-sm w-64" />
+        <select class="rounded-lg border border-line bg-white px-3 py-2 text-sm"><option>Qualquer data</option><option>Últimos 7 dias</option><option>Últimos 30 dias</option></select>
+        <select class="rounded-lg border border-line bg-white px-3 py-2 text-sm"><option>Ordenar: mais recentes</option><option>Mais usadas</option><option>Maior tamanho</option></select>
+        <span class="text-xs text-muted font-mono ml-auto">6 arquivos</span>
+      </div>
 
       <div class="grid grid-cols-4 gap-4">
         <!-- asset card -->
