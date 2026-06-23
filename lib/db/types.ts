@@ -61,3 +61,44 @@ export type RecipeWithChildren = Recipe & {
   inputs: RecipeInput[];
   slots: RecipeSlot[];
 };
+
+export type Campaign = {
+  id: string;
+  recipe_id: string | null;
+  name: string;
+  inputs: Record<string, string>;
+  status: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CampaignTouch = {
+  id: string;
+  campaign_id: string;
+  sort_order: number;
+  offset_label: string;
+  role: string;
+  meta_category: "UTILITY" | "MARKETING";
+  template_body: string;
+  buttons: string[];
+  window_steps: { media: string; caption: string }[];
+  fallback_copy: string;
+  crm_action: string;
+  risk_flag: boolean;
+};
+
+export type CampaignGroupPost = {
+  id: string;
+  campaign_id: string;
+  sort_order: number;
+  offset_label: string;
+  role: string;
+  communities: string;
+  copy: string;
+  media: string;
+};
+
+export type CampaignWithContent = Campaign & {
+  touches: CampaignTouch[];
+  group_posts: CampaignGroupPost[];
+};
