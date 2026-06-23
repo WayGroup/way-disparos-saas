@@ -53,7 +53,7 @@ export function UploadZone() {
         <input ref={inputRef} type="file" className="hidden" multiple disabled={busy}
           onChange={(e) => handleFiles(e.target.files)} />
       </label>
-      {error && <p className="text-sm text-red-600 mt-2">{error}</p>}
+      {error && <p className="text-sm text-risk mt-2">{error}</p>}
     </div>
   );
 }

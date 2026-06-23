@@ -46,7 +46,7 @@ export function AssetGrid({ assets }: { assets: Asset[] }) {
       </div>
 
       {visible.length === 0 ? (
-        <p className="text-muted text-sm">Nenhuma mídia ainda. Envie a primeira acima.</p>
+        <p className="text-muted text-sm">{assets.length === 0 ? "Nenhuma mídia ainda. Envie a primeira acima." : "Nenhuma mídia corresponde ao filtro."}</p>
       ) : (
         <div className="grid grid-cols-4 gap-4">
           {visible.map((a) => {
