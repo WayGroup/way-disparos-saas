@@ -18,7 +18,7 @@ export function UploadZone() {
     const supabase = createBrowserSupabase();
     try {
       for (const file of Array.from(files)) {
-        const seed = Math.random().toString(36).slice(2, 10);
+        const seed = crypto.randomUUID().slice(0, 8);
         const path = buildStoragePath(file.name, seed);
         const { error: upErr } = await supabase.storage.from("assets").upload(path, file, {
           contentType: file.type || "application/octet-stream",
