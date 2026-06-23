@@ -114,6 +114,7 @@
       <button onclick="go('campanhas')" data-nav="campanhas" class="navlink active w-full text-left rounded-lg px-3 py-2 hover:bg-white/10 transition">Campanhas</button>
       <button onclick="go('nova')"      data-nav="nova"      class="navlink w-full text-left rounded-lg px-3 py-2 hover:bg-white/10 transition">Nova campanha</button>
       <button onclick="go('receitas')"  data-nav="receitas"  class="navlink w-full text-left rounded-lg px-3 py-2 hover:bg-white/10 transition">Receitas</button>
+      <button onclick="go('midias')"    data-nav="midias"    class="navlink w-full text-left rounded-lg px-3 py-2 hover:bg-white/10 transition">Mídias</button>
       <button onclick="go('base')"      data-nav="base"      class="navlink w-full text-left rounded-lg px-3 py-2 hover:bg-white/10 transition">Base de conhecimento</button>
     </nav>
     <div class="mt-auto border-t border-white/10 pt-4 px-2">
@@ -259,9 +260,18 @@
       </header>
 
       <div class="grid grid-cols-[1fr_360px]">
-        <!-- cadence rail -->
-        <div class="p-8 rail space-y-5">
+        <div class="p-8">
+          <!-- track tabs -->
+          <div class="flex items-center justify-between mb-5">
+            <div class="flex gap-1 bg-line/40 rounded-lg p-1 w-fit">
+              <button onclick="setTrack('api')" id="tab-api" class="rounded-md px-4 py-1.5 text-sm font-medium bg-white shadow-sm">API individual <span class="font-mono text-xs text-muted">· 5 toques</span></button>
+              <button onclick="setTrack('grupos')" id="tab-grupos" class="rounded-md px-4 py-1.5 text-sm font-medium text-muted">Grupos <span class="font-mono text-xs">· 4 posts</span></button>
+            </div>
+            <div class="font-mono text-xs text-muted">3 comunidades no funil</div>
+          </div>
 
+          <!-- TRACK: API individual -->
+          <div id="track-api" class="rail space-y-5">
           <!-- legend -->
           <div class="flex items-center gap-4 mb-2 text-xs font-mono pl-12">
             <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm bg-utility"></span>UTILITY (barato)</span>
@@ -293,6 +303,10 @@
                 <div class="layer layer-janela pl-3">
                   <div class="font-mono text-[10px] uppercase tracking-widest text-emeraldd">Janela 24h · grátis</div>
                   <p class="text-sm mt-1 leading-relaxed">🎥 Vídeo Lucas (20s) boas-vindas + link de inscrição. Legenda curta lembrando dia/horário.</p>
+                  <div class="flex items-center gap-2 mt-2">
+                    <span class="inline-flex items-center gap-1.5 rounded-md border border-line bg-paper px-2 py-1 text-xs font-mono"><span class="text-emeraldd">▶</span> lucas-boasvindas-20s.mp4 <span class="text-muted">· 8.2MB</span></span>
+                    <button onclick="go('midias')" class="text-xs text-emeraldd hover:underline">trocar mídia</button>
+                  </div>
                 </div>
                 <div class="layer layer-fallback pl-3">
                   <div class="font-mono text-[10px] uppercase tracking-widest text-muted">Fallback</div>
@@ -420,6 +434,100 @@
               <div class="mt-4 pt-3 border-t border-line flex items-center justify-between"><span class="font-mono text-xs text-muted">CRM: tag <b class="text-ink2">quente_sessao</b> → fila do vendedor</span><button class="text-xs text-emeraldd font-medium hover:underline">Regenerar toque</button></div>
             </div>
           </div>
+          </div><!-- /track-api -->
+
+          <!-- TRACK: Grupos -->
+          <div id="track-grupos" class="hidden rail space-y-5">
+            <div class="text-xs font-mono text-muted mb-2 pl-12">Posts únicos nas comunidades — copy + mídia, sem template/janela/fallback (custo de API individual não se aplica aqui).</div>
+
+            <div class="flex gap-4 fade">
+              <div class="flex flex-col items-center pt-2 w-[24px]"><div class="station-dot"></div><div class="font-mono text-xs text-emeraldd font-semibold mt-2">D-3</div></div>
+              <div class="flex-1 rounded-xl border border-line bg-white p-5">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-2"><span class="font-mono text-xs text-muted">01</span><span class="font-display font-bold">Convite ao webinário</span></div>
+                  <span class="rounded-full bg-ink/8 text-ink2 text-xs font-mono font-medium px-2.5 py-1">POST EM GRUPO</span>
+                </div>
+                <div class="mt-3 flex flex-wrap items-center gap-2">
+                  <span class="text-[10px] font-mono uppercase text-muted">Comunidades:</span>
+                  <label class="flex items-center gap-1.5 text-xs rounded-full border border-emerald/40 bg-emerald/8 px-2.5 py-1"><input type="checkbox" checked class="accent-emerald"/> Comunidade 1</label>
+                  <label class="flex items-center gap-1.5 text-xs rounded-full border border-emerald/40 bg-emerald/8 px-2.5 py-1"><input type="checkbox" checked class="accent-emerald"/> Comunidade 2</label>
+                  <label class="flex items-center gap-1.5 text-xs rounded-full border border-emerald/40 bg-emerald/8 px-2.5 py-1"><input type="checkbox" checked class="accent-emerald"/> Comunidade 3</label>
+                </div>
+                <div class="layer layer-template pl-3 mt-4">
+                  <div class="font-mono text-[10px] uppercase tracking-widest text-ink2">Mensagem do post</div>
+                  <p class="text-sm mt-1 leading-relaxed">Galera, quarta (27/06, 20h) tem aula ao vivo: como começar na Amazon do zero. Quem vai estar? Salva o vídeo aí 👇</p>
+                  <div class="flex items-center gap-2 mt-2"><span class="inline-flex items-center gap-1.5 rounded-md border border-line bg-paper px-2 py-1 text-xs font-mono"><span class="text-emeraldd">▶</span> convite-webinario.mp4 <span class="text-muted">· 12MB</span></span><button onclick="go('midias')" class="text-xs text-emeraldd hover:underline">trocar mídia</button></div>
+                </div>
+                <div class="mt-4 pt-3 border-t border-line flex items-center justify-between"><span class="font-mono text-xs text-muted">Infra pega a mídia na biblioteca · agenda o post</span><button class="text-xs text-emeraldd font-medium hover:underline">Regenerar post</button></div>
+              </div>
+            </div>
+
+            <div class="flex gap-4 fade">
+              <div class="flex flex-col items-center pt-2 w-[24px]"><div class="station-dot"></div><div class="font-mono text-xs text-emeraldd font-semibold mt-2">D-1</div></div>
+              <div class="flex-1 rounded-xl border border-line bg-white p-5">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-2"><span class="font-mono text-xs text-muted">02</span><span class="font-display font-bold">Lembrete + prova social</span></div>
+                  <span class="rounded-full bg-ink/8 text-ink2 text-xs font-mono font-medium px-2.5 py-1">POST EM GRUPO</span>
+                </div>
+                <div class="mt-3 flex flex-wrap items-center gap-2">
+                  <span class="text-[10px] font-mono uppercase text-muted">Comunidades:</span>
+                  <label class="flex items-center gap-1.5 text-xs rounded-full border border-emerald/40 bg-emerald/8 px-2.5 py-1"><input type="checkbox" checked class="accent-emerald"/> Comunidade 1</label>
+                  <label class="flex items-center gap-1.5 text-xs rounded-full border border-emerald/40 bg-emerald/8 px-2.5 py-1"><input type="checkbox" checked class="accent-emerald"/> Comunidade 2</label>
+                  <label class="flex items-center gap-1.5 text-xs rounded-full border border-line px-2.5 py-1"><input type="checkbox" class="accent-emerald"/> Comunidade 3</label>
+                </div>
+                <div class="layer layer-template pl-3 mt-4">
+                  <div class="font-mono text-[10px] uppercase tracking-widest text-ink2">Mensagem do post</div>
+                  <p class="text-sm mt-1 leading-relaxed">Amanhã é o dia! Olha o que o Gustavo fez começando igual a maioria de vocês: R$23k → R$230k em 40 dias. Te espero 20h.</p>
+                  <div class="flex items-center gap-2 mt-2"><span class="inline-flex items-center gap-1.5 rounded-md border border-line bg-paper px-2 py-1 text-xs font-mono"><span class="text-emeraldd">▶</span> case-gustavo.mp4 <span class="text-muted">· 24MB</span></span><button onclick="go('midias')" class="text-xs text-emeraldd hover:underline">trocar mídia</button></div>
+                </div>
+                <div class="mt-4 pt-3 border-t border-line flex items-center justify-between"><span class="font-mono text-xs text-muted">Infra pega a mídia na biblioteca · agenda o post</span><button class="text-xs text-emeraldd font-medium hover:underline">Regenerar post</button></div>
+              </div>
+            </div>
+
+            <div class="flex gap-4 fade">
+              <div class="flex flex-col items-center pt-2 w-[24px]"><div class="station-dot"></div><div class="font-mono text-xs text-emeraldd font-semibold mt-2">D0</div></div>
+              <div class="flex-1 rounded-xl border border-line bg-white p-5">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-2"><span class="font-mono text-xs text-muted">03</span><span class="font-display font-bold">No ar — link da sala</span></div>
+                  <span class="rounded-full bg-ink/8 text-ink2 text-xs font-mono font-medium px-2.5 py-1">POST EM GRUPO</span>
+                </div>
+                <div class="mt-3 flex flex-wrap items-center gap-2">
+                  <span class="text-[10px] font-mono uppercase text-muted">Comunidades:</span>
+                  <label class="flex items-center gap-1.5 text-xs rounded-full border border-emerald/40 bg-emerald/8 px-2.5 py-1"><input type="checkbox" checked class="accent-emerald"/> Comunidade 1</label>
+                  <label class="flex items-center gap-1.5 text-xs rounded-full border border-emerald/40 bg-emerald/8 px-2.5 py-1"><input type="checkbox" checked class="accent-emerald"/> Comunidade 2</label>
+                  <label class="flex items-center gap-1.5 text-xs rounded-full border border-emerald/40 bg-emerald/8 px-2.5 py-1"><input type="checkbox" checked class="accent-emerald"/> Comunidade 3</label>
+                </div>
+                <div class="layer layer-template pl-3 mt-4">
+                  <div class="font-mono text-[10px] uppercase tracking-widest text-ink2">Mensagem do post</div>
+                  <p class="text-sm mt-1 leading-relaxed">🔴 ESTAMOS AO VIVO! Entra agora: way.com.br/sala — começou faz pouco, dá tempo.</p>
+                  <div class="flex items-center gap-2 mt-2"><span class="inline-flex items-center gap-1.5 rounded-md border border-line bg-paper px-2 py-1 text-xs font-mono">🖼 banner-ao-vivo.png <span class="text-muted">· 0.4MB</span></span><button onclick="go('midias')" class="text-xs text-emeraldd hover:underline">trocar mídia</button></div>
+                </div>
+                <div class="mt-4 pt-3 border-t border-line flex items-center justify-between"><span class="font-mono text-xs text-muted">Infra pega a mídia na biblioteca · agenda o post</span><button class="text-xs text-emeraldd font-medium hover:underline">Regenerar post</button></div>
+              </div>
+            </div>
+
+            <div class="flex gap-4 fade">
+              <div class="flex flex-col items-center pt-2 w-[24px]"><div class="station-dot !border-line"></div><div class="font-mono text-xs text-muted font-semibold mt-2">D+1</div></div>
+              <div class="flex-1 rounded-xl border border-line bg-white p-5">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-2"><span class="font-mono text-xs text-muted">04</span><span class="font-display font-bold">Reprise + ponte pra Sessão</span></div>
+                  <span class="rounded-full bg-ink/8 text-ink2 text-xs font-mono font-medium px-2.5 py-1">POST EM GRUPO</span>
+                </div>
+                <div class="mt-3 flex flex-wrap items-center gap-2">
+                  <span class="text-[10px] font-mono uppercase text-muted">Comunidades:</span>
+                  <label class="flex items-center gap-1.5 text-xs rounded-full border border-emerald/40 bg-emerald/8 px-2.5 py-1"><input type="checkbox" checked class="accent-emerald"/> Comunidade 1</label>
+                  <label class="flex items-center gap-1.5 text-xs rounded-full border border-emerald/40 bg-emerald/8 px-2.5 py-1"><input type="checkbox" checked class="accent-emerald"/> Comunidade 2</label>
+                  <label class="flex items-center gap-1.5 text-xs rounded-full border border-line px-2.5 py-1"><input type="checkbox" class="accent-emerald"/> Comunidade 3</label>
+                </div>
+                <div class="layer layer-template pl-3 mt-4">
+                  <div class="font-mono text-[10px] uppercase tracking-widest text-ink2">Mensagem do post</div>
+                  <p class="text-sm mt-1 leading-relaxed">Deixei a reprise gravada aqui 👇 Quem quiser falar com nosso especialista sobre o próprio caso (sem custo), me chama no PV.</p>
+                  <div class="flex items-center gap-2 mt-2"><span class="inline-flex items-center gap-1.5 rounded-md border border-line bg-paper px-2 py-1 text-xs font-mono"><span class="text-emeraldd">▶</span> reprise-webinario.mp4 <span class="text-muted">· 180MB</span></span><button onclick="go('midias')" class="text-xs text-emeraldd hover:underline">trocar mídia</button></div>
+                </div>
+                <div class="mt-4 pt-3 border-t border-line flex items-center justify-between"><span class="font-mono text-xs text-muted">Infra pega a mídia na biblioteca · agenda o post</span><button class="text-xs text-emeraldd font-medium hover:underline">Regenerar post</button></div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- refine chat -->
@@ -522,7 +630,11 @@
           <h2 class="font-display font-bold text-lg">Slots de toque</h2>
           <span class="font-mono text-xs text-muted">o esqueleto que a IA preenche — dia, papel e categoria são garantidos</span>
         </div>
-        <div class="space-y-3">
+        <div class="flex gap-1 bg-line/40 rounded-lg p-1 w-fit mb-4">
+          <button onclick="recipeTrack('api')" id="rtab-api" class="rounded-md px-4 py-1.5 text-sm font-medium bg-white shadow-sm">API individual <span class="font-mono text-xs text-muted">· 5</span></button>
+          <button onclick="recipeTrack('grupos')" id="rtab-grupos" class="rounded-md px-4 py-1.5 text-sm font-medium text-muted">Grupos <span class="font-mono text-xs">· 4</span></button>
+        </div>
+        <div id="rslots-api" class="space-y-3">
 
           <div class="rounded-xl border border-line bg-white p-4 flex items-start gap-4">
             <div class="font-mono text-xs text-muted pt-2 cursor-grab">⠿</div>
@@ -586,6 +698,50 @@
 
           <button class="rounded-lg border border-dashed border-line w-full py-3 text-sm text-muted hover:border-ink2 hover:text-ink2 transition">+ Adicionar slot de toque</button>
         </div>
+
+        <div id="rslots-grupos" class="hidden space-y-3">
+          <div class="rounded-xl border border-line bg-white p-4 flex items-start gap-4">
+            <div class="font-mono text-xs text-muted pt-2 cursor-grab">⠿</div>
+            <div class="grid grid-cols-12 gap-3 flex-1 items-center">
+              <label class="col-span-2"><span class="text-[10px] font-mono uppercase text-muted">Offset</span><input value="-3 dias" class="mt-1 w-full rounded-lg border border-line p-2 text-sm" /></label>
+              <label class="col-span-5"><span class="text-[10px] font-mono uppercase text-muted">Papel / objetivo</span><input value="Convite ao webinário" class="mt-1 w-full rounded-lg border border-line p-2 text-sm" /></label>
+              <label class="col-span-2"><span class="text-[10px] font-mono uppercase text-muted">Comunidades</span><input value="1, 2, 3" class="mt-1 w-full rounded-lg border border-line p-2 text-sm" /></label>
+              <label class="col-span-3"><span class="text-[10px] font-mono uppercase text-muted">Mídia sugerida</span><input value="Vídeo convite" class="mt-1 w-full rounded-lg border border-line p-2 text-sm" /></label>
+            </div>
+            <button class="text-xs text-muted hover:text-risk pt-2">remover</button>
+          </div>
+          <div class="rounded-xl border border-line bg-white p-4 flex items-start gap-4">
+            <div class="font-mono text-xs text-muted pt-2 cursor-grab">⠿</div>
+            <div class="grid grid-cols-12 gap-3 flex-1 items-center">
+              <label class="col-span-2"><span class="text-[10px] font-mono uppercase text-muted">Offset</span><input value="-1 dia" class="mt-1 w-full rounded-lg border border-line p-2 text-sm" /></label>
+              <label class="col-span-5"><span class="text-[10px] font-mono uppercase text-muted">Papel / objetivo</span><input value="Lembrete + prova social" class="mt-1 w-full rounded-lg border border-line p-2 text-sm" /></label>
+              <label class="col-span-2"><span class="text-[10px] font-mono uppercase text-muted">Comunidades</span><input value="1, 2" class="mt-1 w-full rounded-lg border border-line p-2 text-sm" /></label>
+              <label class="col-span-3"><span class="text-[10px] font-mono uppercase text-muted">Mídia sugerida</span><input value="Vídeo case Gustavo" class="mt-1 w-full rounded-lg border border-line p-2 text-sm" /></label>
+            </div>
+            <button class="text-xs text-muted hover:text-risk pt-2">remover</button>
+          </div>
+          <div class="rounded-xl border border-line bg-white p-4 flex items-start gap-4">
+            <div class="font-mono text-xs text-muted pt-2 cursor-grab">⠿</div>
+            <div class="grid grid-cols-12 gap-3 flex-1 items-center">
+              <label class="col-span-2"><span class="text-[10px] font-mono uppercase text-muted">Offset</span><input value="0 (no ar)" class="mt-1 w-full rounded-lg border border-line p-2 text-sm" /></label>
+              <label class="col-span-5"><span class="text-[10px] font-mono uppercase text-muted">Papel / objetivo</span><input value="No ar — link da sala" class="mt-1 w-full rounded-lg border border-line p-2 text-sm" /></label>
+              <label class="col-span-2"><span class="text-[10px] font-mono uppercase text-muted">Comunidades</span><input value="1, 2, 3" class="mt-1 w-full rounded-lg border border-line p-2 text-sm" /></label>
+              <label class="col-span-3"><span class="text-[10px] font-mono uppercase text-muted">Mídia sugerida</span><input value="Banner ao vivo" class="mt-1 w-full rounded-lg border border-line p-2 text-sm" /></label>
+            </div>
+            <button class="text-xs text-muted hover:text-risk pt-2">remover</button>
+          </div>
+          <div class="rounded-xl border border-line bg-white p-4 flex items-start gap-4">
+            <div class="font-mono text-xs text-muted pt-2 cursor-grab">⠿</div>
+            <div class="grid grid-cols-12 gap-3 flex-1 items-center">
+              <label class="col-span-2"><span class="text-[10px] font-mono uppercase text-muted">Offset</span><input value="+1 dia" class="mt-1 w-full rounded-lg border border-line p-2 text-sm" /></label>
+              <label class="col-span-5"><span class="text-[10px] font-mono uppercase text-muted">Papel / objetivo</span><input value="Reprise + ponte pra Sessão" class="mt-1 w-full rounded-lg border border-line p-2 text-sm" /></label>
+              <label class="col-span-2"><span class="text-[10px] font-mono uppercase text-muted">Comunidades</span><input value="1, 2" class="mt-1 w-full rounded-lg border border-line p-2 text-sm" /></label>
+              <label class="col-span-3"><span class="text-[10px] font-mono uppercase text-muted">Mídia sugerida</span><input value="Vídeo reprise" class="mt-1 w-full rounded-lg border border-line p-2 text-sm" /></label>
+            </div>
+            <button class="text-xs text-muted hover:text-risk pt-2">remover</button>
+          </div>
+          <button class="rounded-lg border border-dashed border-line w-full py-3 text-sm text-muted hover:border-ink2 hover:text-ink2 transition">+ Adicionar slot de grupo</button>
+        </div>
       </div>
     </section>
 
@@ -627,6 +783,86 @@
       <p class="text-xs text-muted mt-4 font-mono">Toda alteração aqui passa a valer nas próximas gerações.</p>
     </section>
 
+    <!-- ---- MÍDIAS ---- -->
+    <section id="v-midias" class="view p-8">
+      <header class="flex items-end justify-between mb-6">
+        <div>
+          <div class="font-mono text-xs uppercase tracking-widest text-muted">Biblioteca global · o Infra pega daqui</div>
+          <h1 class="font-display font-bold text-3xl mt-1">Mídias</h1>
+        </div>
+        <div class="flex gap-1 bg-line/40 rounded-lg p-1">
+          <button class="rounded-md px-3 py-1.5 text-sm font-medium bg-white shadow-sm">Todas</button>
+          <button class="rounded-md px-3 py-1.5 text-sm font-medium text-muted">Vídeos</button>
+          <button class="rounded-md px-3 py-1.5 text-sm font-medium text-muted">Imagens</button>
+          <button class="rounded-md px-3 py-1.5 text-sm font-medium text-muted">Áudios</button>
+        </div>
+      </header>
+
+      <label class="block rounded-xl border-2 border-dashed border-line bg-white py-8 text-center cursor-pointer hover:border-emerald hover:bg-emerald/5 transition mb-6">
+        <div class="font-display font-semibold">Arraste arquivos aqui ou clique para enviar</div>
+        <p class="text-sm text-muted mt-1">MP4, PNG, JPG, MP3, PDF · até 200MB por arquivo</p>
+        <input type="file" class="hidden" multiple />
+      </label>
+
+      <div class="grid grid-cols-4 gap-4">
+        <!-- asset card -->
+        <div class="rounded-xl border border-line bg-white overflow-hidden">
+          <div class="aspect-video bg-ink flex items-center justify-center text-paper text-3xl">▶</div>
+          <div class="p-3">
+            <div class="font-mono text-sm truncate">lucas-boasvindas-20s.mp4</div>
+            <div class="flex items-center gap-2 mt-1 text-xs text-muted font-mono"><span class="rounded bg-paper border border-line px-1.5">vídeo</span><span>8.2MB</span></div>
+            <div class="mt-2 text-xs text-muted">Usado em <b class="text-ink2">3 campanhas</b></div>
+            <div class="flex gap-2 mt-3"><button class="flex-1 rounded-lg border border-line text-xs py-1.5 hover:bg-paper">Baixar</button><button class="flex-1 rounded-lg border border-line text-xs py-1.5 hover:bg-paper">Copiar link</button></div>
+          </div>
+        </div>
+        <div class="rounded-xl border border-line bg-white overflow-hidden">
+          <div class="aspect-video bg-ink flex items-center justify-center text-paper text-3xl">▶</div>
+          <div class="p-3">
+            <div class="font-mono text-sm truncate">case-gustavo.mp4</div>
+            <div class="flex items-center gap-2 mt-1 text-xs text-muted font-mono"><span class="rounded bg-paper border border-line px-1.5">vídeo</span><span>24MB</span></div>
+            <div class="mt-2 text-xs text-muted">Usado em <b class="text-ink2">5 campanhas</b></div>
+            <div class="flex gap-2 mt-3"><button class="flex-1 rounded-lg border border-line text-xs py-1.5 hover:bg-paper">Baixar</button><button class="flex-1 rounded-lg border border-line text-xs py-1.5 hover:bg-paper">Copiar link</button></div>
+          </div>
+        </div>
+        <div class="rounded-xl border border-line bg-white overflow-hidden">
+          <div class="aspect-video bg-utility/15 flex items-center justify-center text-utility text-3xl">🖼</div>
+          <div class="p-3">
+            <div class="font-mono text-sm truncate">print-cnn-75bi.png</div>
+            <div class="flex items-center gap-2 mt-1 text-xs text-muted font-mono"><span class="rounded bg-paper border border-line px-1.5">imagem</span><span>0.6MB</span></div>
+            <div class="mt-2 text-xs text-muted">Usado em <b class="text-ink2">2 campanhas</b></div>
+            <div class="flex gap-2 mt-3"><button class="flex-1 rounded-lg border border-line text-xs py-1.5 hover:bg-paper">Baixar</button><button class="flex-1 rounded-lg border border-line text-xs py-1.5 hover:bg-paper">Copiar link</button></div>
+          </div>
+        </div>
+        <div class="rounded-xl border border-line bg-white overflow-hidden">
+          <div class="aspect-video bg-marketing/15 flex items-center justify-center text-marketing text-3xl">🔊</div>
+          <div class="p-3">
+            <div class="font-mono text-sm truncate">audio-lucas-lembrete.mp3</div>
+            <div class="flex items-center gap-2 mt-1 text-xs text-muted font-mono"><span class="rounded bg-paper border border-line px-1.5">áudio</span><span>1.1MB</span></div>
+            <div class="mt-2 text-xs text-muted">Usado em <b class="text-ink2">1 campanha</b></div>
+            <div class="flex gap-2 mt-3"><button class="flex-1 rounded-lg border border-line text-xs py-1.5 hover:bg-paper">Baixar</button><button class="flex-1 rounded-lg border border-line text-xs py-1.5 hover:bg-paper">Copiar link</button></div>
+          </div>
+        </div>
+        <div class="rounded-xl border border-line bg-white overflow-hidden">
+          <div class="aspect-video bg-ink flex items-center justify-center text-paper text-3xl">▶</div>
+          <div class="p-3">
+            <div class="font-mono text-sm truncate">reprise-webinario.mp4</div>
+            <div class="flex items-center gap-2 mt-1 text-xs text-muted font-mono"><span class="rounded bg-paper border border-line px-1.5">vídeo</span><span>180MB</span></div>
+            <div class="mt-2 text-xs text-muted">Usado em <b class="text-ink2">1 campanha</b></div>
+            <div class="flex gap-2 mt-3"><button class="flex-1 rounded-lg border border-line text-xs py-1.5 hover:bg-paper">Baixar</button><button class="flex-1 rounded-lg border border-line text-xs py-1.5 hover:bg-paper">Copiar link</button></div>
+          </div>
+        </div>
+        <div class="rounded-xl border border-line bg-white overflow-hidden">
+          <div class="aspect-video bg-emerald/15 flex items-center justify-center text-emeraldd text-3xl">🖼</div>
+          <div class="p-3">
+            <div class="font-mono text-sm truncate">banner-ao-vivo.png</div>
+            <div class="flex items-center gap-2 mt-1 text-xs text-muted font-mono"><span class="rounded bg-paper border border-line px-1.5">imagem</span><span>0.4MB</span></div>
+            <div class="mt-2 text-xs text-muted">Usado em <b class="text-ink2">4 campanhas</b></div>
+            <div class="flex gap-2 mt-3"><button class="flex-1 rounded-lg border border-line text-xs py-1.5 hover:bg-paper">Baixar</button><button class="flex-1 rounded-lg border border-line text-xs py-1.5 hover:bg-paper">Copiar link</button></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
   </div>
 </div>
 
@@ -659,6 +895,20 @@
   function generate(){
     const b=event.target; const t=b.textContent; b.textContent='Gerando…'; b.disabled=true;
     setTimeout(()=>{ b.textContent=t; b.disabled=false; go('editor'); }, 700);
+  }
+  function toggleTab(a,g,t){
+    a.classList.toggle('bg-white', t==='api'); a.classList.toggle('shadow-sm', t==='api'); a.classList.toggle('text-muted', t!=='api');
+    g.classList.toggle('bg-white', t!=='api'); g.classList.toggle('shadow-sm', t!=='api'); g.classList.toggle('text-muted', t==='api');
+  }
+  function setTrack(t){
+    document.getElementById('track-api').classList.toggle('hidden', t!=='api');
+    document.getElementById('track-grupos').classList.toggle('hidden', t==='api');
+    toggleTab(document.getElementById('tab-api'), document.getElementById('tab-grupos'), t);
+  }
+  function recipeTrack(t){
+    document.getElementById('rslots-api').classList.toggle('hidden', t!=='api');
+    document.getElementById('rslots-grupos').classList.toggle('hidden', t==='api');
+    toggleTab(document.getElementById('rtab-api'), document.getElementById('rtab-grupos'), t);
   }
 </script>
 </body>

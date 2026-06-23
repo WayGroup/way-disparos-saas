@@ -40,21 +40,44 @@ com mídia sugerida e ação de CRM por toque.
 - **`recipes`** — definição de campanha:
   - metadados (nome, tipo, descrição);
   - **esquema de inputs** (campos que o usuário preenche por campanha — ex.: data/hora
-    do webinário, tema, link de inscrição; ou oferta + prazo da promo);
-  - lista ordenada de **slots de toque**, cada slot com: ordem, dia/offset (relativo a
-    uma âncora, ex. data do webinário), papel/objetivo, categoria Meta sugerida
-    (UTILITY/MARKETING), mídia sugerida e comportamento de fallback.
+    do webinário, tema, link de inscrição; ou oferta + prazo da promo). Um campo é
+    marcado como **âncora** (a data que rege os offsets);
+  - **slots de toque por trilha** (ver Seção 3.1) — cada slot tem ordem, offset relativo
+    à âncora, papel/objetivo, mídia sugerida e, dependendo da trilha, categoria Meta ou
+    comunidades-alvo.
+- **`communities`** — as comunidades/grupos do funil (no MVP, 3), editáveis: nome e
+  identificador. Usadas como alvo dos posts da trilha de Grupos.
+- **`assets`** — **biblioteca de mídias global e reutilizável** (vídeos, imagens, áudios,
+  PDFs): arquivo no Supabase Storage + metadados (nome, tipo, tamanho, URL). O Infra
+  baixa/copia link daqui. Toques e posts referenciam `assets` por id.
 - **`campaigns`** — instância gerada: referência à receita, inputs preenchidos, status
   (rascunho/aprovado).
-- **`campaign_touches`** — saída gerada por slot, editável:
+- **`campaign_touches`** — saída da **trilha API individual** (1 por slot da trilha),
+  editável:
   - **template**: categoria Meta + corpo com `{{1}}` + botões;
-  - **janela 24h**: sequência de mídia + legenda por clique de botão;
+  - **janela 24h**: sequência de passos, cada um com `asset_id` + legenda;
   - **fallback**: copy para clique "não"/sem engajamento;
   - **ação de CRM**.
-- **`chat_messages`** — histórico do chat de refino por campanha (e por toque).
+- **`campaign_group_posts`** — saída da **trilha de Grupos** (1 por slot de grupo),
+  editável: copy do post único, `asset_id` (mídia anexa), e **comunidades-alvo**
+  (subconjunto de `communities`). Sem template/janela/fallback nem categoria Meta.
+- **`chat_messages`** — histórico do chat de refino por campanha (escopo: trilha e/ou
+  toque/post específico).
 
-Princípio: a **receita** garante o esqueleto (toques/dias/categoria sempre corretos) e a
-**base de conhecimento** alimenta a copy. Campanha = receita preenchida + toques gerados.
+### 3.1 Trilhas paralelas (canais)
+
+Uma campanha tem **duas trilhas independentes**, geradas e editadas em separado:
+- **API individual** — `campaign_touches` com a arquitetura de custo
+  Template → Janela 24h → Fallback + categoria Meta (UTILITY/MARKETING).
+- **Grupos/Comunidades** — `campaign_group_posts`: posts únicos (copy + mídia) nas
+  comunidades selecionadas. A lógica de custo da API individual **não se aplica** aqui.
+
+A receita define, para cada trilha, sua própria lista de slots. O usuário alterna entre
+as trilhas por abas no editor e na edição de receita.
+
+Princípio: a **receita** garante o esqueleto (toques/dias/categoria/comunidades sempre
+corretos) e a **base de conhecimento** alimenta a copy. Campanha = receita preenchida +
+toques (API) + posts (grupos), com mídias vindas da biblioteca de `assets`.
 
 ## 4. Motor de geração e refino (abordagem C)
 
@@ -89,10 +112,15 @@ Regras tratadas como **guardrails do gerador**, não decisão solta da IA:
 - **Login** — Supabase Auth (org única). Tudo atrás de login.
 - **Campanhas** — lista (status rascunho/aprovado) + "Nova campanha".
 - **Nova campanha** — escolhe receita → formulário de inputs → "Gerar".
-- **Editor de campanha** — cards dos toques (esquerda) + chat de refino (direita);
-  editar/regenerar por toque; marcar como aprovada.
-- **Base de conhecimento** — editar os blocos do Way.
-- **Receitas** — criar/editar receitas (metadados, esquema de inputs, slots de toque).
+- **Editor de campanha** — **abas de trilha** (API individual / Grupos); na trilha API,
+  cards dos toques (Template/Janela/Fallback) com vínculo de mídia; na trilha Grupos,
+  posts únicos com comunidades-alvo e mídia. Chat de refino à direita;
+  editar/regenerar por toque/post; marcar como aprovada.
+- **Mídias** — biblioteca global: upload (vídeo/imagem/áudio/PDF), filtros por tipo,
+  baixar/copiar link e "usado em N campanhas". É de onde o Infra retira os arquivos.
+- **Base de conhecimento** — editar os blocos do Way; gerenciar as comunidades do funil.
+- **Receitas** — criar/editar receitas (metadados, esquema de inputs com âncora, e slots
+  por trilha: API individual com categoria Meta, Grupos com comunidades-alvo).
 
 ## 7. Autenticação
 
@@ -116,7 +144,8 @@ MVP). RLS liberando apenas usuários autenticados.
 
 ## 10. Fora de escopo (fases futuras)
 
-- Envio/orquestração via WhatsApp API (este SaaS só gera conteúdo).
+- Envio/orquestração/agendamento via WhatsApp API e postagem nas comunidades (o Infra
+  faz isso manualmente; o SaaS gera o conteúdo e hospeda as mídias).
 - Exports (CSV formato longo, HTML/PDF legível, lista de templates Meta) — possíveis na
   fase 2.
 - Receita da esteira de 91 dias como campanha utilizável.
