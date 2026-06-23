@@ -1,0 +1,73 @@
+"use client";
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import type { RecipeWithChildren } from "@/lib/db/types";
+import { generateCampaignAction } from "../../actions";
+
+export function NewCampaignForm({ recipes }: { recipes: RecipeWithChildren[] }) {
+  const router = useRouter();
+  const [recipeId, setRecipeId] = useState(recipes[0]?.id ?? "");
+  const [name, setName] = useState("");
+  const [values, setValues] = useState<Record<string, string>>({});
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
+  const recipe = recipes.find((r) => r.id === recipeId);
+
+  function generate() {
+    if (!recipe) return;
+    setError(null);
+    startTransition(async () => {
+      try {
+        const id = await generateCampaignAction(recipe.id, name, values);
+        router.push(`/campanhas/${id}`);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Falha ao gerar campanha.");
+      }
+    });
+  }
+
+  if (recipes.length === 0) {
+    return <p className="text-muted">Nenhuma receita ativa. Crie uma em Receitas primeiro.</p>;
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-2 gap-4">
+        {recipes.map((r) => (
+          <button key={r.id} onClick={() => { setRecipeId(r.id); setValues({}); }}
+            className={`text-left rounded-xl border-2 bg-white p-5 transition ${recipeId === r.id ? "border-emerald ring-2 ring-emerald/20" : "border-line hover:border-ink2"}`}>
+            <div className="font-display font-bold text-lg">{r.name}</div>
+            <p className="text-sm text-muted mt-1">{r.description}</p>
+          </button>
+        ))}
+      </div>
+
+      {recipe && (
+        <div className="rounded-xl border border-line bg-white p-6 space-y-4">
+          <label className="block">
+            <span className="text-xs font-mono uppercase tracking-wide text-muted">Nome interno</span>
+            <input value={name} onChange={(e) => setName(e.target.value)} placeholder={recipe.name}
+              className="mt-1 w-full rounded-lg border border-line p-2.5 text-sm" />
+          </label>
+          {recipe.inputs.map((i) => (
+            <label key={i.id} className="block">
+              <span className="text-xs font-mono uppercase tracking-wide text-muted">{i.label}{i.is_anchor ? " ⚓" : ""}</span>
+              <input value={values[i.label] ?? ""} onChange={(e) => setValues((v) => ({ ...v, [i.label]: e.target.value }))}
+                className="mt-1 w-full rounded-lg border border-line p-2.5 text-sm" />
+            </label>
+          ))}
+        </div>
+      )}
+
+      {error && <p className="text-sm text-risk">{error}</p>}
+      <div className="flex justify-end gap-3">
+        <button onClick={() => router.push("/campanhas")} className="rounded-lg border border-line px-4 py-2.5 text-sm font-medium">Cancelar</button>
+        <button onClick={generate} disabled={pending || !recipe}
+          className="rounded-lg bg-emerald hover:bg-emeraldd transition text-white text-sm font-semibold px-5 py-2.5 disabled:opacity-50">
+          {pending ? "Gerando com a IA… (pode levar até 1 min)" : "Gerar campanha →"}
+        </button>
+      </div>
+    </div>
+  );
+}
