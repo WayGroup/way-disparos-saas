@@ -9,4 +9,7 @@ describe("isPublicPath", () => {
     expect(isPublicPath("/campanhas")).toBe(false);
     expect(isPublicPath("/")).toBe(false);
   });
+  it("rotas /auth são públicas", () => {
+    expect(isPublicPath("/auth/signout")).toBe(true);
+  });
 });
