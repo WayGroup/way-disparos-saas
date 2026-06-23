@@ -459,7 +459,7 @@
             <div>D0 · no ar 1h antes · <span class="text-utility">UTILITY</span></div>
             <div>D+1 · reprise+ponte · <span class="text-marketing">MARKETING</span></div>
           </div>
-          <button class="mt-4 text-sm text-emeraldd font-medium hover:underline">Editar receita →</button>
+          <button onclick="go('receita-editor')" class="mt-4 text-sm text-emeraldd font-medium hover:underline">Editar receita →</button>
         </div>
         <div class="rounded-xl border border-line bg-white p-5">
           <div class="flex items-center justify-between"><div class="font-display font-bold text-lg">Promo via API (pontual)</div><span class="font-mono text-xs text-emeraldd">ativa</span></div>
@@ -469,10 +469,124 @@
             <div>D+1 · reforço/prova · <span class="text-marketing">MARKETING</span></div>
             <div>D+2 · última chamada · <span class="text-utility">UTILITY</span></div>
           </div>
-          <button class="mt-4 text-sm text-emeraldd font-medium hover:underline">Editar receita →</button>
+          <button onclick="go('receita-editor')" class="mt-4 text-sm text-emeraldd font-medium hover:underline">Editar receita →</button>
         </div>
       </div>
       <button class="rounded-lg border border-dashed border-line w-full py-4 text-sm text-muted hover:border-ink2 hover:text-ink2 transition">+ Nova receita</button>
+    </section>
+
+    <!-- ---- EDITOR DE RECEITA ---- -->
+    <section id="v-receita-editor" class="view p-8 max-w-5xl">
+      <button onclick="go('receitas')" class="font-mono text-xs text-muted hover:text-ink">← Receitas</button>
+      <header class="flex items-end justify-between mt-1 mb-6">
+        <div>
+          <div class="font-mono text-xs uppercase tracking-widest text-muted">Editar receita</div>
+          <input value="Webinário quinzenal" class="font-display font-bold text-3xl mt-1 bg-transparent border-b border-dashed border-line focus:border-emerald outline-none" />
+        </div>
+        <div class="flex items-center gap-3">
+          <label class="flex items-center gap-2 text-sm text-muted"><input type="checkbox" checked class="accent-emerald" /> ativa</label>
+          <button class="rounded-lg bg-emerald hover:bg-emeraldd transition text-white text-sm font-semibold px-4 py-2.5">Salvar receita</button>
+        </div>
+      </header>
+
+      <label class="block mb-8">
+        <span class="text-xs font-mono uppercase tracking-wide text-muted">Descrição</span>
+        <input value="Convite → lembretes → no ar → reprise, ancorado na data do webinário." class="mt-1 w-full rounded-lg border border-line p-2.5 text-sm" />
+      </label>
+
+      <!-- inputs schema -->
+      <div class="mb-8">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="font-display font-bold text-lg">Inputs da campanha</h2>
+          <span class="font-mono text-xs text-muted">campos que o time preenche a cada campanha</span>
+        </div>
+        <div class="rounded-xl border border-line bg-white overflow-hidden">
+          <table class="w-full text-sm">
+            <thead class="bg-paper text-muted font-mono text-xs uppercase">
+              <tr><th class="text-left font-medium px-4 py-2.5">Campo</th><th class="text-left font-medium px-4 py-2.5">Tipo</th><th class="text-left font-medium px-4 py-2.5">Obrigatório</th><th class="text-left font-medium px-4 py-2.5">Âncora?</th><th class="px-4 py-2.5"></th></tr>
+            </thead>
+            <tbody class="divide-y divide-line">
+              <tr><td class="px-4 py-2.5"><input value="Nome interno" class="w-full bg-transparent outline-none" /></td><td class="px-4 py-2.5 font-mono text-xs">texto</td><td class="px-4 py-2.5">✓</td><td class="px-4 py-2.5 text-muted">—</td><td class="px-4 py-2.5 text-right"><button class="text-xs text-muted hover:text-risk">remover</button></td></tr>
+              <tr class="bg-emerald/5"><td class="px-4 py-2.5"><input value="Data e hora do webinário" class="w-full bg-transparent outline-none" /></td><td class="px-4 py-2.5 font-mono text-xs">data/hora</td><td class="px-4 py-2.5">✓</td><td class="px-4 py-2.5"><span class="font-mono text-xs text-emeraldd">âncora ⚓</span></td><td class="px-4 py-2.5 text-right"><button class="text-xs text-muted hover:text-risk">remover</button></td></tr>
+              <tr><td class="px-4 py-2.5"><input value="Tema" class="w-full bg-transparent outline-none" /></td><td class="px-4 py-2.5 font-mono text-xs">texto</td><td class="px-4 py-2.5">✓</td><td class="px-4 py-2.5 text-muted">—</td><td class="px-4 py-2.5 text-right"><button class="text-xs text-muted hover:text-risk">remover</button></td></tr>
+              <tr><td class="px-4 py-2.5"><input value="Link de inscrição" class="w-full bg-transparent outline-none" /></td><td class="px-4 py-2.5 font-mono text-xs">url</td><td class="px-4 py-2.5">✓</td><td class="px-4 py-2.5 text-muted">—</td><td class="px-4 py-2.5 text-right"><button class="text-xs text-muted hover:text-risk">remover</button></td></tr>
+            </tbody>
+          </table>
+          <button class="w-full border-t border-dashed border-line py-3 text-sm text-muted hover:text-ink2 transition">+ Adicionar campo</button>
+        </div>
+      </div>
+
+      <!-- touch slots -->
+      <div>
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="font-display font-bold text-lg">Slots de toque</h2>
+          <span class="font-mono text-xs text-muted">o esqueleto que a IA preenche — dia, papel e categoria são garantidos</span>
+        </div>
+        <div class="space-y-3">
+
+          <div class="rounded-xl border border-line bg-white p-4 flex items-start gap-4">
+            <div class="font-mono text-xs text-muted pt-2 cursor-grab">⠿</div>
+            <div class="grid grid-cols-12 gap-3 flex-1 items-center">
+              <label class="col-span-2"><span class="text-[10px] font-mono uppercase text-muted">Offset</span><input value="-3 dias" class="mt-1 w-full rounded-lg border border-line p-2 text-sm" /></label>
+              <label class="col-span-5"><span class="text-[10px] font-mono uppercase text-muted">Papel / objetivo</span><input value="Convite ao webinário" class="mt-1 w-full rounded-lg border border-line p-2 text-sm" /></label>
+              <label class="col-span-2"><span class="text-[10px] font-mono uppercase text-muted">Categoria Meta</span>
+                <select class="mt-1 w-full rounded-lg border border-line p-2 text-sm"><option>UTILITY</option><option>MARKETING</option></select></label>
+              <label class="col-span-3"><span class="text-[10px] font-mono uppercase text-muted">Mídia sugerida (janela)</span><input value="Vídeo Lucas 20s + link" class="mt-1 w-full rounded-lg border border-line p-2 text-sm" /></label>
+            </div>
+            <button class="text-xs text-muted hover:text-risk pt-2">remover</button>
+          </div>
+
+          <div class="rounded-xl border border-line bg-white p-4 flex items-start gap-4">
+            <div class="font-mono text-xs text-muted pt-2 cursor-grab">⠿</div>
+            <div class="grid grid-cols-12 gap-3 flex-1 items-center">
+              <label class="col-span-2"><span class="text-[10px] font-mono uppercase text-muted">Offset</span><input value="-1 dia" class="mt-1 w-full rounded-lg border border-line p-2 text-sm" /></label>
+              <label class="col-span-5"><span class="text-[10px] font-mono uppercase text-muted">Papel / objetivo</span><input value="Lembrete + quebra de objeção" class="mt-1 w-full rounded-lg border border-line p-2 text-sm" /></label>
+              <label class="col-span-2"><span class="text-[10px] font-mono uppercase text-muted">Categoria Meta</span>
+                <select class="mt-1 w-full rounded-lg border border-line p-2 text-sm"><option>MARKETING</option><option>UTILITY</option></select></label>
+              <label class="col-span-3"><span class="text-[10px] font-mono uppercase text-muted">Mídia sugerida (janela)</span><input value="Vídeo case + áudio" class="mt-1 w-full rounded-lg border border-line p-2 text-sm" /></label>
+            </div>
+            <button class="text-xs text-muted hover:text-risk pt-2">remover</button>
+          </div>
+
+          <div class="rounded-xl border border-line bg-white p-4 flex items-start gap-4">
+            <div class="font-mono text-xs text-muted pt-2 cursor-grab">⠿</div>
+            <div class="grid grid-cols-12 gap-3 flex-1 items-center">
+              <label class="col-span-2"><span class="text-[10px] font-mono uppercase text-muted">Offset</span><input value="0 (manhã)" class="mt-1 w-full rounded-lg border border-line p-2 text-sm" /></label>
+              <label class="col-span-5"><span class="text-[10px] font-mono uppercase text-muted">Papel / objetivo</span><input value="Lembrete dia do evento" class="mt-1 w-full rounded-lg border border-line p-2 text-sm" /></label>
+              <label class="col-span-2"><span class="text-[10px] font-mono uppercase text-muted">Categoria Meta</span>
+                <select class="mt-1 w-full rounded-lg border border-line p-2 text-sm"><option>UTILITY</option><option>MARKETING</option></select></label>
+              <label class="col-span-3"><span class="text-[10px] font-mono uppercase text-muted">Mídia sugerida (janela)</span><input value="Print notícia + teaser" class="mt-1 w-full rounded-lg border border-line p-2 text-sm" /></label>
+            </div>
+            <button class="text-xs text-muted hover:text-risk pt-2">remover</button>
+          </div>
+
+          <div class="rounded-xl border border-line bg-white p-4 flex items-start gap-4">
+            <div class="font-mono text-xs text-muted pt-2 cursor-grab">⠿</div>
+            <div class="grid grid-cols-12 gap-3 flex-1 items-center">
+              <label class="col-span-2"><span class="text-[10px] font-mono uppercase text-muted">Offset</span><input value="0 (1h antes)" class="mt-1 w-full rounded-lg border border-line p-2 text-sm" /></label>
+              <label class="col-span-5"><span class="text-[10px] font-mono uppercase text-muted">Papel / objetivo</span><input value="No ar — link da sala" class="mt-1 w-full rounded-lg border border-line p-2 text-sm" /></label>
+              <label class="col-span-2"><span class="text-[10px] font-mono uppercase text-muted">Categoria Meta</span>
+                <select class="mt-1 w-full rounded-lg border border-line p-2 text-sm"><option>UTILITY</option><option>MARKETING</option></select></label>
+              <label class="col-span-3"><span class="text-[10px] font-mono uppercase text-muted">Mídia sugerida (janela)</span><input value="Link + recado 10s" class="mt-1 w-full rounded-lg border border-line p-2 text-sm" /></label>
+            </div>
+            <button class="text-xs text-muted hover:text-risk pt-2">remover</button>
+          </div>
+
+          <div class="rounded-xl border border-line bg-white p-4 flex items-start gap-4">
+            <div class="font-mono text-xs text-muted pt-2 cursor-grab">⠿</div>
+            <div class="grid grid-cols-12 gap-3 flex-1 items-center">
+              <label class="col-span-2"><span class="text-[10px] font-mono uppercase text-muted">Offset</span><input value="+1 dia" class="mt-1 w-full rounded-lg border border-line p-2 text-sm" /></label>
+              <label class="col-span-5"><span class="text-[10px] font-mono uppercase text-muted">Papel / objetivo</span><input value="Reprise + ponte pra Sessão" class="mt-1 w-full rounded-lg border border-line p-2 text-sm" /></label>
+              <label class="col-span-2"><span class="text-[10px] font-mono uppercase text-muted">Categoria Meta</span>
+                <select class="mt-1 w-full rounded-lg border border-line p-2 text-sm"><option>MARKETING</option><option>UTILITY</option></select></label>
+              <label class="col-span-3"><span class="text-[10px] font-mono uppercase text-muted">Mídia sugerida (janela)</span><input value="Reprise + convite Sessão" class="mt-1 w-full rounded-lg border border-line p-2 text-sm" /></label>
+            </div>
+            <button class="text-xs text-muted hover:text-risk pt-2">remover</button>
+          </div>
+
+          <button class="rounded-lg border border-dashed border-line w-full py-3 text-sm text-muted hover:border-ink2 hover:text-ink2 transition">+ Adicionar slot de toque</button>
+        </div>
+      </div>
     </section>
 
     <!-- ---- BASE DE CONHECIMENTO ---- -->
