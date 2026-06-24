@@ -78,13 +78,15 @@ export async function approveCampaignAction(id: string): Promise<void> {
 
 export async function refineCampaignAction(
   campaignId: string,
-  userMessage: string,
+  message: string,
 ): Promise<string> {
+  const trimmed = message.trim();
+  if (!trimmed) throw new Error("Escreva o que você quer ajustar.");
   const campaign = await getCampaign(campaignId);
   if (!campaign) throw new Error("Campanha não encontrada.");
   const brandText = compileBrandKnowledge(await listBrandBlocks());
 
-  const result = await refineCampaign(campaign, userMessage, brandText);
+  const result = await refineCampaign(campaign, trimmed, brandText);
 
   const supabase = await createServerSupabase();
 
@@ -92,7 +94,7 @@ export async function refineCampaignAction(
   const { error: e1 } = await supabase.from("chat_messages").insert({
     campaign_id: campaignId,
     role: "user",
-    content: userMessage,
+    content: trimmed,
   });
   if (e1) throw new Error(`Falha ao salvar mensagem do usuário: ${e1.message}`);
 
