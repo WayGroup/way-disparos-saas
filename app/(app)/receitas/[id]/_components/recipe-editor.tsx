@@ -21,6 +21,7 @@ export function RecipeEditor({ recipe }: { recipe: RecipeWithChildren }) {
     recipe.slots.map((s) => ({
       track: s.track, offset_label: s.offset_label, code: s.code, role: s.role,
       meta_category: s.meta_category, target_communities: s.target_communities, suggested_media: s.suggested_media,
+      offset_days: s.offset_days, offset_time: s.offset_time,
     })),
   );
 
@@ -129,9 +130,9 @@ export function RecipeEditor({ recipe }: { recipe: RecipeWithChildren }) {
           {trackSlots.map(({ s, idx }) => (
             <div key={idx} className="rounded-xl border border-line bg-white p-4 flex items-start gap-4">
               <div className="grid grid-cols-12 gap-3 flex-1 items-end">
-                <label className="col-span-2"><span className="text-[10px] font-mono uppercase text-muted">Offset</span>
+                <label className="col-span-1"><span className="text-[10px] font-mono uppercase text-muted">Offset</span>
                   <input value={s.offset_label} onChange={(e) => patchSlot(idx, { offset_label: e.target.value })} className="mt-1 w-full rounded-lg border border-line p-2 text-sm" /></label>
-                <label className="col-span-2"><span className="text-[10px] font-mono uppercase text-muted">Código</span>
+                <label className="col-span-1"><span className="text-[10px] font-mono uppercase text-muted">Código</span>
                   <input value={s.code} onChange={(e) => patchSlot(idx, { code: e.target.value })} placeholder="ex.: convite" className="mt-1 w-full rounded-lg border border-line p-2 text-sm font-mono" /></label>
                 <label className="col-span-4"><span className="text-[10px] font-mono uppercase text-muted">Papel / objetivo</span>
                   <input value={s.role} onChange={(e) => patchSlot(idx, { role: e.target.value })} className="mt-1 w-full rounded-lg border border-line p-2 text-sm" /></label>
@@ -147,14 +148,18 @@ export function RecipeEditor({ recipe }: { recipe: RecipeWithChildren }) {
                 )}
                 <label className="col-span-2"><span className="text-[10px] font-mono uppercase text-muted">Mídia sugerida</span>
                   <input value={s.suggested_media} onChange={(e) => patchSlot(idx, { suggested_media: e.target.value })} className="mt-1 w-full rounded-lg border border-line p-2 text-sm" /></label>
+                <label className="col-span-1"><span className="text-[10px] font-mono uppercase text-muted">Dias</span>
+                  <input type="number" value={s.offset_days} onChange={(e) => patchSlot(idx, { offset_days: Number(e.target.value) })} className="mt-1 w-full rounded-lg border border-line p-2 text-sm" /></label>
+                <label className="col-span-1"><span className="text-[10px] font-mono uppercase text-muted">Hora</span>
+                  <input value={s.offset_time} onChange={(e) => patchSlot(idx, { offset_time: e.target.value })} placeholder="14:00" className="mt-1 w-full rounded-lg border border-line p-2 text-sm font-mono" /></label>
               </div>
               <button onClick={() => setSlots((p) => p.filter((_, i) => i !== idx))} className="text-xs text-muted hover:text-risk pt-5">remover</button>
             </div>
           ))}
           <button
             onClick={() => setSlots((p) => [...p, track === "api"
-              ? { track: "api", offset_label: "0", code: "", role: "Novo toque", meta_category: "UTILITY", target_communities: null, suggested_media: "" }
-              : { track: "grupos", offset_label: "0", code: "", role: "Novo post", meta_category: null, target_communities: "1, 2, 3", suggested_media: "" }])}
+              ? { track: "api", offset_label: "0", code: "", role: "Novo toque", meta_category: "UTILITY", target_communities: null, suggested_media: "", offset_days: 0, offset_time: "" }
+              : { track: "grupos", offset_label: "0", code: "", role: "Novo post", meta_category: null, target_communities: "1, 2, 3", suggested_media: "", offset_days: 0, offset_time: "" }])}
             className="rounded-lg border border-dashed border-line w-full py-3 text-sm text-muted hover:text-ink2 transition">
             + Adicionar slot {track === "api" ? "de API" : "de grupo"}
           </button>

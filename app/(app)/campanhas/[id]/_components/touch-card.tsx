@@ -1,11 +1,13 @@
 "use client";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import type { CampaignTouch } from "@/lib/db/types";
-import { updateTouchAction, type TouchFields } from "../../actions";
+import type { CampaignTouch, Asset } from "@/lib/db/types";
+import { updateTouchAction, setTouchStepAssetAction, type TouchFields } from "../../actions";
 import { CopyButton } from "./copy-button";
+import { formatSendAt } from "@/lib/schedule";
+import { MediaPicker } from "./media-picker";
 
-export function TouchCard({ campaignId, touch }: { campaignId: string; touch: CampaignTouch }) {
+export function TouchCard({ campaignId, touch, assets }: { campaignId: string; touch: CampaignTouch; assets: Asset[] }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -45,20 +47,37 @@ export function TouchCard({ campaignId, touch }: { campaignId: string; touch: Ca
         <div className="mt-2 flex items-center gap-2">
           <span className="font-mono text-xs bg-paper border border-line rounded px-2 py-0.5">{touch.template_name || "— sem nome —"}</span>
           <CopyButton text={touch.template_name} label="copiar nome" />
+          {touch.send_at && (
+            <span className="inline-flex items-center gap-2 font-mono text-xs bg-emerald/10 text-emeraldd rounded px-2 py-0.5">
+              📅 {formatSendAt(touch.send_at)}
+              <CopyButton text={touch.send_at} />
+            </span>
+          )}
         </div>
         <div className="mt-4 space-y-3">
           <div className="pl-3 border-l-2 border-ink2">
             <div className="font-mono text-[10px] uppercase tracking-widest text-ink2">Template · pago</div>
             <p className="text-sm mt-1 leading-relaxed whitespace-pre-wrap">{touch.template_body}</p>
-            <div className="flex gap-2 mt-2 flex-wrap">{touch.buttons.map((b, bi) => <span key={bi} className="rounded-full border border-line text-xs px-3 py-1">{b}</span>)}</div>
-            <div className="mt-2 flex gap-3"><CopyButton text={touch.template_body} label="copiar texto" /><CopyButton text={touch.buttons.join("\n")} label="copiar botões" /></div>
+            <div className="flex gap-2 mt-2 flex-wrap">
+              {touch.buttons.map((b, bi) => (
+                <span key={bi} className="inline-flex items-center gap-1 rounded-md border border-line px-2 py-0.5 text-xs">
+                  <span>{b.type === "url" ? "🔗" : "↩"}</span>
+                  <span>{b.text}</span>
+                  {b.type === "url" && b.url && <a href={b.url} target="_blank" rel="noreferrer" className="text-emeraldd underline truncate max-w-[160px]">{b.url}</a>}
+                </span>
+              ))}
+            </div>
+            <div className="mt-2 flex gap-3"><CopyButton text={touch.template_body} label="copiar texto" /><CopyButton text={touch.buttons.map((b) => b.type === "url" ? `${b.text} → ${b.url}` : b.text).join("\n")} label="copiar botões" /></div>
           </div>
           <div className="pl-3 border-l-2 border-emerald">
             <div className="font-mono text-[10px] uppercase tracking-widest text-emeraldd">Janela 24h · grátis</div>
             {touch.window_steps.map((w, wi) => (
-              <div key={wi} className="flex items-center justify-between gap-2">
-                <p className="text-sm mt-1 leading-relaxed"><span className="font-medium">{w.media}:</span> {w.caption}</p>
-                <CopyButton text={`${w.media}: ${w.caption}`} />
+              <div key={wi} className="mt-1">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm leading-relaxed"><span className="font-medium">{w.media}:</span> {w.caption}</p>
+                  <CopyButton text={`${w.media}: ${w.caption}`} />
+                </div>
+                <MediaPicker assets={assets} currentId={w.asset_id ?? null} onPick={(id) => setTouchStepAssetAction(campaignId, touch.sort_order, wi, id)} />
               </div>
             ))}
           </div>
@@ -94,7 +113,21 @@ export function TouchCard({ campaignId, touch }: { campaignId: string; touch: Ca
       <label className="block"><span className="text-[10px] font-mono uppercase text-muted">Papel</span><input value={f.role} onChange={(e) => setF({ ...f, role: e.target.value })} className="mt-1 w-full rounded-lg border border-line p-2 text-sm" /></label>
       <label className="block"><span className="text-[10px] font-mono uppercase text-muted">Nome do template</span><input value={f.template_name} onChange={(e) => setF({ ...f, template_name: e.target.value })} className="mt-1 w-full rounded-lg border border-line p-2 text-sm font-mono" /></label>
       <label className="block"><span className="text-[10px] font-mono uppercase text-muted">Template</span><textarea value={f.template_body} onChange={(e) => setF({ ...f, template_body: e.target.value })} rows={3} className="mt-1 w-full rounded-lg border border-line p-2 text-sm" /></label>
-      <label className="block"><span className="text-[10px] font-mono uppercase text-muted">Botões (separados por vírgula)</span><input value={f.buttons.join(", ")} onChange={(e) => setF({ ...f, buttons: e.target.value.split(",").map((s) => s.trim()).filter(Boolean) })} className="mt-1 w-full rounded-lg border border-line p-2 text-sm" /></label>
+      <div className="block space-y-2">
+        <span className="text-[10px] font-mono uppercase text-muted">Botões</span>
+        {f.buttons.map((b, bi) => (
+          <div key={bi} className="flex gap-2 items-center">
+            <select value={b.type} onChange={(e) => setF({ ...f, buttons: f.buttons.map((x, i) => i === bi ? { ...x, type: e.target.value as "quick_reply" | "url" } : x) })} className="rounded-lg border border-line p-1.5 text-xs">
+              <option value="quick_reply">resposta rápida</option>
+              <option value="url">URL</option>
+            </select>
+            <input value={b.text} onChange={(e) => setF({ ...f, buttons: f.buttons.map((x, i) => i === bi ? { ...x, text: e.target.value } : x) })} placeholder="texto do botão" className="flex-1 rounded-lg border border-line p-1.5 text-xs" />
+            {b.type === "url" && <input value={b.url} onChange={(e) => setF({ ...f, buttons: f.buttons.map((x, i) => i === bi ? { ...x, url: e.target.value } : x) })} placeholder="https://…" className="flex-1 rounded-lg border border-line p-1.5 text-xs" />}
+            <button type="button" onClick={() => setF({ ...f, buttons: f.buttons.filter((_, i) => i !== bi) })} className="text-xs text-muted hover:text-risk">×</button>
+          </div>
+        ))}
+        <button type="button" onClick={() => setF({ ...f, buttons: [...f.buttons, { type: "quick_reply", text: "", url: "" }] })} className="text-xs text-emeraldd hover:underline">+ adicionar botão</button>
+      </div>
       <label className="block"><span className="text-[10px] font-mono uppercase text-muted">Fallback</span><textarea value={f.fallback_copy} onChange={(e) => setF({ ...f, fallback_copy: e.target.value })} rows={2} className="mt-1 w-full rounded-lg border border-line p-2 text-sm" /></label>
       <label className="block"><span className="text-[10px] font-mono uppercase text-muted">Ação de CRM</span><input value={f.crm_action} onChange={(e) => setF({ ...f, crm_action: e.target.value })} className="mt-1 w-full rounded-lg border border-line p-2 text-sm" /></label>
       <label className="flex items-center gap-2 text-sm text-muted"><input type="checkbox" checked={f.risk_flag} onChange={(e) => setF({ ...f, risk_flag: e.target.checked })} className="accent-emerald" /> marcar risco de reclassificação</label>

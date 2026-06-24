@@ -1,11 +1,13 @@
 "use client";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import type { CampaignGroupPost } from "@/lib/db/types";
-import { updateGroupPostAction, type PostFields } from "../../actions";
+import type { CampaignGroupPost, Asset } from "@/lib/db/types";
+import { updateGroupPostAction, setPostAssetAction, type PostFields } from "../../actions";
 import { CopyButton } from "./copy-button";
+import { formatSendAt } from "@/lib/schedule";
+import { MediaPicker } from "./media-picker";
 
-export function PostCard({ campaignId, post }: { campaignId: string; post: CampaignGroupPost }) {
+export function PostCard({ campaignId, post, assets }: { campaignId: string; post: CampaignGroupPost; assets: Asset[] }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -40,6 +42,12 @@ export function PostCard({ campaignId, post }: { campaignId: string; post: Campa
         <div className="mt-2 flex items-center gap-2">
           <span className="font-mono text-xs bg-paper border border-line rounded px-2 py-0.5">{post.message_code || "— sem código —"}</span>
           <CopyButton text={post.message_code} label="copiar código" />
+          {post.send_at && (
+            <span className="inline-flex items-center gap-2 font-mono text-xs bg-emerald/10 text-emeraldd rounded px-2 py-0.5">
+              📅 {formatSendAt(post.send_at)}
+              <CopyButton text={post.send_at} />
+            </span>
+          )}
         </div>
         <div className="mt-2 flex items-center gap-2 font-mono text-xs text-muted">
           <span>Comunidades: {post.communities}</span>
@@ -49,6 +57,7 @@ export function PostCard({ campaignId, post }: { campaignId: string; post: Campa
           <div className="font-mono text-[10px] uppercase tracking-widest text-ink2">Mensagem do post</div>
           <p className="text-sm mt-1 leading-relaxed whitespace-pre-wrap">{post.copy}</p>
           <p className="text-xs text-muted mt-2 font-mono">Mídia sugerida: {post.media}</p>
+          <MediaPicker assets={assets} currentId={post.asset_id} onPick={(id) => setPostAssetAction(campaignId, post.sort_order, id)} />
           <div className="mt-2 flex gap-3"><CopyButton text={post.copy} label="copiar mensagem" /><CopyButton text={post.media} label="copiar mídia" /></div>
         </div>
         <div className="mt-4 pt-3 border-t border-line flex justify-end gap-3">

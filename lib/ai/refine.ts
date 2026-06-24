@@ -10,7 +10,7 @@ export type TouchUpdate = {
   role: string;
   meta_category: "UTILITY" | "MARKETING";
   template_body: string;
-  buttons: string[];
+  buttons: { type: "quick_reply" | "url"; text: string; url: string }[];
   window_steps: { media: string; caption: string }[];
   fallback_copy: string;
   crm_action: string;

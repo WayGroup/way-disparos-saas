@@ -17,6 +17,8 @@ export type SaveSlot = {
   meta_category: "UTILITY" | "MARKETING" | null;
   target_communities: string | null;
   suggested_media: string;
+  offset_days: number;
+  offset_time: string;
 };
 
 export type SaveRecipePayload = {

@@ -10,6 +10,7 @@ Regras inegociáveis:
 - Trilha de Grupos: um post único (copy + mídia) para as comunidades indicadas, sem template/janela/fallback.
 - Use {{1}} para o primeiro nome do lead nos templates da API.
 - Se houver um campo de "Links para incluir" (ferramentas como MZHUB, CNPJ, Gestor Seller etc.), cite esses links nas mensagens onde fizer sentido apresentá-los; use a URL exatamente como informada e NUNCA invente URLs.
+- Botões dos templates da API: cada botão é {type, text, url}. Use type "quick_reply" (texto curto que volta como clique, url="") ou "url" (abre link — preencha url com uma URL informada nos inputs/links, NUNCA invente). No máximo 3 botões curtos por template.
 Responda APENAS no formato estruturado pedido.`;
 
 function describeSlots(slots: RecipeSlot[], track: "api" | "grupos"): string {
