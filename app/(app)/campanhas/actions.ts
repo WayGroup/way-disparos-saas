@@ -122,9 +122,14 @@ export async function refineCampaignAction(
   // Aplica atualizações de toques por (campaign_id, sort_order)
   for (const touch of result.touch_updates) {
     const { sort_order, ...fields } = touch;
+    const current = campaign.touches.find((t) => t.sort_order === sort_order);
+    const mergedSteps = (fields.window_steps ?? []).map((w, i) => {
+      const prev = current?.window_steps?.[i];
+      return prev?.asset_id ? { ...w, asset_id: prev.asset_id } : w;
+    });
     const { error } = await supabase
       .from("campaign_touches")
-      .update(fields)
+      .update({ ...fields, window_steps: mergedSteps })
       .eq("campaign_id", campaignId)
       .eq("sort_order", sort_order);
     if (error) throw new Error(`Falha ao atualizar toque ${sort_order}: ${error.message}`);
@@ -187,7 +192,7 @@ export async function setTouchStepAssetAction(campaignId: string, sortOrder: num
   const supabase = await createServerSupabase();
   const { data, error } = await supabase.from("campaign_touches").select("window_steps").eq("campaign_id", campaignId).eq("sort_order", sortOrder).single();
   if (error) throw new Error(`Falha ao carregar toque: ${error.message}`);
-  const steps = ((data?.window_steps ?? []) as { media: string; caption: string; asset_id?: string }[]).map((s, i) => i === stepIndex ? { ...s, asset_id: assetId } : s);
+  const steps = ((data?.window_steps ?? []) as { media: string; caption: string; asset_id?: string }[]).map((s, i) => i === stepIndex ? (assetId ? { ...s, asset_id: assetId } : (() => { const { asset_id, ...rest } = s; return rest; })()) : s);
   const { error: e2 } = await supabase.from("campaign_touches").update({ window_steps: steps }).eq("campaign_id", campaignId).eq("sort_order", sortOrder);
   if (e2) throw new Error(`Falha ao anexar mídia: ${e2.message}`);
   revalidatePath(`/campanhas/${campaignId}`);
