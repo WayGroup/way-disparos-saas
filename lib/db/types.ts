@@ -50,6 +50,8 @@ export type RecipeSlot = {
   recipe_id: string;
   track: "api" | "grupos";
   code: string;
+  offset_days: number;
+  offset_time: string;
   offset_label: string;
   role: string;
   meta_category: "UTILITY" | "MARKETING" | null;
@@ -83,10 +85,11 @@ export type CampaignTouch = {
   meta_category: "UTILITY" | "MARKETING";
   template_body: string;
   buttons: string[];
-  window_steps: { media: string; caption: string }[];
+  window_steps: { media: string; caption: string; asset_id?: string }[];
   fallback_copy: string;
   crm_action: string;
   risk_flag: boolean;
+  send_at: string;
 };
 
 export type CampaignGroupPost = {
@@ -99,6 +102,8 @@ export type CampaignGroupPost = {
   communities: string;
   copy: string;
   media: string;
+  send_at: string;
+  asset_id: string | null;
 };
 
 export type CampaignWithContent = Campaign & {
