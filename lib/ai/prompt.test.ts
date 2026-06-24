@@ -9,8 +9,8 @@ const recipe: RecipeWithChildren = {
     { id: "i1", recipe_id: "r", label: "Data e hora do webinário", field_type: "data_hora", required: true, is_anchor: true, sort_order: 0 },
   ],
   slots: [
-    { id: "s1", recipe_id: "r", track: "api", offset_label: "-3 dias", role: "Convite ao webinário", meta_category: "UTILITY", target_communities: null, suggested_media: "Vídeo Lucas", sort_order: 0 },
-    { id: "s2", recipe_id: "r", track: "grupos", offset_label: "-3 dias", role: "Convite", meta_category: null, target_communities: "1, 2, 3", suggested_media: "Vídeo convite", sort_order: 0 },
+    { id: "s1", recipe_id: "r", track: "api", code: "webinario_convite_2706", offset_label: "-3 dias", role: "Convite ao webinário", meta_category: "UTILITY", target_communities: null, suggested_media: "Vídeo Lucas", sort_order: 0 },
+    { id: "s2", recipe_id: "r", track: "grupos", code: "webinario_convite_2706", offset_label: "-3 dias", role: "Convite", meta_category: null, target_communities: "1, 2, 3", suggested_media: "Vídeo convite", sort_order: 0 },
   ],
 };
 

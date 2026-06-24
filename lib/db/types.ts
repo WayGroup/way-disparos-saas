@@ -49,6 +49,7 @@ export type RecipeSlot = {
   id: string;
   recipe_id: string;
   track: "api" | "grupos";
+  code: string;
   offset_label: string;
   role: string;
   meta_category: "UTILITY" | "MARKETING" | null;
@@ -77,6 +78,7 @@ export type CampaignTouch = {
   campaign_id: string;
   sort_order: number;
   offset_label: string;
+  template_name: string;
   role: string;
   meta_category: "UTILITY" | "MARKETING";
   template_body: string;
@@ -92,6 +94,7 @@ export type CampaignGroupPost = {
   campaign_id: string;
   sort_order: number;
   offset_label: string;
+  message_code: string;
   role: string;
   communities: string;
   copy: string;
