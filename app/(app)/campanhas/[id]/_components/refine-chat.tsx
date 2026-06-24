@@ -13,6 +13,7 @@ export function RefineChat({
 }) {
   const router = useRouter();
   const [input, setInput] = useState("");
+  const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -25,9 +26,14 @@ export function RefineChat({
     const msg = input.trim();
     if (!msg || pending) return;
     setInput("");
+    setError(null);
     startTransition(async () => {
-      await refineCampaignAction(campaignId, msg);
-      router.refresh();
+      try {
+        await refineCampaignAction(campaignId, msg);
+        router.refresh();
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Falha no refino.");
+      }
     });
   }
 
@@ -41,7 +47,7 @@ export function RefineChat({
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
         {initialMessages.length === 0 && !pending && (
           <p className="text-center font-mono text-xs text-muted mt-8">
-            Nenhuma conversa ainda.
+            Ex.: &quot;reescreve o toque 2 mais agressivo&quot;, &quot;mais urgência na promo sem hype&quot;, &quot;resolve o risco do toque 3&quot;.
           </p>
         )}
         {initialMessages.map((m) => (
@@ -64,21 +70,24 @@ export function RefineChat({
         <div ref={bottomRef} />
       </div>
 
-      <form onSubmit={handleSubmit} className="px-4 py-3 border-t border-line flex gap-2">
-        <input
-          className="flex-1 rounded-lg border border-line bg-paper px-3 py-2 text-sm outline-none focus:border-emerald placeholder:text-muted"
-          placeholder="O que você quer ajustar?"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          disabled={pending}
-        />
-        <button
-          type="submit"
-          disabled={pending || !input.trim()}
-          className="rounded-lg bg-emerald hover:bg-emeraldd transition text-white px-3 py-2 text-sm font-semibold disabled:opacity-50"
-        >
-          →
-        </button>
+      <form onSubmit={handleSubmit} className="px-4 py-3 border-t border-line">
+        {error && <p className="text-xs text-risk mb-2">{error}</p>}
+        <div className="flex gap-2">
+          <input
+            className="flex-1 rounded-lg border border-line bg-paper px-3 py-2 text-sm outline-none focus:border-emerald placeholder:text-muted"
+            placeholder="O que você quer ajustar?"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            disabled={pending}
+          />
+          <button
+            type="submit"
+            disabled={pending || !input.trim()}
+            className="rounded-lg bg-emerald hover:bg-emeraldd transition text-white px-3 py-2 text-sm font-semibold disabled:opacity-50"
+          >
+            →
+          </button>
+        </div>
       </form>
     </aside>
   );
