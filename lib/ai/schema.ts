@@ -14,7 +14,19 @@ export const GENERATION_SCHEMA = {
           role: { type: "string" },
           meta_category: { type: "string", enum: ["UTILITY", "MARKETING"] },
           template_body: { type: "string" },
-          buttons: { type: "array", items: { type: "string" } },
+          buttons: {
+            type: "array",
+            items: {
+              type: "object",
+              additionalProperties: false,
+              required: ["type", "text", "url"],
+              properties: {
+                type: { type: "string", enum: ["quick_reply", "url"] },
+                text: { type: "string" },
+                url: { type: "string" },
+              },
+            },
+          },
           window_steps: {
             type: "array",
             items: {
