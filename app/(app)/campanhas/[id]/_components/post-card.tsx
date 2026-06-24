@@ -10,6 +10,7 @@ export function PostCard({ campaignId, post }: { campaignId: string; post: Campa
   const [pending, startTransition] = useTransition();
   const [f, setF] = useState<PostFields>({
     offset_label: post.offset_label, role: post.role, communities: post.communities, copy: post.copy, media: post.media,
+    message_code: post.message_code,
   });
 
   function save() {

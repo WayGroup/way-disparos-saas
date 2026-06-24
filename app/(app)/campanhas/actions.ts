@@ -7,6 +7,7 @@ import { listBrandBlocks } from "@/lib/db/brand-knowledge";
 import { compileBrandKnowledge } from "@/lib/ai/brand";
 import { generateCampaign } from "@/lib/ai/generate";
 import { refineCampaign } from "@/lib/ai/refine";
+import { buildCode } from "@/lib/ai/nomenclature";
 
 export type TouchFields = {
   offset_label: string;
@@ -18,6 +19,7 @@ export type TouchFields = {
   fallback_copy: string;
   crm_action: string;
   risk_flag: boolean;
+  template_name: string;
 };
 
 export type PostFields = {
@@ -26,6 +28,7 @@ export type PostFields = {
   communities: string;
   copy: string;
   media: string;
+  message_code: string;
 };
 
 export async function generateCampaignAction(
@@ -39,6 +42,11 @@ export async function generateCampaignAction(
 
   const content = await generateCampaign(recipe, inputs, brandText);
 
+  const anchorLabel = recipe.inputs.find((i) => i.is_anchor)?.label;
+  const anchorValue = anchorLabel ? (inputs[anchorLabel] ?? "") : "";
+  const apiSlots = recipe.slots.filter((s) => s.track === "api");
+  const gruposSlots = recipe.slots.filter((s) => s.track === "grupos");
+
   const supabase = await createServerSupabase();
   const { data: campaign, error } = await supabase
     .from("campaigns")
@@ -50,13 +58,23 @@ export async function generateCampaignAction(
 
   if (content.touches.length > 0) {
     const { error: e1 } = await supabase.from("campaign_touches").insert(
-      content.touches.map((t, idx) => ({ campaign_id: campaignId, sort_order: idx, ...t })),
+      content.touches.map((t, idx) => ({
+        campaign_id: campaignId,
+        sort_order: idx,
+        ...t,
+        template_name: buildCode(recipe.recipe_type, apiSlots[idx]?.code ?? "", anchorValue),
+      })),
     );
     if (e1) throw new Error(`Falha ao salvar toques: ${e1.message}`);
   }
   if (content.group_posts.length > 0) {
     const { error: e2 } = await supabase.from("campaign_group_posts").insert(
-      content.group_posts.map((p, idx) => ({ campaign_id: campaignId, sort_order: idx, ...p })),
+      content.group_posts.map((p, idx) => ({
+        campaign_id: campaignId,
+        sort_order: idx,
+        ...p,
+        message_code: buildCode(recipe.recipe_type, gruposSlots[idx]?.code ?? "", anchorValue),
+      })),
     );
     if (e2) throw new Error(`Falha ao salvar posts: ${e2.message}`);
   }

@@ -12,6 +12,7 @@ export function TouchCard({ campaignId, touch }: { campaignId: string; touch: Ca
     offset_label: touch.offset_label, role: touch.role, meta_category: touch.meta_category,
     template_body: touch.template_body, buttons: touch.buttons, window_steps: touch.window_steps,
     fallback_copy: touch.fallback_copy, crm_action: touch.crm_action, risk_flag: touch.risk_flag,
+    template_name: touch.template_name,
   });
 
   function save() {
