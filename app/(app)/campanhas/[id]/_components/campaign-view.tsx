@@ -6,6 +6,7 @@ import { approveCampaignAction } from "../../actions";
 import { RefineChat } from "./refine-chat";
 import { TouchCard } from "./touch-card";
 import { PostCard } from "./post-card";
+import { DuplicateButton } from "./duplicate-button";
 
 export function CampaignView({
   campaign,
@@ -43,6 +44,7 @@ export function CampaignView({
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <DuplicateButton campaignId={campaign.id} />
           <button
             onClick={() =>
               startApproveTransition(async () => {
