@@ -182,3 +182,20 @@ export async function updateGroupPostAction(
   if (error) throw new Error(`Falha ao atualizar post: ${error.message}`);
   revalidatePath(`/campanhas/${campaignId}`);
 }
+
+export async function setTouchStepAssetAction(campaignId: string, sortOrder: number, stepIndex: number, assetId: string): Promise<void> {
+  const supabase = await createServerSupabase();
+  const { data, error } = await supabase.from("campaign_touches").select("window_steps").eq("campaign_id", campaignId).eq("sort_order", sortOrder).single();
+  if (error) throw new Error(`Falha ao carregar toque: ${error.message}`);
+  const steps = ((data?.window_steps ?? []) as { media: string; caption: string; asset_id?: string }[]).map((s, i) => i === stepIndex ? { ...s, asset_id: assetId } : s);
+  const { error: e2 } = await supabase.from("campaign_touches").update({ window_steps: steps }).eq("campaign_id", campaignId).eq("sort_order", sortOrder);
+  if (e2) throw new Error(`Falha ao anexar mídia: ${e2.message}`);
+  revalidatePath(`/campanhas/${campaignId}`);
+}
+
+export async function setPostAssetAction(campaignId: string, sortOrder: number, assetId: string): Promise<void> {
+  const supabase = await createServerSupabase();
+  const { error } = await supabase.from("campaign_group_posts").update({ asset_id: assetId || null }).eq("campaign_id", campaignId).eq("sort_order", sortOrder);
+  if (error) throw new Error(`Falha ao anexar mídia: ${error.message}`);
+  revalidatePath(`/campanhas/${campaignId}`);
+}

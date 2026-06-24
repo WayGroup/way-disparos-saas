@@ -1,7 +1,7 @@
 "use client";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import type { CampaignWithContent, ChatMessage } from "@/lib/db/types";
+import type { CampaignWithContent, ChatMessage, Asset } from "@/lib/db/types";
 import { approveCampaignAction } from "../../actions";
 import { RefineChat } from "./refine-chat";
 import { TouchCard } from "./touch-card";
@@ -10,9 +10,11 @@ import { PostCard } from "./post-card";
 export function CampaignView({
   campaign,
   messages,
+  assets,
 }: {
   campaign: CampaignWithContent;
   messages: ChatMessage[];
+  assets: Asset[];
 }) {
   const router = useRouter();
   const [track, setTrack] = useState<"api" | "grupos">("api");
@@ -89,13 +91,13 @@ export function CampaignView({
           {track === "api" ? (
             <div className="space-y-5 max-w-3xl">
               {campaign.touches.map((t) => (
-                <TouchCard key={t.id} campaignId={campaign.id} touch={t} />
+                <TouchCard key={t.id} campaignId={campaign.id} touch={t} assets={assets} />
               ))}
             </div>
           ) : (
             <div className="space-y-5 max-w-3xl">
               {campaign.group_posts.map((p) => (
-                <PostCard key={p.id} campaignId={campaign.id} post={p} />
+                <PostCard key={p.id} campaignId={campaign.id} post={p} assets={assets} />
               ))}
             </div>
           )}

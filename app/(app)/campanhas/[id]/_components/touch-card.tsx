@@ -1,12 +1,13 @@
 "use client";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import type { CampaignTouch } from "@/lib/db/types";
-import { updateTouchAction, type TouchFields } from "../../actions";
+import type { CampaignTouch, Asset } from "@/lib/db/types";
+import { updateTouchAction, setTouchStepAssetAction, type TouchFields } from "../../actions";
 import { CopyButton } from "./copy-button";
 import { formatSendAt } from "@/lib/schedule";
+import { MediaPicker } from "./media-picker";
 
-export function TouchCard({ campaignId, touch }: { campaignId: string; touch: CampaignTouch }) {
+export function TouchCard({ campaignId, touch, assets }: { campaignId: string; touch: CampaignTouch; assets: Asset[] }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -71,9 +72,12 @@ export function TouchCard({ campaignId, touch }: { campaignId: string; touch: Ca
           <div className="pl-3 border-l-2 border-emerald">
             <div className="font-mono text-[10px] uppercase tracking-widest text-emeraldd">Janela 24h · grátis</div>
             {touch.window_steps.map((w, wi) => (
-              <div key={wi} className="flex items-center justify-between gap-2">
-                <p className="text-sm mt-1 leading-relaxed"><span className="font-medium">{w.media}:</span> {w.caption}</p>
-                <CopyButton text={`${w.media}: ${w.caption}`} />
+              <div key={wi} className="mt-1">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm leading-relaxed"><span className="font-medium">{w.media}:</span> {w.caption}</p>
+                  <CopyButton text={`${w.media}: ${w.caption}`} />
+                </div>
+                <MediaPicker assets={assets} currentId={w.asset_id ?? null} onPick={(id) => setTouchStepAssetAction(campaignId, touch.sort_order, wi, id)} />
               </div>
             ))}
           </div>
