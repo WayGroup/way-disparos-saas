@@ -102,3 +102,11 @@ export type CampaignWithContent = Campaign & {
   touches: CampaignTouch[];
   group_posts: CampaignGroupPost[];
 };
+
+export type ChatMessage = {
+  id: string;
+  campaign_id: string;
+  role: "user" | "assistant";
+  content: string;
+  created_at: string;
+};
