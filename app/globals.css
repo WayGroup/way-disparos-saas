@@ -1,16 +1,23 @@
 @import "tailwindcss";
 
 @theme {
-  --color-ink: #15211c;
-  --color-ink2: #2a3b34;
-  --color-paper: #fbfaf7;
-  --color-line: #e5e2d9;
+  /* superfícies — esfriadas para um ar mais técnico, ancoradas no verde da marca */
+  --color-ink: #0a1f19;
+  --color-ink2: #234a3f;
+  --color-brand: #084135;
+  --color-brand2: #3c7e71;
+  --color-paper: #f4f7f5;
+  --color-line: #e1e7e3;
+
+  /* acento da marca */
   --color-emerald: #1f7a5a;
-  --color-emeraldd: #185f46;
+  --color-emeraldd: #155f44;
+
+  /* semântica do modelo de custo (não mexer — codifica significado) */
   --color-utility: #2d6cdf;
   --color-marketing: #c8701c;
   --color-risk: #b8860b;
-  --color-muted: #6b7269;
+  --color-muted: #5f6b65;
 
   --font-display: var(--font-archivo), system-ui, sans-serif;
   --font-sans: var(--font-inter), system-ui, sans-serif;
@@ -21,4 +28,44 @@ body {
   background: var(--color-paper);
   color: var(--color-ink);
   font-family: var(--font-sans);
+}
+
+::selection {
+  background: color-mix(in srgb, var(--color-emerald) 26%, transparent);
+}
+
+*:focus-visible {
+  outline: 2px solid var(--color-emerald);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* textura de grid técnico para superfícies escuras (sidebar, painel de marca) */
+.tech-grid {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.045) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+
+/* sinal "ao vivo" — ponto pulsante discreto */
+.signal-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--color-emerald);
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-emerald) 70%, transparent);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .signal-dot {
+    animation: signal-pulse 2.2s ease-out infinite;
+  }
+  @keyframes signal-pulse {
+    0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-emerald) 60%, transparent); }
+    70% { box-shadow: 0 0 0 9px color-mix(in srgb, var(--color-emerald) 0%, transparent); }
+    100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-emerald) 0%, transparent); }
+  }
+  .rise { animation: rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
+  @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 }
