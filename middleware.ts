@@ -35,5 +35,7 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  // exclui assets do Next, favicon e arquivos estáticos do /public (svg/png/etc.)
+  // — senão a logo seria barrada na própria tela de login (deslogado).
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|txt)$).*)"],
 };
