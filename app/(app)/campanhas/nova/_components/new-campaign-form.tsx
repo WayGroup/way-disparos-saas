@@ -1,14 +1,15 @@
 "use client";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import type { RecipeWithChildren } from "@/lib/db/types";
+import type { RecipeWithChildren, StandardLink } from "@/lib/db/types";
 import { generateCampaignAction } from "../../actions";
 
-export function NewCampaignForm({ recipes }: { recipes: RecipeWithChildren[] }) {
+export function NewCampaignForm({ recipes, links }: { recipes: RecipeWithChildren[]; links: StandardLink[] }) {
   const router = useRouter();
   const [recipeId, setRecipeId] = useState(recipes[0]?.id ?? "");
   const [name, setName] = useState("");
   const [values, setValues] = useState<Record<string, string>>({});
+  const [customMode, setCustomMode] = useState<Record<string, boolean>>({});
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
@@ -51,6 +52,43 @@ export function NewCampaignForm({ recipes }: { recipes: RecipeWithChildren[] }) 
               className="mt-1 w-full rounded-lg border border-line p-2.5 text-sm" />
           </label>
           {recipe.inputs.map((i) => {
+            if (i.field_type === "link") {
+              const savedLinks = links.filter((l) => l.url);
+              const current = values[i.label] ?? "";
+              const isCustom = customMode[i.label] || (current !== "" && !savedLinks.some((l) => l.url === current));
+              return (
+                <label key={i.id} className="block">
+                  <span className="text-xs font-mono uppercase tracking-wide text-muted">{i.label}{i.is_anchor ? " ⚓ (âncora da cadência)" : ""}</span>
+                  <select
+                    value={isCustom ? "__custom__" : current}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      if (v === "__custom__") {
+                        setCustomMode((m) => ({ ...m, [i.label]: true }));
+                        setValues((prev) => ({ ...prev, [i.label]: "" }));
+                      } else {
+                        setCustomMode((m) => ({ ...m, [i.label]: false }));
+                        setValues((prev) => ({ ...prev, [i.label]: v }));
+                      }
+                    }}
+                    className="mt-1 w-full rounded-lg border border-line bg-white p-2.5 text-sm outline-none focus:border-emerald"
+                  >
+                    <option value="">— escolher link salvo —</option>
+                    {savedLinks.map((l) => (
+                      <option key={l.id} value={l.url}>{l.label}</option>
+                    ))}
+                    <option value="__custom__">Outro (colar URL)…</option>
+                  </select>
+                  {isCustom && (
+                    <input
+                      type="url" value={current} placeholder="https://…"
+                      onChange={(e) => setValues((prev) => ({ ...prev, [i.label]: e.target.value }))}
+                      className="mt-2 w-full rounded-lg border border-line p-2.5 text-sm outline-none focus:border-emerald"
+                    />
+                  )}
+                </label>
+              );
+            }
             const inputType = i.field_type === "data_hora" ? "datetime-local" : i.field_type === "url" ? "url" : "text";
             return (
               <label key={i.id} className="block">
