@@ -12,6 +12,7 @@ export type SaveInput = {
 export type SaveSlot = {
   track: "api" | "grupos";
   offset_label: string;
+  code: string;
   role: string;
   meta_category: "UTILITY" | "MARKETING" | null;
   target_communities: string | null;

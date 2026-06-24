@@ -19,7 +19,7 @@ export function RecipeEditor({ recipe }: { recipe: RecipeWithChildren }) {
   );
   const [slots, setSlots] = useState<SaveSlot[]>(
     recipe.slots.map((s) => ({
-      track: s.track, offset_label: s.offset_label, role: s.role,
+      track: s.track, offset_label: s.offset_label, code: s.code, role: s.role,
       meta_category: s.meta_category, target_communities: s.target_communities, suggested_media: s.suggested_media,
     })),
   );
@@ -131,7 +131,9 @@ export function RecipeEditor({ recipe }: { recipe: RecipeWithChildren }) {
               <div className="grid grid-cols-12 gap-3 flex-1 items-end">
                 <label className="col-span-2"><span className="text-[10px] font-mono uppercase text-muted">Offset</span>
                   <input value={s.offset_label} onChange={(e) => patchSlot(idx, { offset_label: e.target.value })} className="mt-1 w-full rounded-lg border border-line p-2 text-sm" /></label>
-                <label className="col-span-5"><span className="text-[10px] font-mono uppercase text-muted">Papel / objetivo</span>
+                <label className="col-span-2"><span className="text-[10px] font-mono uppercase text-muted">Código</span>
+                  <input value={s.code} onChange={(e) => patchSlot(idx, { code: e.target.value })} placeholder="ex.: convite" className="mt-1 w-full rounded-lg border border-line p-2 text-sm font-mono" /></label>
+                <label className="col-span-4"><span className="text-[10px] font-mono uppercase text-muted">Papel / objetivo</span>
                   <input value={s.role} onChange={(e) => patchSlot(idx, { role: e.target.value })} className="mt-1 w-full rounded-lg border border-line p-2 text-sm" /></label>
                 {track === "api" ? (
                   <label className="col-span-2"><span className="text-[10px] font-mono uppercase text-muted">Categoria Meta</span>
@@ -143,7 +145,7 @@ export function RecipeEditor({ recipe }: { recipe: RecipeWithChildren }) {
                   <label className="col-span-2"><span className="text-[10px] font-mono uppercase text-muted">Comunidades</span>
                     <input value={s.target_communities ?? ""} onChange={(e) => patchSlot(idx, { target_communities: e.target.value })} className="mt-1 w-full rounded-lg border border-line p-2 text-sm" /></label>
                 )}
-                <label className="col-span-3"><span className="text-[10px] font-mono uppercase text-muted">Mídia sugerida</span>
+                <label className="col-span-2"><span className="text-[10px] font-mono uppercase text-muted">Mídia sugerida</span>
                   <input value={s.suggested_media} onChange={(e) => patchSlot(idx, { suggested_media: e.target.value })} className="mt-1 w-full rounded-lg border border-line p-2 text-sm" /></label>
               </div>
               <button onClick={() => setSlots((p) => p.filter((_, i) => i !== idx))} className="text-xs text-muted hover:text-risk pt-5">remover</button>
@@ -151,8 +153,8 @@ export function RecipeEditor({ recipe }: { recipe: RecipeWithChildren }) {
           ))}
           <button
             onClick={() => setSlots((p) => [...p, track === "api"
-              ? { track: "api", offset_label: "0", role: "Novo toque", meta_category: "UTILITY", target_communities: null, suggested_media: "" }
-              : { track: "grupos", offset_label: "0", role: "Novo post", meta_category: null, target_communities: "1, 2, 3", suggested_media: "" }])}
+              ? { track: "api", offset_label: "0", code: "", role: "Novo toque", meta_category: "UTILITY", target_communities: null, suggested_media: "" }
+              : { track: "grupos", offset_label: "0", code: "", role: "Novo post", meta_category: null, target_communities: "1, 2, 3", suggested_media: "" }])}
             className="rounded-lg border border-dashed border-line w-full py-3 text-sm text-muted hover:text-ink2 transition">
             + Adicionar slot {track === "api" ? "de API" : "de grupo"}
           </button>
