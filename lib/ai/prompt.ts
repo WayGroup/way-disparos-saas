@@ -9,6 +9,7 @@ Regras inegociáveis:
 - Marque risk_flag = true quando o template "UTILITY" tiver conteúdo promocional demais (risco de reclassificação da Meta).
 - Trilha de Grupos: um post único (copy + mídia) para as comunidades indicadas, sem template/janela/fallback.
 - Use {{1}} para o primeiro nome do lead nos templates da API.
+- Se houver um campo de "Links para incluir" (ferramentas como MZHUB, CNPJ, Gestor Seller etc.), cite esses links nas mensagens onde fizer sentido apresentá-los; use a URL exatamente como informada e NUNCA invente URLs.
 Responda APENAS no formato estruturado pedido.`;
 
 function describeSlots(slots: RecipeSlot[], track: "api" | "grupos"): string {

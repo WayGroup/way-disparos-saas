@@ -10,6 +10,7 @@ export function NewCampaignForm({ recipes, links }: { recipes: RecipeWithChildre
   const [name, setName] = useState("");
   const [values, setValues] = useState<Record<string, string>>({});
   const [customMode, setCustomMode] = useState<Record<string, boolean>>({});
+  const [multiSel, setMultiSel] = useState<Record<string, Set<string>>>({});
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
@@ -36,7 +37,7 @@ export function NewCampaignForm({ recipes, links }: { recipes: RecipeWithChildre
     <div className="space-y-6">
       <div className="grid grid-cols-2 gap-4">
         {recipes.map((r) => (
-          <button key={r.id} onClick={() => { setRecipeId(r.id); setValues({}); }}
+          <button key={r.id} onClick={() => { setRecipeId(r.id); setValues({}); setCustomMode({}); setMultiSel({}); }}
             className={`text-left rounded-xl border-2 bg-white p-5 transition ${recipeId === r.id ? "border-emerald ring-2 ring-emerald/20" : "border-line hover:border-ink2"}`}>
             <div className="font-display font-bold text-lg">{r.name}</div>
             <p className="text-sm text-muted mt-1">{r.description}</p>
@@ -52,6 +53,34 @@ export function NewCampaignForm({ recipes, links }: { recipes: RecipeWithChildre
               className="mt-1 w-full rounded-lg border border-line p-2.5 text-sm" />
           </label>
           {recipe.inputs.map((i) => {
+            if (i.field_type === "links_multi") {
+              const savedLinks = links.filter((l) => l.url);
+              const selected = multiSel[i.label] ?? new Set<string>();
+              function toggle(link: StandardLink) {
+                const next = new Set(selected);
+                if (next.has(link.id)) next.delete(link.id); else next.add(link.id);
+                const chosen = savedLinks.filter((l) => next.has(l.id));
+                setMultiSel((prev) => ({ ...prev, [i.label]: next }));
+                setValues((v) => ({ ...v, [i.label]: chosen.map((l) => `${l.label}: ${l.url}`).join("\n") }));
+              }
+              return (
+                <div key={i.id} className="block">
+                  <span className="text-xs font-mono uppercase tracking-wide text-muted">{i.label}</span>
+                  {savedLinks.length === 0 ? (
+                    <p className="mt-1 text-xs text-muted">Nenhum link salvo com URL. Cadastre em Links primeiro.</p>
+                  ) : (
+                    <div className="mt-1 grid grid-cols-2 gap-2">
+                      {savedLinks.map((l) => (
+                        <label key={l.id} className={`flex items-center gap-2 rounded-lg border p-2.5 text-sm cursor-pointer transition ${selected.has(l.id) ? "border-emerald bg-emerald/5" : "border-line hover:border-ink2"}`}>
+                          <input type="checkbox" checked={selected.has(l.id)} onChange={() => toggle(l)} className="accent-emerald" />
+                          <span className="truncate">{l.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            }
             if (i.field_type === "link") {
               const savedLinks = links.filter((l) => l.url);
               const current = values[i.label] ?? "";
