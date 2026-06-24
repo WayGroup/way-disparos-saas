@@ -50,13 +50,20 @@ export function NewCampaignForm({ recipes }: { recipes: RecipeWithChildren[] }) 
             <input value={name} onChange={(e) => setName(e.target.value)} placeholder={recipe.name}
               className="mt-1 w-full rounded-lg border border-line p-2.5 text-sm" />
           </label>
-          {recipe.inputs.map((i) => (
-            <label key={i.id} className="block">
-              <span className="text-xs font-mono uppercase tracking-wide text-muted">{i.label}{i.is_anchor ? " ⚓" : ""}</span>
-              <input value={values[i.label] ?? ""} onChange={(e) => setValues((v) => ({ ...v, [i.label]: e.target.value }))}
-                className="mt-1 w-full rounded-lg border border-line p-2.5 text-sm" />
-            </label>
-          ))}
+          {recipe.inputs.map((i) => {
+            const inputType = i.field_type === "data_hora" ? "datetime-local" : i.field_type === "url" ? "url" : "text";
+            return (
+              <label key={i.id} className="block">
+                <span className="text-xs font-mono uppercase tracking-wide text-muted">{i.label}{i.is_anchor ? " ⚓ (âncora da cadência)" : ""}</span>
+                <input
+                  type={inputType}
+                  value={values[i.label] ?? ""}
+                  onChange={(e) => setValues((v) => ({ ...v, [i.label]: e.target.value }))}
+                  className="mt-1 w-full rounded-lg border border-line p-2.5 text-sm outline-none focus:border-emerald"
+                />
+              </label>
+            );
+          })}
         </div>
       )}
 
