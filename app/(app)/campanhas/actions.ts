@@ -8,6 +8,7 @@ import { compileBrandKnowledge } from "@/lib/ai/brand";
 import { generateCampaign } from "@/lib/ai/generate";
 import { refineCampaign } from "@/lib/ai/refine";
 import { buildCode } from "@/lib/ai/nomenclature";
+import { computeSendAt } from "@/lib/schedule";
 
 export type TouchFields = {
   offset_label: string;
@@ -63,6 +64,7 @@ export async function generateCampaignAction(
         sort_order: idx,
         ...t,
         template_name: buildCode(recipe.recipe_type, apiSlots[idx]?.code ?? "", anchorValue),
+        send_at: computeSendAt(anchorValue, apiSlots[idx]?.offset_days ?? 0, apiSlots[idx]?.offset_time ?? ""),
       })),
     );
     if (e1) throw new Error(`Falha ao salvar toques: ${e1.message}`);
@@ -74,6 +76,7 @@ export async function generateCampaignAction(
         sort_order: idx,
         ...p,
         message_code: buildCode(recipe.recipe_type, gruposSlots[idx]?.code ?? "", anchorValue),
+        send_at: computeSendAt(anchorValue, gruposSlots[idx]?.offset_days ?? 0, gruposSlots[idx]?.offset_time ?? ""),
       })),
     );
     if (e2) throw new Error(`Falha ao salvar posts: ${e2.message}`);

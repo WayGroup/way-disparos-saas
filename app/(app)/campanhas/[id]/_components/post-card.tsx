@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import type { CampaignGroupPost } from "@/lib/db/types";
 import { updateGroupPostAction, type PostFields } from "../../actions";
 import { CopyButton } from "./copy-button";
+import { formatSendAt } from "@/lib/schedule";
 
 export function PostCard({ campaignId, post }: { campaignId: string; post: CampaignGroupPost }) {
   const router = useRouter();
@@ -40,6 +41,12 @@ export function PostCard({ campaignId, post }: { campaignId: string; post: Campa
         <div className="mt-2 flex items-center gap-2">
           <span className="font-mono text-xs bg-paper border border-line rounded px-2 py-0.5">{post.message_code || "— sem código —"}</span>
           <CopyButton text={post.message_code} label="copiar código" />
+          {post.send_at && (
+            <span className="inline-flex items-center gap-2 font-mono text-xs bg-emerald/10 text-emeraldd rounded px-2 py-0.5">
+              📅 {formatSendAt(post.send_at)}
+              <CopyButton text={post.send_at} />
+            </span>
+          )}
         </div>
         <div className="mt-2 flex items-center gap-2 font-mono text-xs text-muted">
           <span>Comunidades: {post.communities}</span>
