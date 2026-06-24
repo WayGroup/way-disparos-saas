@@ -7,6 +7,7 @@ describe("nav", () => {
       "/campanhas",
       "/receitas",
       "/midias",
+      "/links",
       "/base-conhecimento",
     ]);
   });

@@ -110,3 +110,12 @@ export type ChatMessage = {
   content: string;
   created_at: string;
 };
+
+export type StandardLink = {
+  id: string;
+  label: string;
+  url: string;
+  description: string;
+  sort_order: number;
+  created_at: string;
+};
