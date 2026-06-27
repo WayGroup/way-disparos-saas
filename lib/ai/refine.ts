@@ -38,14 +38,17 @@ export async function refineCampaign(
   brandText: string,
 ): Promise<RefineResult> {
   const client = new Anthropic(); // lê ANTHROPIC_API_KEY do ambiente (servidor)
-  const response = await client.messages.create({
+  // Streaming evita timeout de request em refinos longos; finalMessage() junta tudo.
+  const params = {
     model: "claude-opus-4-8",
     max_tokens: 16000,
     thinking: { type: "adaptive" },
     system: SYSTEM_PROMPT,
     messages: [{ role: "user", content: buildRefinePrompt(campaign, userMessage, brandText) }],
     output_config: { format: { type: "json_schema", schema: REFINE_SCHEMA } },
-  } as Anthropic.MessageCreateParamsNonStreaming);
+  };
+  const stream = client.messages.stream(params as Parameters<typeof client.messages.stream>[0]);
+  const response = await stream.finalMessage();
 
   const textBlock = response.content.find((b) => b.type === "text");
   if (!textBlock || textBlock.type !== "text") {

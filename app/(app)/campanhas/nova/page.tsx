@@ -3,6 +3,9 @@ import { listLinks } from "@/lib/db/links";
 import type { RecipeWithChildren } from "@/lib/db/types";
 import { NewCampaignForm } from "./_components/new-campaign-form";
 
+// A geração via IA leva ~30-60s; sem isso a Server Action estoura o timeout padrão (30s) no Vercel.
+export const maxDuration = 300;
+
 export default async function NovaCampanhaPage() {
   const recipes = await listRecipes();
   const detailed = (await Promise.all(recipes.filter((r) => r.active).map((r) => getRecipe(r.id))))

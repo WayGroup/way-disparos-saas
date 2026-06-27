@@ -10,6 +10,21 @@ import { refineCampaign } from "@/lib/ai/refine";
 import { buildCode } from "@/lib/ai/nomenclature";
 import { computeSendAt } from "@/lib/schedule";
 
+type GenLog = { campaign_id?: string; recipe_id: string; kind: string; ok: boolean; error?: string; duration_ms: number };
+
+// Log best-effort de geração: a tabela ai_generation_logs (migração 0009) pode ainda não estar aplicada;
+// qualquer erro do insert é ignorado para nunca quebrar a geração.
+async function logGeneration(
+  supabase: Awaited<ReturnType<typeof createServerSupabase>>,
+  entry: GenLog,
+): Promise<void> {
+  try {
+    await supabase.from("ai_generation_logs").insert(entry);
+  } catch {
+    /* ignore */
+  }
+}
+
 export type TouchFields = {
   offset_label: string;
   role: string;
@@ -40,15 +55,25 @@ export async function generateCampaignAction(
   const recipe = await getRecipe(recipeId);
   if (!recipe) throw new Error("Receita não encontrada.");
   const brandText = compileBrandKnowledge(await listBrandBlocks());
+  const supabase = await createServerSupabase();
 
-  const content = await generateCampaign(recipe, inputs, brandText);
+  const startedAt = Date.now();
+  let content;
+  try {
+    content = await generateCampaign(recipe, inputs, brandText);
+  } catch (e) {
+    await logGeneration(supabase, {
+      recipe_id: recipeId, kind: "generate", ok: false,
+      error: e instanceof Error ? e.message : String(e), duration_ms: Date.now() - startedAt,
+    });
+    throw e;
+  }
 
   const anchorLabel = recipe.inputs.find((i) => i.is_anchor)?.label;
   const anchorValue = anchorLabel ? (inputs[anchorLabel] ?? "") : "";
   const apiSlots = recipe.slots.filter((s) => s.track === "api");
   const gruposSlots = recipe.slots.filter((s) => s.track === "grupos");
 
-  const supabase = await createServerSupabase();
   const { data: campaign, error } = await supabase
     .from("campaigns")
     .insert({ recipe_id: recipeId, name: name.trim() || recipe.name, inputs })
@@ -57,31 +82,44 @@ export async function generateCampaignAction(
   if (error) throw new Error(`Falha ao salvar campanha: ${error.message}`);
   const campaignId = campaign.id as string;
 
-  if (content.touches.length > 0) {
-    const { error: e1 } = await supabase.from("campaign_touches").insert(
-      content.touches.map((t, idx) => ({
-        campaign_id: campaignId,
-        sort_order: idx,
-        ...t,
-        template_name: buildCode(recipe.recipe_type, apiSlots[idx]?.code ?? "", anchorValue),
-        send_at: computeSendAt(anchorValue, apiSlots[idx]?.offset_days ?? 0, apiSlots[idx]?.offset_time ?? ""),
-      })),
-    );
-    if (e1) throw new Error(`Falha ao salvar toques: ${e1.message}`);
-  }
-  if (content.group_posts.length > 0) {
-    const { error: e2 } = await supabase.from("campaign_group_posts").insert(
-      content.group_posts.map((p, idx) => ({
-        campaign_id: campaignId,
-        sort_order: idx,
-        ...p,
-        message_code: buildCode(recipe.recipe_type, gruposSlots[idx]?.code ?? "", anchorValue),
-        send_at: computeSendAt(anchorValue, gruposSlots[idx]?.offset_days ?? 0, gruposSlots[idx]?.offset_time ?? ""),
-      })),
-    );
-    if (e2) throw new Error(`Falha ao salvar posts: ${e2.message}`);
+  try {
+    if (content.touches.length > 0) {
+      const { error: e1 } = await supabase.from("campaign_touches").insert(
+        content.touches.map((t, idx) => ({
+          campaign_id: campaignId,
+          sort_order: idx,
+          ...t,
+          template_name: buildCode(recipe.recipe_type, apiSlots[idx]?.code ?? "", anchorValue),
+          send_at: computeSendAt(anchorValue, apiSlots[idx]?.offset_days ?? 0, apiSlots[idx]?.offset_time ?? ""),
+        })),
+      );
+      if (e1) throw new Error(`Falha ao salvar toques: ${e1.message}`);
+    }
+    if (content.group_posts.length > 0) {
+      const { error: e2 } = await supabase.from("campaign_group_posts").insert(
+        content.group_posts.map((p, idx) => ({
+          campaign_id: campaignId,
+          sort_order: idx,
+          ...p,
+          message_code: buildCode(recipe.recipe_type, gruposSlots[idx]?.code ?? "", anchorValue),
+          send_at: computeSendAt(anchorValue, gruposSlots[idx]?.offset_days ?? 0, gruposSlots[idx]?.offset_time ?? ""),
+        })),
+      );
+      if (e2) throw new Error(`Falha ao salvar posts: ${e2.message}`);
+    }
+  } catch (e) {
+    // rollback compensatório: remove a campanha órfã antes de propagar o erro
+    await supabase.from("campaigns").delete().eq("id", campaignId);
+    await logGeneration(supabase, {
+      recipe_id: recipeId, kind: "generate", ok: false,
+      error: e instanceof Error ? e.message : String(e), duration_ms: Date.now() - startedAt,
+    });
+    throw e;
   }
 
+  await logGeneration(supabase, {
+    campaign_id: campaignId, recipe_id: recipeId, kind: "generate", ok: true, duration_ms: Date.now() - startedAt,
+  });
   revalidatePath("/campanhas");
   return campaignId;
 }
@@ -224,26 +262,32 @@ export async function duplicateCampaignAction(campaignId: string, newAnchor: str
   if (error) throw new Error(`Falha ao duplicar campanha: ${error.message}`);
   const newId = campaign.id as string;
 
-  if (src.touches.length > 0) {
-    const { error: e1 } = await supabase.from("campaign_touches").insert(src.touches.map((t, idx) => ({
-      campaign_id: newId, sort_order: t.sort_order,
-      offset_label: t.offset_label, role: t.role, meta_category: t.meta_category,
-      template_body: t.template_body, buttons: t.buttons, window_steps: t.window_steps,
-      fallback_copy: t.fallback_copy, crm_action: t.crm_action, risk_flag: t.risk_flag,
-      template_name: recipe ? buildCode(recipe.recipe_type, apiSlots[idx]?.code ?? "", anchorValue) : t.template_name,
-      send_at: recipe ? computeSendAt(anchorValue, apiSlots[idx]?.offset_days ?? 0, apiSlots[idx]?.offset_time ?? "") : t.send_at,
-    })));
-    if (e1) throw new Error(`Falha ao duplicar toques: ${e1.message}`);
-  }
-  if (src.group_posts.length > 0) {
-    const { error: e2 } = await supabase.from("campaign_group_posts").insert(src.group_posts.map((p, idx) => ({
-      campaign_id: newId, sort_order: p.sort_order,
-      offset_label: p.offset_label, role: p.role, communities: p.communities,
-      copy: p.copy, media: p.media, asset_id: p.asset_id,
-      message_code: recipe ? buildCode(recipe.recipe_type, gruposSlots[idx]?.code ?? "", anchorValue) : p.message_code,
-      send_at: recipe ? computeSendAt(anchorValue, gruposSlots[idx]?.offset_days ?? 0, gruposSlots[idx]?.offset_time ?? "") : p.send_at,
-    })));
-    if (e2) throw new Error(`Falha ao duplicar posts: ${e2.message}`);
+  try {
+    if (src.touches.length > 0) {
+      const { error: e1 } = await supabase.from("campaign_touches").insert(src.touches.map((t, idx) => ({
+        campaign_id: newId, sort_order: t.sort_order,
+        offset_label: t.offset_label, role: t.role, meta_category: t.meta_category,
+        template_body: t.template_body, buttons: t.buttons, window_steps: t.window_steps,
+        fallback_copy: t.fallback_copy, crm_action: t.crm_action, risk_flag: t.risk_flag,
+        template_name: recipe ? buildCode(recipe.recipe_type, apiSlots[idx]?.code ?? "", anchorValue) : t.template_name,
+        send_at: recipe ? computeSendAt(anchorValue, apiSlots[idx]?.offset_days ?? 0, apiSlots[idx]?.offset_time ?? "") : t.send_at,
+      })));
+      if (e1) throw new Error(`Falha ao duplicar toques: ${e1.message}`);
+    }
+    if (src.group_posts.length > 0) {
+      const { error: e2 } = await supabase.from("campaign_group_posts").insert(src.group_posts.map((p, idx) => ({
+        campaign_id: newId, sort_order: p.sort_order,
+        offset_label: p.offset_label, role: p.role, communities: p.communities,
+        copy: p.copy, media: p.media, asset_id: p.asset_id,
+        message_code: recipe ? buildCode(recipe.recipe_type, gruposSlots[idx]?.code ?? "", anchorValue) : p.message_code,
+        send_at: recipe ? computeSendAt(anchorValue, gruposSlots[idx]?.offset_days ?? 0, gruposSlots[idx]?.offset_time ?? "") : p.send_at,
+      })));
+      if (e2) throw new Error(`Falha ao duplicar posts: ${e2.message}`);
+    }
+  } catch (e) {
+    // rollback compensatório: remove a cópia órfã antes de propagar o erro
+    await supabase.from("campaigns").delete().eq("id", newId);
+    throw e;
   }
   revalidatePath("/campanhas");
   return newId;
