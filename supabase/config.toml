@@ -1,0 +1,7 @@
+# Projeto Supabase remoto (My Way / way-disparos-saas).
+# Vincule o CLI com: supabase link --project-ref gtctjfoitstbjkzpfpgk
+project_id = "gtctjfoitstbjkzpfpgk"
+
+[db]
+# Versão do Postgres do projeto remoto.
+major_version = 15
