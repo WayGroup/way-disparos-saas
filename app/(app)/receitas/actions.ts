@@ -51,34 +51,17 @@ export async function deleteRecipeAction(id: string): Promise<void> {
 export async function saveRecipeAction(id: string, payload: SaveRecipePayload): Promise<void> {
   const supabase = await createServerSupabase();
 
-  const { error: upErr } = await supabase
-    .from("recipes")
-    .update({
-      name: payload.name,
-      description: payload.description,
-      active: payload.active,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", id);
-  if (upErr) throw new Error(`Falha ao salvar receita: ${upErr.message}`);
-
-  const { error: delInputsErr } = await supabase.from("recipe_inputs").delete().eq("recipe_id", id);
-  if (delInputsErr) throw new Error(`Falha ao limpar inputs: ${delInputsErr.message}`);
-  const { error: delSlotsErr } = await supabase.from("recipe_slots").delete().eq("recipe_id", id);
-  if (delSlotsErr) throw new Error(`Falha ao limpar slots: ${delSlotsErr.message}`);
-
-  if (payload.inputs.length > 0) {
-    const { error } = await supabase.from("recipe_inputs").insert(
-      payload.inputs.map((i, idx) => ({ recipe_id: id, ...i, sort_order: idx })),
-    );
-    if (error) throw new Error(`Falha ao salvar inputs: ${error.message}`);
-  }
-  if (payload.slots.length > 0) {
-    const { error } = await supabase.from("recipe_slots").insert(
-      payload.slots.map((s, idx) => ({ recipe_id: id, ...s, sort_order: idx })),
-    );
-    if (error) throw new Error(`Falha ao salvar slots: ${error.message}`);
-  }
+  // Salva tudo numa única transação atômica (função save_recipe — migração 0010).
+  // O sort_order é derivado da ordem dos arrays dentro da função (with ordinality).
+  const { error } = await supabase.rpc("save_recipe", {
+    p_id: id,
+    p_name: payload.name,
+    p_description: payload.description,
+    p_active: payload.active,
+    p_inputs: payload.inputs,
+    p_slots: payload.slots,
+  });
+  if (error) throw new Error(`Falha ao salvar receita: ${error.message}`);
 
   revalidatePath("/receitas");
   revalidatePath(`/receitas/${id}`);
