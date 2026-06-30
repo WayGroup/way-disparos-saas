@@ -140,5 +140,6 @@ export type CopyMessage = {
   chat_id: string;
   role: "user" | "assistant";
   content: string;
+  attachments: { kind: "image" | "pdf"; storage_path: string; mime_type: string; filename: string }[];
   created_at: string;
 };

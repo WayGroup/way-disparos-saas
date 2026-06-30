@@ -40,8 +40,8 @@ export async function sendCopyMessageAction(chatId: string, message: string): Pr
   }
 
   const history = [
-    ...data.messages.map((m) => ({ role: m.role, content: m.content })),
-    { role: "user" as const, content: trimmed },
+    ...data.messages.map((m) => ({ role: m.role, content: m.content, attachments: m.attachments ?? [] })),
+    { role: "user" as const, content: trimmed, attachments: [] },
   ];
 
   const brandText = compileBrandKnowledge(await listBrandBlocks());
