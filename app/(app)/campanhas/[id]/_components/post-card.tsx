@@ -57,7 +57,7 @@ export function PostCard({ campaignId, post, assets }: { campaignId: string; pos
           <div className="font-mono text-[10px] uppercase tracking-widest text-ink2">Mensagem do post</div>
           <p className="text-sm mt-1 leading-relaxed whitespace-pre-wrap">{post.copy}</p>
           <p className="text-xs text-muted mt-2 font-mono">Mídia sugerida: {post.media}</p>
-          <MediaPicker assets={assets} currentId={post.asset_id} onPick={(id) => setPostAssetAction(campaignId, post.sort_order, id)} />
+          <MediaPicker assets={assets} currentId={post.asset_id} suggestion={post.media} onPick={(id) => setPostAssetAction(campaignId, post.sort_order, id)} />
           <div className="mt-2 flex gap-3"><CopyButton text={post.copy} label="copiar mensagem" /><CopyButton text={post.media} label="copiar mídia" /></div>
         </div>
         <div className="mt-4 pt-3 border-t border-line flex justify-end gap-3">

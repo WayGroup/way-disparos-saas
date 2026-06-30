@@ -8,17 +8,18 @@ export async function registerAssetAction(input: {
   storagePath: string;
   mime: string;
   size: number;
-}): Promise<void> {
+}): Promise<string> {
   const supabase = await createServerSupabase();
-  const { error } = await supabase.from("assets").insert({
+  const { data, error } = await supabase.from("assets").insert({
     filename: input.filename,
     storage_path: input.storagePath,
     kind: assetKindFromMime(input.mime),
     mime_type: input.mime,
     size_bytes: input.size,
-  });
+  }).select("id").single();
   if (error) throw new Error(`Falha ao registrar mídia: ${error.message}`);
   revalidatePath("/midias");
+  return data.id as string;
 }
 
 export async function deleteAssetAction(id: string, storagePath: string): Promise<void> {
