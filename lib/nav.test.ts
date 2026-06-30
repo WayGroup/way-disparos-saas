@@ -5,6 +5,7 @@ describe("nav", () => {
   it("expõe os itens de navegação na ordem do mockup", () => {
     expect(NAV_ITEMS.map((i) => i.href)).toEqual([
       "/campanhas",
+      "/copywriter",
       "/receitas",
       "/midias",
       "/links",
