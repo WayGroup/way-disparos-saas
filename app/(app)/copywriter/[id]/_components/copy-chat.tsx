@@ -2,8 +2,15 @@
 import { useState, useTransition, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import type { CopyMessage } from "@/lib/db/types";
+import type { Attachment } from "@/lib/ai/copy-chat";
+import { createBrowserSupabase } from "@/lib/supabase/client";
+import { buildStoragePath } from "@/lib/assets/storage-path";
+import { assetKindFromMime } from "@/lib/assets/kind";
 import { sendCopyMessageAction } from "../../actions";
 import { CopyButton } from "./copy-button";
+
+const PUBLIC_BASE =
+  (process.env.NEXT_PUBLIC_SUPABASE_URL ?? "") + "/storage/v1/object/public/assets/";
 
 export function CopyChat({
   chatId,
@@ -16,24 +23,68 @@ export function CopyChat({
   const [input, setInput] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const [staged, setStaged] = useState<Attachment[]>([]);
+  const [uploading, setUploading] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [initialMessages.length, pending]);
 
+  async function handleFiles(files: FileList) {
+    setUploading(true);
+    const supabase = createBrowserSupabase();
+    const newAttachments: Attachment[] = [];
+
+    for (const file of Array.from(files)) {
+      if (file.size > 20 * 1024 * 1024) {
+        setError(`Arquivo "${file.name}" é grande demais (>20MB).`);
+        continue;
+      }
+      const kind = assetKindFromMime(file.type);
+      if (kind !== "image" && kind !== "pdf") {
+        setError(`Arquivo "${file.name}" não é imagem nem PDF.`);
+        continue;
+      }
+      const path = buildStoragePath(file.name, crypto.randomUUID().slice(0, 8));
+      const { error: uploadError } = await supabase.storage
+        .from("assets")
+        .upload(path, file, {
+          contentType: file.type || "application/octet-stream",
+          upsert: false,
+        });
+      if (uploadError) {
+        setError(`Falha ao enviar "${file.name}": ${uploadError.message}`);
+        continue;
+      }
+      newAttachments.push({
+        kind: kind as "image" | "pdf",
+        storage_path: path,
+        mime_type: file.type,
+        filename: file.name,
+      });
+    }
+
+    setStaged((prev) => [...prev, ...newAttachments]);
+    setUploading(false);
+    if (fileRef.current) fileRef.current.value = "";
+  }
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const msg = input.trim();
-    if (!msg || pending) return;
+    if ((!msg && staged.length === 0) || pending || uploading) return;
     setInput("");
+    const attachments = staged;
+    setStaged([]);
     setError(null);
     startTransition(async () => {
       try {
-        await sendCopyMessageAction(chatId, msg);
+        await sendCopyMessageAction(chatId, msg, attachments);
         router.refresh();
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "Falha ao enviar mensagem.");
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Falha ao enviar mensagem.");
       }
     });
   }
@@ -61,6 +112,35 @@ export function CopyChat({
               }`}
             >
               {m.content}
+              {m.attachments && m.attachments.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {m.attachments.map((a, i) => {
+                    const url = PUBLIC_BASE + a.storage_path;
+                    if (a.kind === "image") {
+                      return (
+                        <a key={i} href={url} target="_blank" rel="noreferrer">
+                          <img
+                            src={url}
+                            alt={a.filename}
+                            className="max-h-40 rounded-lg border border-line object-cover"
+                          />
+                        </a>
+                      );
+                    }
+                    return (
+                      <a
+                        key={i}
+                        href={url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex items-center gap-1 rounded-lg border border-line bg-paper px-2 py-1 text-xs text-ink hover:bg-line/30 transition"
+                      >
+                        📄 {a.filename}
+                      </a>
+                    );
+                  })}
+                </div>
+              )}
             </div>
             {m.role === "assistant" && (
               <div className="mt-1">
@@ -79,7 +159,58 @@ export function CopyChat({
 
       <form onSubmit={handleSubmit} className="px-4 py-3 border-t border-line">
         {error && <p className="text-xs text-risk mb-2">{error}</p>}
+
+        {staged.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-2">
+            {staged.map((a, i) => (
+              <div
+                key={i}
+                className="flex items-center gap-1 rounded-lg border border-line bg-paper px-2 py-1 text-xs text-ink"
+              >
+                {a.kind === "image" ? (
+                  <img
+                    src={PUBLIC_BASE + a.storage_path}
+                    alt={a.filename}
+                    className="h-10 w-10 rounded object-cover"
+                  />
+                ) : (
+                  <span>📄 {a.filename}</span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setStaged((prev) => prev.filter((_, idx) => idx !== i))}
+                  className="ml-1 text-muted hover:text-risk transition"
+                  aria-label="Remover"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
         <div className="flex gap-2">
+          <input
+            ref={fileRef}
+            type="file"
+            hidden
+            accept="image/*,application/pdf"
+            multiple
+            onChange={(e) => {
+              if (e.target.files && e.target.files.length > 0) {
+                handleFiles(e.target.files);
+              }
+            }}
+          />
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            disabled={pending || uploading}
+            className="rounded-lg border border-line bg-paper px-3 py-2 text-sm text-muted hover:text-ink hover:bg-line/30 transition disabled:opacity-50"
+            title="Anexar imagem ou PDF"
+          >
+            {uploading ? "…" : "📎"}
+          </button>
           <input
             className="flex-1 rounded-lg border border-line bg-paper px-3 py-2 text-sm outline-none focus:border-emerald placeholder:text-muted"
             placeholder="O que você quer gerar?"
@@ -89,7 +220,7 @@ export function CopyChat({
           />
           <button
             type="submit"
-            disabled={pending || !input.trim()}
+            disabled={pending || uploading || (!input.trim() && staged.length === 0)}
             className="rounded-lg bg-emerald hover:bg-emeraldd transition text-white px-3 py-2 text-sm font-semibold disabled:opacity-50"
           >
             →
