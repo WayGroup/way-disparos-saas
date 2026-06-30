@@ -7,6 +7,9 @@ import { CopyButton } from "./copy-button";
 import { formatSendAt } from "@/lib/schedule";
 import { MediaPicker } from "./media-picker";
 
+const COPY_REVEAL = "opacity-0 group-hover:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity";
+const COPY_REVEAL_STEP = "opacity-0 group-hover/step:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity";
+
 export function TouchCard({ campaignId, touch, assets }: { campaignId: string; touch: CampaignTouch; assets: Asset[] }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
@@ -36,63 +39,87 @@ export function TouchCard({ campaignId, touch, assets }: { campaignId: string; t
 
   if (!editing) {
     return (
-      <div className={`rounded-xl border bg-white p-5 ${touch.risk_flag ? "border-risk/40" : "border-line"}`}>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2"><span className="font-mono text-xs text-emeraldd font-semibold">{touch.offset_label}</span><span className="font-display font-bold">{touch.role}</span></div>
-          <div className="flex items-center gap-2">
-            {touch.risk_flag && <span className="rounded-full bg-risk/15 text-risk text-xs font-mono px-2.5 py-1">⚠ risco reclassificação</span>}
-            <span className={`rounded-full text-xs font-mono font-medium px-2.5 py-1 ${touch.meta_category === "UTILITY" ? "bg-utility/12 text-utility" : "bg-marketing/12 text-marketing"}`}>{touch.meta_category}</span>
+      <div className={`rounded-2xl border bg-white p-6 ${touch.risk_flag ? "border-risk/40" : "border-line"}`}>
+        {/* cabeçalho */}
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <span className="font-mono text-xs text-emeraldd font-semibold">{touch.offset_label}</span>
+            <h3 className="font-display font-bold text-lg leading-tight">{touch.role}</h3>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            {touch.risk_flag && <span className="rounded-full bg-risk/15 text-risk text-[11px] font-mono px-2.5 py-1">⚠ risco reclassificação</span>}
+            <span className={`rounded-full text-[11px] font-mono font-medium px-2.5 py-1 ${touch.meta_category === "UTILITY" ? "bg-utility/12 text-utility" : "bg-marketing/12 text-marketing"}`}>{touch.meta_category}</span>
           </div>
         </div>
-        <div className="mt-2 flex items-center gap-2">
-          <span className="font-mono text-xs bg-paper border border-line rounded px-2 py-0.5">{touch.template_name || "— sem nome —"}</span>
-          <CopyButton text={touch.template_name} label="copiar nome" />
+        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs">
+          <span className="inline-flex items-center gap-2">
+            <span className="font-mono bg-paper border border-line rounded px-2 py-0.5">{touch.template_name || "— sem nome —"}</span>
+            <CopyButton text={touch.template_name} label="copiar nome" />
+          </span>
           {touch.send_at && (
-            <span className="inline-flex items-center gap-2 font-mono text-xs bg-emerald/10 text-emeraldd rounded px-2 py-0.5">
-              📅 {formatSendAt(touch.send_at)}
+            <span className="inline-flex items-center gap-2 font-mono text-emeraldd">
+              <span>📅 {formatSendAt(touch.send_at)}</span>
               <CopyButton text={touch.send_at} />
             </span>
           )}
         </div>
-        <div className="mt-4 space-y-3">
-          <div className="pl-3 border-l-2 border-ink2">
-            <div className="font-mono text-[10px] uppercase tracking-widest text-ink2">Template · pago</div>
-            <p className="text-sm mt-1 leading-relaxed whitespace-pre-wrap">{touch.template_body}</p>
-            <div className="flex gap-2 mt-2 flex-wrap">
-              {touch.buttons.map((b, bi) => (
-                <span key={bi} className="inline-flex items-center gap-1 rounded-md border border-line px-2 py-0.5 text-xs">
-                  <span>{b.type === "url" ? "🔗" : "↩"}</span>
-                  <span>{b.text}</span>
-                  {b.type === "url" && b.url && <a href={b.url} target="_blank" rel="noreferrer" className="text-emeraldd underline truncate max-w-[160px]">{b.url}</a>}
-                </span>
+
+        {/* blocos */}
+        <div className="mt-5 space-y-4">
+          {/* template */}
+          <section className="group rounded-xl border border-line p-4">
+            <div className="flex items-center justify-between border-b border-line pb-2 mb-3">
+              <div className="font-mono text-[11px] uppercase tracking-widest text-ink2">Template <span className="text-muted">· pago</span></div>
+              <CopyButton text={touch.template_body} label="copiar texto" className={COPY_REVEAL} />
+            </div>
+            <p className="text-sm leading-relaxed whitespace-pre-wrap">{touch.template_body}</p>
+            {touch.buttons.length > 0 && (
+              <div className="mt-3 flex items-center gap-2 flex-wrap">
+                {touch.buttons.map((b, bi) => (
+                  <span key={bi} className="inline-flex items-center gap-1 rounded-md border border-line px-2 py-0.5 text-xs">
+                    <span>{b.type === "url" ? "🔗" : "↩"}</span>
+                    <span>{b.text}</span>
+                    {b.type === "url" && b.url && <a href={b.url} target="_blank" rel="noreferrer" className="text-emeraldd underline truncate max-w-[160px]">{b.url}</a>}
+                  </span>
+                ))}
+                <CopyButton text={touch.buttons.map((b) => b.type === "url" ? `${b.text} → ${b.url}` : b.text).join("\n")} label="copiar botões" className={COPY_REVEAL} />
+              </div>
+            )}
+          </section>
+
+          {/* janela 24h */}
+          <section className="rounded-xl border border-line p-4">
+            <div className="font-mono text-[11px] uppercase tracking-widest text-emeraldd border-b border-line pb-2 mb-3">Janela 24h <span className="text-muted">· grátis</span></div>
+            <div className="space-y-2.5">
+              {touch.window_steps.map((w, wi) => (
+                <div key={wi} className="group/step rounded-lg border border-line bg-paper/50 p-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="text-sm leading-relaxed">{w.caption}</p>
+                    <CopyButton text={w.caption} className={`shrink-0 ${COPY_REVEAL_STEP}`} />
+                  </div>
+                  <MediaPicker assets={assets} currentId={w.asset_id ?? null} suggestion={w.media} onPick={(id) => setTouchStepAssetAction(campaignId, touch.sort_order, wi, id)} />
+                </div>
               ))}
             </div>
-            <div className="mt-2 flex gap-3"><CopyButton text={touch.template_body} label="copiar texto" /><CopyButton text={touch.buttons.map((b) => b.type === "url" ? `${b.text} → ${b.url}` : b.text).join("\n")} label="copiar botões" /></div>
-          </div>
-          <div className="pl-3 border-l-2 border-emerald">
-            <div className="font-mono text-[10px] uppercase tracking-widest text-emeraldd">Janela 24h · grátis</div>
-            {touch.window_steps.map((w, wi) => (
-              <div key={wi} className="mt-1">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-sm leading-relaxed"><span className="font-medium">{w.media}:</span> {w.caption}</p>
-                  <CopyButton text={`${w.media}: ${w.caption}`} />
-                </div>
-                <MediaPicker assets={assets} currentId={w.asset_id ?? null} suggestion={w.media} onPick={(id) => setTouchStepAssetAction(campaignId, touch.sort_order, wi, id)} />
-              </div>
-            ))}
-          </div>
-          <div className="pl-3 border-l-2 border-line">
-            <div className="font-mono text-[10px] uppercase tracking-widest text-muted">Fallback</div>
-            <p className="text-sm mt-1 leading-relaxed text-ink2 whitespace-pre-wrap">{touch.fallback_copy}</p>
-            <CopyButton text={touch.fallback_copy} className="mt-1" />
-          </div>
+          </section>
+
+          {/* fallback */}
+          <section className="group rounded-xl border border-line p-4">
+            <div className="flex items-center justify-between border-b border-line pb-2 mb-3">
+              <div className="font-mono text-[11px] uppercase tracking-widest text-muted">Fallback</div>
+              <CopyButton text={touch.fallback_copy} className={COPY_REVEAL} />
+            </div>
+            <p className="text-sm leading-relaxed text-ink2 whitespace-pre-wrap">{touch.fallback_copy}</p>
+          </section>
         </div>
-        <div className="mt-4 pt-3 border-t border-line flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="font-mono text-xs text-muted">CRM: {touch.crm_action}</span>
-            <CopyButton text={touch.crm_action} label="copiar crm" />
+
+        {/* rodapé */}
+        <div className="group mt-5 pt-3 border-t border-line flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="font-mono text-xs text-muted truncate">CRM: {touch.crm_action}</span>
+            <CopyButton text={touch.crm_action} label="copiar crm" className={`shrink-0 ${COPY_REVEAL}`} />
           </div>
-          <div className="flex gap-3">
+          <div className="flex gap-3 shrink-0">
             <button onClick={() => setEditing(true)} className="text-xs text-ink2 font-medium hover:underline">Editar</button>
             <button onClick={regenerate} disabled={pending} className="text-xs text-emeraldd font-medium hover:underline disabled:opacity-50">Regenerar</button>
           </div>

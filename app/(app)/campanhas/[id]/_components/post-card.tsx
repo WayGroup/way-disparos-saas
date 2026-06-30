@@ -7,6 +7,8 @@ import { CopyButton } from "./copy-button";
 import { formatSendAt } from "@/lib/schedule";
 import { MediaPicker } from "./media-picker";
 
+const COPY_REVEAL = "opacity-0 group-hover:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity";
+
 export function PostCard({ campaignId, post, assets }: { campaignId: string; post: CampaignGroupPost; assets: Asset[] }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
@@ -34,33 +36,46 @@ export function PostCard({ campaignId, post, assets }: { campaignId: string; pos
 
   if (!editing) {
     return (
-      <div className="rounded-xl border border-line bg-white p-5">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2"><span className="font-mono text-xs text-emeraldd font-semibold">{post.offset_label}</span><span className="font-display font-bold">{post.role}</span></div>
-          <span className="rounded-full bg-ink/8 text-ink2 text-xs font-mono px-2.5 py-1">POST EM GRUPO</span>
+      <div className="rounded-2xl border border-line bg-white p-6">
+        {/* cabeçalho */}
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <span className="font-mono text-xs text-emeraldd font-semibold">{post.offset_label}</span>
+            <h3 className="font-display font-bold text-lg leading-tight">{post.role}</h3>
+          </div>
+          <span className="rounded-full bg-ink/8 text-ink2 text-[11px] font-mono px-2.5 py-1 shrink-0">POST EM GRUPO</span>
         </div>
-        <div className="mt-2 flex items-center gap-2">
-          <span className="font-mono text-xs bg-paper border border-line rounded px-2 py-0.5">{post.message_code || "— sem código —"}</span>
-          <CopyButton text={post.message_code} label="copiar código" />
+        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs">
+          <span className="inline-flex items-center gap-2">
+            <span className="font-mono bg-paper border border-line rounded px-2 py-0.5">{post.message_code || "— sem código —"}</span>
+            <CopyButton text={post.message_code} label="copiar código" />
+          </span>
           {post.send_at && (
-            <span className="inline-flex items-center gap-2 font-mono text-xs bg-emerald/10 text-emeraldd rounded px-2 py-0.5">
-              📅 {formatSendAt(post.send_at)}
+            <span className="inline-flex items-center gap-2 font-mono text-emeraldd">
+              <span>📅 {formatSendAt(post.send_at)}</span>
               <CopyButton text={post.send_at} />
             </span>
           )}
         </div>
-        <div className="mt-2 flex items-center gap-2 font-mono text-xs text-muted">
-          <span>Comunidades: {post.communities}</span>
-          <CopyButton text={post.communities} />
-        </div>
-        <div className="pl-3 border-l-2 border-ink2 mt-3">
-          <div className="font-mono text-[10px] uppercase tracking-widest text-ink2">Mensagem do post</div>
-          <p className="text-sm mt-1 leading-relaxed whitespace-pre-wrap">{post.copy}</p>
-          <p className="text-xs text-muted mt-2 font-mono">Mídia sugerida: {post.media}</p>
-          <MediaPicker assets={assets} currentId={post.asset_id} suggestion={post.media} onPick={(id) => setPostAssetAction(campaignId, post.sort_order, id)} />
-          <div className="mt-2 flex gap-3"><CopyButton text={post.copy} label="copiar mensagem" /><CopyButton text={post.media} label="copiar mídia" /></div>
-        </div>
-        <div className="mt-4 pt-3 border-t border-line flex justify-end gap-3">
+
+        {/* mensagem */}
+        <section className="group mt-5 rounded-xl border border-line p-4">
+          <div className="flex items-center justify-between border-b border-line pb-2 mb-3">
+            <div className="font-mono text-[11px] uppercase tracking-widest text-ink2">Mensagem do post</div>
+            <CopyButton text={post.copy} label="copiar mensagem" className={COPY_REVEAL} />
+          </div>
+          <div className="flex items-center gap-2 font-mono text-xs text-muted mb-2">
+            <span className="truncate">Comunidades: {post.communities}</span>
+            <CopyButton text={post.communities} className={`shrink-0 ${COPY_REVEAL}`} />
+          </div>
+          <p className="text-sm leading-relaxed whitespace-pre-wrap">{post.copy}</p>
+          <div className="mt-3">
+            <MediaPicker assets={assets} currentId={post.asset_id} suggestion={post.media} onPick={(id) => setPostAssetAction(campaignId, post.sort_order, id)} />
+          </div>
+        </section>
+
+        {/* rodapé */}
+        <div className="mt-5 pt-3 border-t border-line flex justify-end gap-3">
           <button onClick={() => setEditing(true)} className="text-xs text-ink2 font-medium hover:underline">Editar</button>
           <button onClick={regenerate} disabled={pending} className="text-xs text-emeraldd font-medium hover:underline disabled:opacity-50">Regenerar</button>
         </div>
