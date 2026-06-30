@@ -9,7 +9,7 @@ import { MediaPicker } from "./media-picker";
 
 const COPY_REVEAL = "opacity-0 group-hover:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity";
 
-export function PostCard({ campaignId, post, assets }: { campaignId: string; post: CampaignGroupPost; assets: Asset[] }) {
+export function PostCard({ campaignId, post, assets, highlight = false }: { campaignId: string; post: CampaignGroupPost; assets: Asset[]; highlight?: boolean }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -36,7 +36,7 @@ export function PostCard({ campaignId, post, assets }: { campaignId: string; pos
 
   if (!editing) {
     return (
-      <div className="rounded-2xl border border-line bg-white p-6">
+      <div id={`grupos-${post.sort_order}`} className={`rounded-2xl border border-line bg-white p-6 scroll-mt-24 transition-shadow ${highlight ? "ring-2 ring-emerald ring-offset-2" : ""}`}>
         {/* cabeçalho */}
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-2.5">
