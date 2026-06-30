@@ -4,7 +4,7 @@ import { createServerSupabase } from "@/lib/supabase/server";
 import { getCopyChat } from "@/lib/db/copy-chats";
 import { compileBrandKnowledge } from "@/lib/ai/brand";
 import { listBrandBlocks } from "@/lib/db/brand-knowledge";
-import { generateCopyReply, chatTitleFrom } from "@/lib/ai/copy-chat";
+import { generateCopyReply, chatTitleFrom, type Attachment } from "@/lib/ai/copy-chat";
 
 export async function createCopyChatAction(): Promise<string> {
   const supabase = await createServerSupabase();
@@ -18,9 +18,13 @@ export async function createCopyChatAction(): Promise<string> {
   return data.id as string;
 }
 
-export async function sendCopyMessageAction(chatId: string, message: string): Promise<string> {
+export async function sendCopyMessageAction(
+  chatId: string,
+  message: string,
+  attachments: Attachment[] = [],
+): Promise<string> {
   const trimmed = message.trim();
-  if (!trimmed) throw new Error("Escreva sua mensagem.");
+  if (!trimmed && attachments.length === 0) throw new Error("Escreva sua mensagem ou anexe um arquivo.");
 
   const data = await getCopyChat(chatId);
   if (!data) throw new Error("Conversa não encontrada.");
@@ -29,19 +33,20 @@ export async function sendCopyMessageAction(chatId: string, message: string): Pr
 
   const { error: e1 } = await supabase
     .from("copy_messages")
-    .insert({ chat_id: chatId, role: "user", content: trimmed });
+    .insert({ chat_id: chatId, role: "user", content: trimmed, attachments });
   if (e1) throw new Error(`Falha ao salvar mensagem: ${e1.message}`);
 
   if (data.chat.title === "Nova conversa") {
+    const title = trimmed ? chatTitleFrom(trimmed) : "Imagem/arquivo";
     await supabase
       .from("copy_chats")
-      .update({ title: chatTitleFrom(trimmed) })
+      .update({ title })
       .eq("id", chatId);
   }
 
   const history = [
-    ...data.messages.map((m) => ({ role: m.role, content: m.content })),
-    { role: "user" as const, content: trimmed },
+    ...data.messages.map((m) => ({ role: m.role, content: m.content, attachments: m.attachments ?? [] })),
+    { role: "user" as const, content: trimmed, attachments },
   ];
 
   const brandText = compileBrandKnowledge(await listBrandBlocks());
