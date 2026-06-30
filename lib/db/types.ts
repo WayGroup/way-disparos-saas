@@ -127,3 +127,18 @@ export type StandardLink = {
   sort_order: number;
   created_at: string;
 };
+
+export type CopyChat = {
+  id: string;
+  title: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CopyMessage = {
+  id: string;
+  chat_id: string;
+  role: "user" | "assistant";
+  content: string;
+  created_at: string;
+};
