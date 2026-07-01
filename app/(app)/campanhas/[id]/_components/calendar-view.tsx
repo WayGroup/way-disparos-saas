@@ -80,6 +80,7 @@ function PieceChip({
         className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-mono truncate max-w-full ${chipColor(piece)}`}
       >
         {time && <span className="shrink-0">{time}</span>}
+        {piece.mediaMissing && <span className="shrink-0 text-risk" title="Falta mídia">⚠</span>}
         <span className="truncate">{piece.role}</span>
       </div>
     </HoverPreview>
