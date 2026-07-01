@@ -1,19 +1,27 @@
 "use client";
-
 import { useEffect } from "react";
 import type { Piece } from "@/lib/campaign-pieces";
+import type { CampaignTouch, CampaignGroupPost, Asset } from "@/lib/db/types";
 import { pieceTime } from "@/lib/campaign-pieces";
 import { formatSendAt } from "@/lib/schedule";
 import { WhatsappPreview } from "./whatsapp-preview";
+import { TouchCard } from "./touch-card";
+import { PostCard } from "./post-card";
 
 export function PieceDetailModal({
   piece,
+  touch,
+  post,
+  campaignId,
+  assets,
   onClose,
-  onOpenInList,
 }: {
   piece: Piece;
+  touch: CampaignTouch | null;
+  post: CampaignGroupPost | null;
+  campaignId: string;
+  assets: Asset[];
   onClose: () => void;
-  onOpenInList: (p: Piece) => void;
 }) {
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -25,63 +33,46 @@ export function PieceDetailModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-ink/40 flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 bg-ink/40 flex items-start justify-center overflow-y-auto p-4 sm:p-8"
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-2xl border border-line max-w-md w-full p-5"
+        className="bg-paper rounded-2xl border border-line w-full max-w-5xl my-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-start justify-between gap-3 mb-3">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="font-mono text-xs text-emeraldd font-semibold">
-                {piece.offset_label}
-              </span>
-              <h3 className="font-display font-bold">{piece.role}</h3>
-            </div>
-            <div className="mt-1 flex items-center gap-2 font-mono text-[11px] text-muted">
-              <span className="rounded-full bg-ink/8 px-2 py-0.5">
-                {piece.track === "api" ? "API" : "GRUPO"}
-              </span>
-              {piece.send_at && (
-                <span>📅 {formatSendAt(piece.send_at)}</span>
-              )}
-              {piece.meta_category && (
-                <span
-                  className={
-                    piece.meta_category === "UTILITY"
-                      ? "text-utility"
-                      : "text-marketing"
-                  }
-                >
-                  {piece.meta_category}
-                </span>
-              )}
-            </div>
+        {/* cabeçalho */}
+        <div className="flex items-center justify-between gap-3 px-5 py-3 border-b border-line">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="font-mono text-xs text-emeraldd font-semibold shrink-0">{piece.offset_label}</span>
+            <h3 className="font-display font-bold truncate">{piece.role}</h3>
+            <span className="rounded-full bg-ink/8 text-ink2 text-[10px] font-mono px-2 py-0.5 shrink-0">
+              {piece.track === "api" ? "API" : "GRUPO"}
+            </span>
+            {piece.send_at && (
+              <span className="font-mono text-[11px] text-muted shrink-0 hidden sm:inline">📅 {formatSendAt(piece.send_at)}</span>
+            )}
           </div>
-          <button
-            onClick={onClose}
-            className="text-muted hover:text-ink text-lg leading-none"
-          >
-            ×
-          </button>
+          <button onClick={onClose} aria-label="Fechar" className="text-muted hover:text-ink text-xl leading-none shrink-0">×</button>
         </div>
 
-        <WhatsappPreview
-          message={piece.message}
-          buttons={piece.buttons}
-          imageUrl={piece.imageUrl}
-          time={pieceTime(piece.send_at) || "11:48"}
-        />
-
-        <div className="mt-4 flex justify-end">
-          <button
-            onClick={() => onOpenInList(piece)}
-            className="rounded-lg bg-emerald hover:bg-emeraldd text-white text-sm font-semibold px-4 py-2"
-          >
-            Abrir na lista →
-          </button>
+        {/* card completo + prévia ao lado */}
+        <div className="grid gap-5 p-5 grid-cols-1 lg:grid-cols-[minmax(0,1fr)_340px]">
+          <div className="min-w-0">
+            {touch && <TouchCard campaignId={campaignId} touch={touch} assets={assets} />}
+            {post && <PostCard campaignId={campaignId} post={post} assets={assets} />}
+            {!touch && !post && <p className="text-sm text-muted">Peça não encontrada.</p>}
+          </div>
+          <div className="min-w-0">
+            <div className="font-mono text-[10px] uppercase tracking-widest text-muted mb-2">Prévia no WhatsApp</div>
+            <div className="lg:sticky lg:top-2">
+              <WhatsappPreview
+                message={piece.message}
+                buttons={piece.buttons}
+                imageUrl={piece.imageUrl}
+                time={pieceTime(piece.send_at) || "11:48"}
+              />
+            </div>
+          </div>
         </div>
       </div>
     </div>
