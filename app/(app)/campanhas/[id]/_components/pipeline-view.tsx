@@ -29,6 +29,9 @@ export function PipelineView({ pieces, onOpen }: { pieces: Piece[]; onOpen: (p: 
                   </div>
                   <p className="font-display font-bold text-sm mt-1 leading-tight">{p.role}</p>
                   <p className="text-xs text-muted mt-1 line-clamp-2">{p.message}</p>
+                  {p.mediaMissing && (
+                    <span className="inline-flex items-center gap-1 mt-2 rounded-full bg-risk/12 text-risk text-[10px] font-mono px-2 py-0.5">⚠ falta mídia</span>
+                  )}
                 </div>
               </HoverPreview>
             ))}

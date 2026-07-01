@@ -16,6 +16,7 @@ export type Piece = {
   meta_category?: "UTILITY" | "MARKETING";
   communities?: string;
   imageUrl?: string;
+  mediaMissing?: boolean;
   badge: string;
 };
 
@@ -215,6 +216,7 @@ export function toPieces(campaign: CampaignWithContent, assets: Asset[]): Piece[
       buttons: t.buttons,
       meta_category: t.meta_category,
       imageUrl,
+      mediaMissing: t.window_steps.some((s) => !s.asset_id),
       badge: t.template_name,
     });
   }
@@ -240,6 +242,7 @@ export function toPieces(campaign: CampaignWithContent, assets: Asset[]): Piece[
       buttons: [],
       communities: p.communities,
       imageUrl,
+      mediaMissing: !!p.media && !p.asset_id,
       badge: p.message_code,
     });
   }
