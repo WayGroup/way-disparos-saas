@@ -1,5 +1,5 @@
 "use client";
-import { useState, useTransition, useMemo, useEffect } from "react";
+import { useState, useTransition, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import type { CampaignWithContent, ChatMessage, Asset } from "@/lib/db/types";
 import { approveCampaignAction } from "../../actions";
@@ -27,31 +27,10 @@ export function CampaignView({
   const [view, setView] = useState<View>("lista");
   const [track, setTrack] = useState<"api" | "grupos">("api");
   const [selected, setSelected] = useState<Piece | null>(null);
-  const [focusKey, setFocusKey] = useState<string | null>(null);
-  const [highlightKey, setHighlightKey] = useState<string | null>(null);
   const [approvePending, startApproveTransition] = useTransition();
 
   const pieces = useMemo(() => toPieces(campaign, assets), [campaign, assets]);
   const filtered = pieces.filter((p) => p.track === track);
-
-  function openInList(p: Piece) {
-    setSelected(null);
-    setTrack(p.track);
-    setView("lista");
-    setFocusKey(p.key);
-  }
-
-  useEffect(() => {
-    if (!focusKey || view !== "lista") return;
-    const el = document.getElementById(focusKey);
-    if (el) {
-      el.scrollIntoView({ behavior: "smooth", block: "center" });
-      setHighlightKey(focusKey);
-      const t = setTimeout(() => setHighlightKey(null), 1600);
-      setFocusKey(null);
-      return () => clearTimeout(t);
-    }
-  }, [focusKey, view]);
 
   return (
     <div className="h-[calc(100vh-var(--nav-height,56px))] flex flex-col">
@@ -113,13 +92,13 @@ export function CampaignView({
               {track === "api" ? (
                 <div className="space-y-5 max-w-3xl">
                   {campaign.touches.map((t) => (
-                    <TouchCard key={t.id} campaignId={campaign.id} touch={t} assets={assets} highlight={highlightKey === `api-${t.sort_order}`} />
+                    <TouchCard key={t.id} campaignId={campaign.id} touch={t} assets={assets} />
                   ))}
                 </div>
               ) : (
                 <div className="space-y-5 max-w-3xl">
                   {campaign.group_posts.map((p) => (
-                    <PostCard key={p.id} campaignId={campaign.id} post={p} assets={assets} highlight={highlightKey === `grupos-${p.sort_order}`} />
+                    <PostCard key={p.id} campaignId={campaign.id} post={p} assets={assets} />
                   ))}
                 </div>
               )}
@@ -137,7 +116,16 @@ export function CampaignView({
         )}
       </div>
 
-      {selected && <PieceDetailModal piece={selected} onClose={() => setSelected(null)} onOpenInList={openInList} />}
+      {selected && (
+        <PieceDetailModal
+          piece={selected}
+          touch={selected.track === "api" ? (campaign.touches.find((t) => t.sort_order === selected.sort_order) ?? null) : null}
+          post={selected.track === "grupos" ? (campaign.group_posts.find((p) => p.sort_order === selected.sort_order) ?? null) : null}
+          campaignId={campaign.id}
+          assets={assets}
+          onClose={() => setSelected(null)}
+        />
+      )}
     </div>
   );
 }
