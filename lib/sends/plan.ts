@@ -1,6 +1,6 @@
 import { toInstant } from "@/lib/schedule";
 import { withJitter, type JitterOptions } from "@/lib/sends/jitter";
-import { buildEvolutionPayload, type SendPayload } from "@/lib/sends/payload";
+import { buildEvolutionPayload, isGroupJid, type SendPayload } from "@/lib/sends/payload";
 
 export type PlanTarget = {
   community_id: string;
@@ -88,6 +88,9 @@ export function validateSchedulable(pieces: (PlanPiece & { label: string })[]): 
       issue("Nenhum grupo selecionado.");
     } else if (piece.targets.some((t) => !t.wa_group_id)) {
       issue("Grupo selecionado não está vinculado a um grupo do WhatsApp.");
+    } else if (piece.targets.some((t) => !isGroupJid(t.wa_group_id))) {
+      // Só grupo. Um destino que não seja @g.us não passa daqui.
+      issue("Destino inválido: não é um grupo do WhatsApp.");
     }
 
     if (buildEvolutionPayload(piece.payload, "x@g.us").length === 0) {

@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   buildEvolutionPayload,
   buildSendPayload,
+  isGroupJid,
   mediaTypeFromKind,
   type SendPayload,
 } from "@/lib/sends/payload";
@@ -23,6 +24,33 @@ function asset(over: Partial<Asset> = {}): Asset {
 }
 
 const publicUrl = (p: string) => `https://cdn.way.com/${p}`;
+
+// REGRA DE OURO: esta ferramenta só envia em grupo. Nunca no privado.
+describe("só grupo, nunca no privado", () => {
+  it("reconhece JID de grupo", () => {
+    expect(isGroupJid("120363000000000001@g.us")).toBe(true);
+  });
+
+  it("rejeita JID de pessoa (privado)", () => {
+    expect(isGroupJid("5511999999999@s.whatsapp.net")).toBe(false);
+    expect(isGroupJid("5531999999999@lid")).toBe(false);
+    expect(isGroupJid("status@broadcast")).toBe(false);
+    expect(isGroupJid("5531999999999")).toBe(false);
+    expect(isGroupJid("")).toBe(false);
+  });
+
+  it("montar mensagem para um número privado é ERRO — nada é enviado", () => {
+    const payload: SendPayload = { text: "oi", media: null };
+    expect(() => buildEvolutionPayload(payload, "5511999999999@s.whatsapp.net")).toThrow(
+      /não envia mensagem no privado/,
+    );
+  });
+
+  it("nem com mídia: o destino é checado antes de qualquer coisa", () => {
+    const payload = buildSendPayload("legenda", asset(), publicUrl);
+    expect(() => buildEvolutionPayload(payload, "5531999999999")).toThrow(/não é um grupo/);
+  });
+});
 
 describe("mediaTypeFromKind", () => {
   it("mapeia os kinds conhecidos", () => {

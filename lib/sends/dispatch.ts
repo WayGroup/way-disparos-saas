@@ -22,13 +22,17 @@ export const DISPATCH_LIMIT = 10;
  */
 async function sendOne(cfg: EvolutionConfig, send: ScheduledSend): Promise<DispatchResult> {
   const base = { id: send.id, wa_subject: send.wa_subject || send.wa_group_id };
-  const calls = buildEvolutionPayload(send.payload, send.wa_group_id);
-
-  if (calls.length === 0) {
-    return { ...base, ok: false, error: "Payload vazio: sem texto e sem mídia." };
-  }
 
   try {
+    // buildEvolutionPayload lança se o destino não for um grupo (@g.us). Fica dentro do
+    // try de propósito: um destino corrompido vira falha daquela linha, não uma exceção
+    // que derruba o worker e deixa a fila inteira presa em 'enviando'.
+    const calls = buildEvolutionPayload(send.payload, send.wa_group_id);
+
+    if (calls.length === 0) {
+      return { ...base, ok: false, error: "Payload vazio: sem texto e sem mídia." };
+    }
+
     let waMessageId = "";
     for (const call of calls) {
       const result = await evoSend(cfg, call);

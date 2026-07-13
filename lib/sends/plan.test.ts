@@ -106,6 +106,17 @@ describe("validateSchedulable", () => {
     expect(issues[0].message).toMatch(/não está vinculado/);
   });
 
+  // REGRA DE OURO: só grupo. Um número privado não pode nem ser agendado.
+  it("recusa destino que não é grupo — nem chega a entrar na fila", () => {
+    const privado = {
+      community_id: "c9",
+      wa_group_id: "5511999999999@s.whatsapp.net",
+      wa_subject: "Fulano",
+    };
+    const issues = validateSchedulable([labeled({ targets: [privado] })]);
+    expect(issues[0].message).toMatch(/não é um grupo/);
+  });
+
   it("reclama de peça sem texto e sem mídia", () => {
     const issues = validateSchedulable([labeled({ payload: { text: "", media: null } })]);
     expect(issues[0].message).toMatch(/sem texto e sem mídia/);
