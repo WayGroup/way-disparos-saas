@@ -14,6 +14,37 @@ export function computeSendAt(anchor: string, offsetDays: number, offsetTime: st
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(hh)}:${pad(mm)}`;
 }
 
+/**
+ * Offset fixo do Brasil. O horário de verão foi abolido em 2019, então não há
+ * DST a considerar. Se um dia voltar, este é o único ponto do código a mudar.
+ */
+export const BR_OFFSET = "-03:00";
+
+const SEND_AT_RE = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})$/;
+
+/**
+ * Converte o send_at do app ("YYYY-MM-DD HH:mm", sem fuso) no instante real (ISO UTC).
+ * É a fronteira entre a agenda editorial, que é local, e a fila, que é absoluta.
+ */
+export function toInstant(sendAt: string, offset: string = BR_OFFSET): string | null {
+  const m = sendAt.match(SEND_AT_RE);
+  if (!m) return null;
+
+  const [, y, mo, d, hh, mm] = m.map(Number) as unknown as number[];
+  if (Number(hh) > 23 || Number(mm) > 59) return null;
+
+  // O Date do JS não rejeita 31/02 — ele rola para 03/03. Sem esta checagem,
+  // uma data errada viraria silenciosamente outra data.
+  const probe = new Date(Date.UTC(y, mo - 1, d));
+  if (probe.getUTCFullYear() !== y || probe.getUTCMonth() !== mo - 1 || probe.getUTCDate() !== d) {
+    return null;
+  }
+
+  const date = new Date(`${sendAt.replace(" ", "T")}:00${offset}`);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toISOString();
+}
+
 const DIAS = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
 
 export function formatSendAt(value: string): string {

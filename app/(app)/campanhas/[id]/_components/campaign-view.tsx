@@ -2,7 +2,8 @@
 import { useState, useTransition, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import type { CampaignWithContent, ChatMessage, Asset, Community } from "@/lib/db/types";
-import { approveCampaignAction } from "../../actions";
+import { approveAndScheduleAction } from "../../actions";
+import type { ScheduleIssue } from "@/lib/sends/plan";
 import { toPieces, type Piece } from "@/lib/campaign-pieces";
 import { RefineChat } from "./refine-chat";
 import { TouchCard } from "./touch-card";
@@ -30,6 +31,22 @@ export function CampaignView({
   const [track, setTrack] = useState<"api" | "grupos">("api");
   const [selected, setSelected] = useState<Piece | null>(null);
   const [approvePending, startApproveTransition] = useTransition();
+  const [issues, setIssues] = useState<ScheduleIssue[]>([]);
+  const [scheduled, setScheduled] = useState<number | null>(null);
+
+  function approveAndSchedule() {
+    setIssues([]);
+    setScheduled(null);
+    startApproveTransition(async () => {
+      const result = await approveAndScheduleAction(campaign.id);
+      if (result.ok) {
+        setScheduled(result.scheduled);
+        router.refresh();
+      } else {
+        setIssues(result.issues);
+      }
+    });
+  }
 
   const pieces = useMemo(() => toPieces(campaign, assets), [campaign, assets]);
   const filtered = pieces.filter((p) => p.track === track);
@@ -54,14 +71,43 @@ export function CampaignView({
         <div className="flex items-center gap-2">
           <DuplicateButton campaignId={campaign.id} />
           <button
-            onClick={() => startApproveTransition(async () => { await approveCampaignAction(campaign.id); router.refresh(); })}
-            disabled={approvePending || campaign.status === "aprovada"}
+            onClick={approveAndSchedule}
+            disabled={approvePending}
+            title="Aprovar libera o envio automático nos grupos, no horário de cada peça."
             className="rounded-lg bg-emerald hover:bg-emeraldd transition text-white px-4 py-2 text-sm font-semibold disabled:opacity-50"
           >
-            {campaign.status === "aprovada" ? "Aprovada ✓" : approvePending ? "Aprovando…" : "Aprovar campanha"}
+            {approvePending
+              ? "Agendando…"
+              : campaign.status === "aprovada"
+                ? "Reagendar ↻"
+                : "Aprovar e agendar"}
           </button>
         </div>
       </header>
+
+      {(issues.length > 0 || scheduled !== null) && (
+        <div className="px-8 pt-4 shrink-0">
+          {issues.length > 0 ? (
+            <div className="rounded-xl border border-risk/30 bg-risk/5 p-4">
+              <p className="text-sm font-semibold text-risk">
+                Nada foi agendado. Resolva antes de aprovar:
+              </p>
+              <ul className="mt-2 space-y-1 text-sm text-ink2">
+                {issues.map((issue, i) => (
+                  <li key={i}>
+                    <span className="font-mono text-xs">{issue.label}</span> — {issue.message}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : (
+            <div className="rounded-xl border border-emerald/30 bg-emerald/5 p-4 text-sm text-emeraldd">
+              {scheduled} envio(s) na fila.{" "}
+              <a href="/envios" className="underline font-semibold">Ver em Envios</a>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Controles: visão + filtro de trilha */}
       <div className="px-8 pt-5 pb-3 shrink-0 flex items-center justify-between gap-3 flex-wrap">

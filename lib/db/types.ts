@@ -28,6 +28,28 @@ export type AppSettings = {
   updated_at: string;
 };
 
+export type SendStatus = "pendente" | "enviando" | "enviado" | "falhou" | "cancelado";
+
+export type ScheduledSend = {
+  id: string;
+  batch_id: string;
+  campaign_id: string | null;
+  post_id: string | null;
+  community_id: string | null;
+  wa_group_id: string;
+  wa_subject: string;
+  scheduled_at: string;
+  next_attempt_at: string | null;
+  status: SendStatus;
+  attempts: number;
+  last_error: string;
+  claimed_at: string | null;
+  sent_at: string | null;
+  wa_message_id: string | null;
+  payload: { text: string; media: { url: string; mediatype: string; mimetype: string; fileName: string } | null };
+  created_at: string;
+};
+
 export type Asset = {
   id: string;
   filename: string;

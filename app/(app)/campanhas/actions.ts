@@ -9,6 +9,11 @@ import { generateCampaign } from "@/lib/ai/generate";
 import { refineCampaign } from "@/lib/ai/refine";
 import { buildCode } from "@/lib/ai/nomenclature";
 import { computeSendAt } from "@/lib/schedule";
+import { listActiveGroups } from "@/lib/db/communities";
+import { listAssets } from "@/lib/db/assets";
+import { publicAssetUrl } from "@/lib/campaign-pieces";
+import { buildSendPayload } from "@/lib/sends/payload";
+import { planSends, validateSchedulable, type ScheduleIssue } from "@/lib/sends/plan";
 
 type GenLog = { campaign_id?: string; recipe_id: string; kind: string; ok: boolean; error?: string; duration_ms: number };
 
@@ -124,15 +129,83 @@ export async function generateCampaignAction(
   return campaignId;
 }
 
-export async function approveCampaignAction(id: string): Promise<void> {
+/**
+ * Monta as peças agendáveis da trilha Grupos, congelando texto e mídia no payload.
+ * A trilha API continua manual — não entra na fila.
+ */
+async function buildGroupPieces(campaignId: string) {
+  const [campaign, groups, assets] = await Promise.all([
+    getCampaign(campaignId),
+    listActiveGroups(),
+    listAssets(),
+  ]);
+  if (!campaign) throw new Error("Campanha não encontrada.");
+
+  const groupById = new Map(groups.map((g) => [g.id, g]));
+  const assetById = new Map(assets.map((a) => [a.id, a]));
+
+  const pieces = campaign.group_posts.map((post) => ({
+    post_id: post.id,
+    label: `${post.role} (${post.offset_label})`,
+    send_at: post.send_at,
+    payload: buildSendPayload(post.copy, post.asset_id ? (assetById.get(post.asset_id) ?? null) : null, publicAssetUrl),
+    targets: post.community_ids.flatMap((id) => {
+      const g = groupById.get(id);
+      // Grupo desativado ou sem JID some da lista de alvos; validate reclama depois.
+      return g?.wa_group_id ? [{ community_id: g.id, wa_group_id: g.wa_group_id, wa_subject: g.wa_subject }] : [];
+    }),
+  }));
+
+  return { campaign, pieces };
+}
+
+export type ScheduleResult =
+  | { ok: true; scheduled: number }
+  | { ok: false; issues: ScheduleIssue[] };
+
+/**
+ * Aprovar não é mais um selo: é o gatilho do envio. Valida tudo primeiro e,
+ * se houver qualquer problema, não escreve nada — nada de agendar meia campanha.
+ *
+ * Os problemas voltam como valor, não como exceção: em produção o Next.js mascara
+ * a mensagem de erros lançados numa Server Action, e o usuário precisa ver a lista.
+ */
+export async function approveAndScheduleAction(id: string): Promise<ScheduleResult> {
+  const { pieces } = await buildGroupPieces(id);
+
+  const issues = validateSchedulable(pieces);
+  if (issues.length > 0) return { ok: false, issues };
+
+  const planned = planSends(pieces);
   const supabase = await createServerSupabase();
+
+  // Reaprovar = replanejar. Só os pendentes são refeitos; o que já saiu ou está
+  // saindo permanece intocado.
+  const { error: eDel } = await supabase
+    .from("scheduled_sends")
+    .delete()
+    .eq("campaign_id", id)
+    .eq("status", "pendente");
+  if (eDel) throw new Error(`Falha ao limpar a fila da campanha: ${eDel.message}`);
+
+  if (planned.length > 0) {
+    const batchId = crypto.randomUUID();
+    const rows = planned.map((s) => ({ ...s, batch_id: batchId, campaign_id: id }));
+    const { error } = await supabase.from("scheduled_sends").insert(rows);
+    if (error) throw new Error(`Falha ao agendar envios: ${error.message}`);
+  }
+
   const { error } = await supabase
     .from("campaigns")
     .update({ status: "aprovada", updated_at: new Date().toISOString() })
     .eq("id", id);
   if (error) throw new Error(`Falha ao aprovar campanha: ${error.message}`);
+
   revalidatePath("/campanhas");
   revalidatePath(`/campanhas/${id}`);
+  revalidatePath("/envios");
+
+  return { ok: true, scheduled: planned.length };
 }
 
 export async function refineCampaignAction(
