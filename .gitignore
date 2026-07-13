@@ -43,3 +43,6 @@ next-env.d.ts
 
 # superpowers ledger
 .superpowers/
+
+# log do dev server local
+dev.log
