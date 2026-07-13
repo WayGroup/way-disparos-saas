@@ -16,16 +16,31 @@ async function evoFetch<T>(
   path: string,
   init?: { method?: "GET" | "POST"; body?: unknown; timeoutMs?: number },
 ): Promise<T> {
-  const res = await fetch(evoUrl(cfg.baseUrl, path), {
-    method: init?.method ?? "GET",
-    headers: {
-      apikey: cfg.apiKey,
-      "Content-Type": "application/json",
-    },
-    body: init?.body === undefined ? undefined : JSON.stringify(init.body),
-    cache: "no-store",
-    signal: AbortSignal.timeout(init?.timeoutMs ?? TIMEOUT_MS),
-  });
+  const timeoutMs = init?.timeoutMs ?? TIMEOUT_MS;
+
+  let res: Response;
+  try {
+    res = await fetch(evoUrl(cfg.baseUrl, path), {
+      method: init?.method ?? "GET",
+      headers: {
+        apikey: cfg.apiKey,
+        "Content-Type": "application/json",
+      },
+      body: init?.body === undefined ? undefined : JSON.stringify(init.body),
+      cache: "no-store",
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+  } catch (e) {
+    // AbortSignal.timeout lança um DOMException, que o Next não consegue serializar
+    // ao atravessar uma Server Action — o usuário via um 500 críptico em vez do motivo.
+    // Reembrulhar num Error normal preserva a mensagem.
+    if (e instanceof Error && e.name === "TimeoutError") {
+      throw new Error(`A Evolution não respondeu em ${timeoutMs / 1000}s (${path}).`);
+    }
+    throw new Error(
+      `Falha ao falar com a Evolution: ${e instanceof Error ? e.message : "erro desconhecido"}`,
+    );
+  }
 
   if (!res.ok) {
     const text = await res.text().catch(() => "");
