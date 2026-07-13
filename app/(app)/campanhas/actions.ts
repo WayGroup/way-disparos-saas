@@ -14,6 +14,7 @@ import { listAssets } from "@/lib/db/assets";
 import { publicAssetUrl } from "@/lib/campaign-pieces";
 import { buildSendPayload } from "@/lib/sends/payload";
 import { planSends, validateSchedulable, type ScheduleIssue } from "@/lib/sends/plan";
+import { partitionSchedulable } from "@/lib/sends/reschedule";
 import { dispatchDue } from "@/lib/sends/dispatch";
 
 type GenLog = { campaign_id?: string; recipe_id: string; kind: string; ok: boolean; error?: string; duration_ms: number };
@@ -160,6 +161,42 @@ async function buildGroupPieces(campaignId: string) {
   return { campaign, pieces };
 }
 
+/**
+ * Remonta a fila da campanha a partir do conteúdo atual das peças.
+ *
+ * Cada linha da fila guarda um snapshot do texto e da mídia. Sem isto, editar a peça
+ * deixaria a fila velha — o grupo receberia a versão antiga. Só apaga os `pendente`:
+ * o que já saiu, está saindo ou falhou é intocável.
+ *
+ * Não mexe no status da campanha. Rascunho continua rascunho, e o worker — que só
+ * entrega envio de campanha aprovada — segue segurando a fila. É por isso que dá para
+ * montar a fila na geração sem que nada dispare.
+ */
+async function rescheduleCampaign(campaignId: string): Promise<number> {
+  const { pieces } = await buildGroupPieces(campaignId);
+  const { schedulable } = partitionSchedulable(pieces);
+
+  const supabase = await createServerSupabase();
+  const { error: eDel } = await supabase
+    .from("scheduled_sends")
+    .delete()
+    .eq("campaign_id", campaignId)
+    .eq("status", "pendente");
+  if (eDel) throw new Error(`Falha ao limpar a fila: ${eDel.message}`);
+
+  const planned = planSends(schedulable);
+  if (planned.length > 0) {
+    const batchId = crypto.randomUUID();
+    const rows = planned.map((s) => ({ ...s, batch_id: batchId, campaign_id: campaignId }));
+    const { error } = await supabase.from("scheduled_sends").insert(rows);
+    if (error) throw new Error(`Falha ao agendar envios: ${error.message}`);
+  }
+
+  revalidatePath(`/campanhas/${campaignId}`);
+  revalidatePath("/disparos");
+  return planned.length;
+}
+
 export type ScheduleResult =
   | { ok: true; scheduled: number }
   | { ok: false; issues: ScheduleIssue[] };
@@ -174,28 +211,13 @@ export type ScheduleResult =
 export async function approveAndScheduleAction(id: string): Promise<ScheduleResult> {
   const { pieces } = await buildGroupPieces(id);
 
+  // Aprovar é rigoroso: qualquer peça inagendável bloqueia tudo. É o estado "vai pro ar".
   const issues = validateSchedulable(pieces);
   if (issues.length > 0) return { ok: false, issues };
 
-  const planned = planSends(pieces);
+  const scheduled = await rescheduleCampaign(id);
+
   const supabase = await createServerSupabase();
-
-  // Reaprovar = replanejar. Só os pendentes são refeitos; o que já saiu ou está
-  // saindo permanece intocado.
-  const { error: eDel } = await supabase
-    .from("scheduled_sends")
-    .delete()
-    .eq("campaign_id", id)
-    .eq("status", "pendente");
-  if (eDel) throw new Error(`Falha ao limpar a fila da campanha: ${eDel.message}`);
-
-  if (planned.length > 0) {
-    const batchId = crypto.randomUUID();
-    const rows = planned.map((s) => ({ ...s, batch_id: batchId, campaign_id: id }));
-    const { error } = await supabase.from("scheduled_sends").insert(rows);
-    if (error) throw new Error(`Falha ao agendar envios: ${error.message}`);
-  }
-
   const { error } = await supabase
     .from("campaigns")
     .update({ status: "aprovada", updated_at: new Date().toISOString() })
@@ -204,9 +226,9 @@ export async function approveAndScheduleAction(id: string): Promise<ScheduleResu
 
   revalidatePath("/campanhas");
   revalidatePath(`/campanhas/${id}`);
-  revalidatePath("/envios");
+  revalidatePath("/disparos");
 
-  return { ok: true, scheduled: planned.length };
+  return { ok: true, scheduled };
 }
 
 export async function refineCampaignAction(
@@ -266,6 +288,9 @@ export async function refineCampaignAction(
   });
   if (e2) throw new Error(`Falha ao salvar reply do assistente: ${e2.message}`);
 
+  // O refino reescreve copy e mídia das peças; a fila carrega um snapshot delas.
+  await rescheduleCampaign(campaignId);
+
   revalidatePath(`/campanhas/${campaignId}`);
   return result.reply;
 }
@@ -297,6 +322,7 @@ export async function updateGroupPostAction(
     .eq("campaign_id", campaignId)
     .eq("sort_order", sortOrder);
   if (error) throw new Error(`Falha ao atualizar post: ${error.message}`);
+  await rescheduleCampaign(campaignId);
   revalidatePath(`/campanhas/${campaignId}`);
 }
 
@@ -386,6 +412,7 @@ export async function setPostCommunitiesAction(
     const { error: e2 } = await supabase.from("campaign_group_post_communities").insert(rows);
     if (e2) throw new Error(`Falha ao salvar grupos do post: ${e2.message}`);
   }
+  await rescheduleCampaign(campaignId);
   revalidatePath(`/campanhas/${campaignId}`);
 }
 
@@ -393,6 +420,7 @@ export async function setPostAssetAction(campaignId: string, sortOrder: number, 
   const supabase = await createServerSupabase();
   const { error } = await supabase.from("campaign_group_posts").update({ asset_id: assetId || null }).eq("campaign_id", campaignId).eq("sort_order", sortOrder);
   if (error) throw new Error(`Falha ao anexar mídia: ${error.message}`);
+  await rescheduleCampaign(campaignId);
   revalidatePath(`/campanhas/${campaignId}`);
 }
 
