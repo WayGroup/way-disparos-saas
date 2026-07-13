@@ -58,6 +58,7 @@ export async function generateCampaignAction(
   recipeId: string,
   name: string,
   inputs: Record<string, string>,
+  communityIds: string[] = [],
 ): Promise<string> {
   const recipe = await getRecipe(recipeId);
   if (!recipe) throw new Error("Receita não encontrada.");
@@ -103,7 +104,7 @@ export async function generateCampaignAction(
       if (e1) throw new Error(`Falha ao salvar toques: ${e1.message}`);
     }
     if (content.group_posts.length > 0) {
-      const { error: e2 } = await supabase.from("campaign_group_posts").insert(
+      const { data: newPosts, error: e2 } = await supabase.from("campaign_group_posts").insert(
         content.group_posts.map((p, idx) => ({
           campaign_id: campaignId,
           sort_order: idx,
@@ -111,8 +112,19 @@ export async function generateCampaignAction(
           message_code: buildCode(recipe.recipe_type, gruposSlots[idx]?.code ?? "", anchorValue),
           send_at: computeSendAt(anchorValue, gruposSlots[idx]?.offset_days ?? 0, gruposSlots[idx]?.offset_time ?? ""),
         })),
-      );
+      ).select("id");
       if (e2) throw new Error(`Falha ao salvar posts: ${e2.message}`);
+
+      // A seleção da campanha é COPIADA para cada peça — não herdada. A peça segue
+      // sendo a única fonte de verdade sobre para onde ela vai, e pode divergir depois.
+      const posts = newPosts ?? [];
+      if (communityIds.length > 0 && posts.length > 0) {
+        const links = posts.flatMap((p) =>
+          communityIds.map((community_id) => ({ post_id: p.id as string, community_id })),
+        );
+        const { error: e3 } = await supabase.from("campaign_group_post_communities").insert(links);
+        if (e3) throw new Error(`Falha ao vincular grupos: ${e3.message}`);
+      }
     }
   } catch (e) {
     // rollback compensatório: remove a campanha órfã antes de propagar o erro
@@ -127,6 +139,16 @@ export async function generateCampaignAction(
   await logGeneration(supabase, {
     campaign_id: campaignId, recipe_id: recipeId, kind: "generate", ok: true, duration_ms: Date.now() - startedAt,
   });
+
+  // A fila nasce montada — e travada: o worker só entrega envio de campanha aprovada.
+  // Se falhar, a campanha continua de pé; a fila se remonta em qualquer edição ou na
+  // aprovação. Não vale destruir uma geração que custou 1 min de IA por causa disto.
+  try {
+    await rescheduleCampaign(campaignId);
+  } catch (e) {
+    console.error(`Campanha ${campaignId} gerada, mas a fila não foi montada:`, e);
+  }
+
   revalidatePath("/campanhas");
   return campaignId;
 }
