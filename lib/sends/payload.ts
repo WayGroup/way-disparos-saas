@@ -1,20 +1,7 @@
-import type { Asset } from "@/lib/db/types";
+import type { Asset, SendMediaKind, SendPayload } from "@/lib/db/types";
 import type { EvolutionCall } from "@/lib/evolution/types";
 
-export type SendMediaKind = "image" | "video" | "document" | "audio";
-
-export type SendMedia = {
-  url: string;
-  mediatype: SendMediaKind;
-  mimetype: string;
-  fileName: string;
-};
-
-/** O que uma linha da fila carrega congelado. */
-export type SendPayload = {
-  text: string;
-  media: SendMedia | null;
-};
+export type { SendMedia, SendMediaKind, SendPayload } from "@/lib/db/types";
 
 export function mediaTypeFromKind(kind: string): SendMediaKind {
   if (kind === "image") return "image";

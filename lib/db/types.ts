@@ -30,6 +30,21 @@ export type AppSettings = {
 
 export type SendStatus = "pendente" | "enviando" | "enviado" | "falhou" | "cancelado";
 
+export type SendMediaKind = "image" | "video" | "document" | "audio";
+
+export type SendMedia = {
+  url: string;
+  mediatype: SendMediaKind;
+  mimetype: string;
+  fileName: string;
+};
+
+/** O conteúdo congelado no momento do agendamento. É o jsonb da coluna `payload`. */
+export type SendPayload = {
+  text: string;
+  media: SendMedia | null;
+};
+
 export type ScheduledSend = {
   id: string;
   batch_id: string;
@@ -46,7 +61,7 @@ export type ScheduledSend = {
   claimed_at: string | null;
   sent_at: string | null;
   wa_message_id: string | null;
-  payload: { text: string; media: { url: string; mediatype: string; mimetype: string; fileName: string } | null };
+  payload: SendPayload;
   created_at: string;
 };
 
