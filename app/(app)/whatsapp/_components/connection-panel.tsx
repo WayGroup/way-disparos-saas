@@ -1,6 +1,5 @@
 "use client";
 import { useEffect, useRef, useState, useTransition } from "react";
-import type { Community } from "@/lib/db/types";
 import type { EvoConnectionState, EvoQrCode } from "@/lib/evolution/types";
 import { fetchQrCodeAction, refreshStateAction, syncGroupsAction, type SyncResult } from "../actions";
 
@@ -19,11 +18,11 @@ const STATE_STYLE: Record<EvoConnectionState, string> = {
 export function ConnectionPanel({
   initialState,
   configError,
-  communities,
+  syncedCount,
 }: {
   initialState: EvoConnectionState | null;
   configError: string | null;
-  communities: Community[];
+  syncedCount: number;
 }) {
   const [state, setState] = useState(initialState);
   const [qr, setQr] = useState<EvoQrCode | null>(null);
@@ -65,9 +64,6 @@ export function ConnectionPanel({
       }
     });
   }
-
-  const groups = communities.filter((c) => c.wa_group_id);
-  const orphans = communities.filter((c) => !c.wa_group_id);
 
   if (configError) {
     return (
@@ -145,50 +141,31 @@ export function ConnectionPanel({
       </div>
 
       <div className="rounded-xl border border-line bg-white p-5">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-4">
           <div>
-            <h2 className="font-display font-bold">Grupos sincronizados</h2>
+            <h2 className="font-display font-bold">Sincronização</h2>
             <p className="text-sm text-muted mt-1">
-              Puxados do WhatsApp. É nesta lista que as peças escolhem o alvo do disparo.
+              Puxa a lista de grupos do número.{" "}
+              {syncedCount > 0
+                ? `${syncedCount} grupo(s) conhecidos.`
+                : "Nenhum grupo ainda."}{" "}
+              Sincronizar não habilita ninguém — a escolha é logo abaixo.
             </p>
           </div>
           <button
             onClick={() => run(syncGroupsAction, setSync)}
             disabled={pending || state !== "open"}
             title={state !== "open" ? "Conecte o número primeiro" : undefined}
-            className="rounded-lg bg-emerald hover:bg-emeraldd text-white text-sm font-semibold px-3 py-1.5 disabled:opacity-50"
+            className="shrink-0 rounded-lg bg-emerald hover:bg-emeraldd text-white text-sm font-semibold px-3 py-1.5 disabled:opacity-50"
           >
             {pending ? "Sincronizando…" : "Sincronizar grupos"}
           </button>
         </div>
 
         {sync && (
-          <p className="mt-3 text-sm text-emerald">
-            {sync.inserted} novo(s) · {sync.linked} atualizado(s) · {sync.deactivated} desativado(s)
-          </p>
-        )}
-
-        {groups.length === 0 ? (
-          <p className="mt-4 text-sm text-muted">
-            Nenhum grupo ainda. Conecte o número e clique em Sincronizar grupos.
-          </p>
-        ) : (
-          <ul className="mt-4 divide-y divide-line">
-            {groups.map((c) => (
-              <li key={c.id} className="flex items-center justify-between py-2 text-sm">
-                <span className={c.active ? "" : "text-muted line-through"}>
-                  {c.wa_subject || c.name}
-                </span>
-                <span className="font-mono text-xs text-muted">{c.wa_group_id}</span>
-              </li>
-            ))}
-          </ul>
-        )}
-
-        {orphans.length > 0 && (
-          <p className="mt-4 text-xs text-muted">
-            {orphans.length} comunidade(s) sem grupo vinculado:{" "}
-            {orphans.map((c) => c.name).join(", ")}. Elas não podem receber disparo.
+          <p className="mt-3 text-sm text-emeraldd">
+            {sync.inserted} novo(s) · {sync.linked} atualizado(s) · {sync.deactivated} sumiram do
+            WhatsApp
           </p>
         )}
       </div>

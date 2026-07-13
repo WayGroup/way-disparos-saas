@@ -16,6 +16,22 @@ export async function refreshStateAction(): Promise<{ state: EvoConnectionState 
   return { state: await evoConnectionState(cfg) };
 }
 
+/**
+ * Habilita ou desabilita grupos para uso na ferramenta.
+ *
+ * Mexe só em `enabled` — nunca em `active`, que pertence à sincronização. Um grupo
+ * desabilitado continua sincronizado; ele só deixa de aparecer como alvo possível.
+ */
+export async function setGroupsEnabledAction(ids: string[], enabled: boolean): Promise<void> {
+  if (ids.length === 0) return;
+  const supabase = await createServerSupabase();
+  const { error } = await supabase.from("communities").update({ enabled }).in("id", ids);
+  if (error) throw new Error(`Falha ao alterar os grupos: ${error.message}`);
+  revalidatePath("/whatsapp");
+  revalidatePath("/disparo-rapido");
+  revalidatePath("/campanhas");
+}
+
 export type SyncResult = { inserted: number; linked: number; deactivated: number };
 
 export async function syncGroupsAction(): Promise<SyncResult> {

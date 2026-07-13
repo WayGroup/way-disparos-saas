@@ -17,7 +17,10 @@ export type Community = {
   wa_group_id: string | null;
   /** Nome do grupo como está no WhatsApp. Pode vir vazio. */
   wa_subject: string;
+  /** O grupo existe no WhatsApp na última sincronização. Quem decide é o sistema. */
   active: boolean;
+  /** O grupo foi escolhido para uso na ferramenta. Quem decide é uma pessoa. */
+  enabled: boolean;
   synced_at: string | null;
 };
 

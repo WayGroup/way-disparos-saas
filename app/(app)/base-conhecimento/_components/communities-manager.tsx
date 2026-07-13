@@ -19,9 +19,13 @@ export function CommunitiesManager({ communities }: { communities: Community[] }
           <li key={c.id} className="flex items-center justify-between text-sm">
             <span>
               {c.name} <span className="font-mono text-xs text-muted">· {c.identifier}</span>
-              {c.wa_group_id ? (
+              {c.enabled ? (
                 <span className="ml-2 rounded-full bg-emerald/10 text-emerald px-2 py-0.5 text-xs font-semibold">
-                  grupo vinculado
+                  em uso
+                </span>
+              ) : c.wa_group_id ? (
+                <span className="ml-2 rounded-full bg-ink/8 text-muted px-2 py-0.5 text-xs font-semibold">
+                  fora de uso
                 </span>
               ) : (
                 <span className="ml-2 rounded-full bg-risk/10 text-risk px-2 py-0.5 text-xs font-semibold">
