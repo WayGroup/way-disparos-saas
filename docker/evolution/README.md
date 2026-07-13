@@ -8,6 +8,27 @@ Consequências que não somem:
 - O número **pode ser banido**. Mitigamos com o jitter de 20–60s entre grupos e envio
   sequencial, mas o risco não vai a zero.
 
+## Versão: use `evoapicloud/evolution-api:v2.3.7` ou superior
+
+Duas armadilhas, e caímos nas duas:
+
+1. **`atendai/evolution-api` está abandonada.** Ela para na v2.2.3. O projeto migrou para
+   `evoapicloud/evolution-api`.
+2. **Até a v2.2.x o QR não é gerado.** O Baileys entra em loop de reconexão antes do
+   primeiro QR: como o `statusCode` é `undefined` na primeira tentativa, o handler de
+   `connection close` manda reconectar, e isso se repete para sempre. A instância trava
+   em `connecting` e `/instance/connect` responde `{"count": 0}` — sem `base64`, sem
+   `code`, sem QR. Logout e restart **não** resolvem.
+
+   Corrigido na **v2.3.7**.
+
+Se você já tem uma instância travada nesse estado, subir a versão nova não a
+desentrava sozinha — apague e recrie:
+
+```bash
+curl -X DELETE http://SEU-HOST/instance/delete/NOME -H "apikey: SUA-CHAVE"
+```
+
 ## 1. Subir
 
 ```bash

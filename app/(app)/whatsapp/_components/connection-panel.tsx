@@ -114,10 +114,21 @@ export function ConnectionPanel({
 
         <div className="mt-4 flex gap-2">
           <button
-            onClick={() => run(fetchQrCodeAction, (result) => {
-              setQr(result);
-              if (result.state) setState(result.state);
-            })}
+            onClick={() =>
+              run(fetchQrCodeAction, (result) => {
+                setQr(result);
+                if (result.state) setState(result.state);
+                // A Evolution respondeu 200 mas sem QR nenhum. Sem esta mensagem, a tela
+                // fica em branco e ninguém entende por quê.
+                if (!result.base64 && !result.code && result.state !== "open") {
+                  setError(
+                    "A Evolution respondeu sem QR code. Quase sempre é a instância travada em 'connecting': " +
+                      "nas versões até a 2.2.x o Baileys entra em loop de reconexão antes de gerar o primeiro QR. " +
+                      "Atualize a imagem para evoapicloud/evolution-api:v2.3.7 ou superior e recrie a instância.",
+                  );
+                }
+              })
+            }
             disabled={pending}
             className="rounded-lg border border-line px-3 py-1.5 text-sm font-semibold hover:bg-paper disabled:opacity-50"
           >

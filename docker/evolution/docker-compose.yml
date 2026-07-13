@@ -9,7 +9,11 @@
 services:
   evolution:
     container_name: evolution_api
-    image: evoapicloud/evolution-api:v2.1.1
+    # NÃO use `atendai/evolution-api` — aquele repositório foi abandonado na v2.2.3.
+    # E NÃO use nada abaixo da v2.3.7: até a 2.2.x existe um bug em que o Baileys
+    # entra em loop de reconexão antes de gerar o primeiro QR. A instância trava em
+    # `connecting` e /instance/connect responde {"count": 0}, para sempre, sem QR.
+    image: evoapicloud/evolution-api:v2.3.7
     restart: always
     ports:
       - "8080:8080"
