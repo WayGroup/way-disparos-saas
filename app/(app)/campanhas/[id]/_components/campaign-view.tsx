@@ -12,6 +12,7 @@ import { DuplicateButton } from "./duplicate-button";
 import { PipelineView } from "./pipeline-view";
 import { CalendarView } from "./calendar-view";
 import { PieceDetailModal } from "./piece-detail-modal";
+import { CampaignGroupsBar } from "./campaign-groups-bar";
 
 type View = "lista" | "pipeline" | "calendario";
 
@@ -131,6 +132,17 @@ export function CampaignView({
           </button>
         </div>
       </div>
+
+      {/* Alvo da trilha Grupos: editor em massa. Só faz sentido nesta trilha. */}
+      {track === "grupos" && (
+        <div className="px-8 pb-3 shrink-0">
+          <CampaignGroupsBar
+            campaignId={campaign.id}
+            posts={campaign.group_posts}
+            groups={groups}
+          />
+        </div>
+      )}
 
       {/* Conteúdo */}
       <div className="flex-1 min-h-0">

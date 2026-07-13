@@ -3,6 +3,7 @@ import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { Community } from "@/lib/db/types";
 import { matchCommunities } from "@/lib/sends/match";
+import { GroupChips } from "../../_components/group-chips";
 import { setPostCommunitiesAction } from "../../actions";
 
 export function GroupMultiSelect({
@@ -36,21 +37,9 @@ export function GroupMultiSelect({
     [suggestion, groups],
   );
 
-  // Sem seleção salva, parte da sugestão da IA — mas nada é gravado até o usuário confirmar.
+  // Sem seleção salva, parte da sugestão da IA — mas nada é gravado até confirmar.
   const [ids, setIds] = useState<string[]>(selected.length > 0 ? selected : suggested);
-  const [query, setQuery] = useState("");
   const dirty = ids.length !== selected.length || ids.some((id) => !selected.includes(id));
-
-  function toggle(id: string) {
-    setIds((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
-  }
-
-  // Contas reais têm centenas de grupos: sem busca, a lista é uma parede de chips.
-  // Os selecionados aparecem sempre, mesmo fora da busca, para não sumirem de vista.
-  const q = query.trim().toLowerCase();
-  const visible = groups.filter(
-    (g) => ids.includes(g.id) || !q || (g.wa_subject || g.name).toLowerCase().includes(q),
-  );
 
   function save() {
     startTransition(async () => {
@@ -62,8 +51,8 @@ export function GroupMultiSelect({
   if (groups.length === 0) {
     return (
       <p className="text-xs text-risk">
-        Nenhum grupo sincronizado. Conecte o número em{" "}
-        <a href="/whatsapp" className="underline">Conexão WhatsApp</a> antes de agendar.
+        Nenhum grupo habilitado. Escolha quais grupos a ferramenta pode usar em{" "}
+        <a href="/disparos" className="underline">Disparos</a>.
       </p>
     );
   }
@@ -71,41 +60,14 @@ export function GroupMultiSelect({
   return (
     <div>
       <div className="flex items-center justify-between">
-        <span className="text-[10px] font-mono uppercase text-muted">Grupos do disparo</span>
+        <span className="text-[10px] font-mono uppercase text-muted">Grupos desta peça</span>
         {selected.length === 0 && suggested.length > 0 && (
           <span className="text-[10px] font-mono text-muted">pré-marcado pela sugestão da IA</span>
         )}
       </div>
 
-      <input
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder={`Buscar entre ${groups.length} grupos…`}
-        className="mt-1.5 w-full rounded-lg border border-line p-2 text-xs"
-      />
-
-      <div className="mt-1.5 flex flex-wrap gap-1.5 max-h-44 overflow-y-auto">
-        {visible.map((g) => {
-          const on = ids.includes(g.id);
-          return (
-            <button
-              key={g.id}
-              type="button"
-              onClick={() => toggle(g.id)}
-              className={`rounded-full border px-2.5 py-1 text-xs transition ${
-                on
-                  ? "border-emerald bg-emerald/10 text-emeraldd font-semibold"
-                  : "border-line text-muted hover:border-emerald/40"
-              }`}
-            >
-              {on ? "✓ " : ""}
-              {g.wa_subject || g.name}
-            </button>
-          );
-        })}
-        {visible.length === 0 && (
-          <p className="text-xs text-muted">Nenhum grupo com “{query}”.</p>
-        )}
+      <div className="mt-1.5">
+        <GroupChips groups={groups} value={ids} onChange={setIds} disabled={pending} />
       </div>
 
       {ids.length === 0 && (

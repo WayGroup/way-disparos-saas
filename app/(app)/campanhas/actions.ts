@@ -417,6 +417,45 @@ export async function sendPieceNowAction(
   return { ok: true, sent, failed, queued: Math.max(0, myIds.size - sent - failed) };
 }
 
+/**
+ * Editor em massa: sobrescreve os grupos de TODAS as peças da campanha.
+ *
+ * Não existe "grupo da campanha" persistido — a peça é a fonte de verdade. Isto aqui é
+ * conveniência (escolher uma vez em vez de cinco), não herança. Por isso sobrescreve
+ * mesmo quem tinha alvo customizado, e a UI avisa antes.
+ */
+export async function setCampaignCommunitiesAction(
+  campaignId: string,
+  communityIds: string[],
+): Promise<void> {
+  const supabase = await createServerSupabase();
+  const { data: posts, error } = await supabase
+    .from("campaign_group_posts")
+    .select("id")
+    .eq("campaign_id", campaignId);
+  if (error) throw new Error(`Falha ao carregar posts: ${error.message}`);
+
+  const ids = (posts ?? []).map((p) => p.id as string);
+  if (ids.length === 0) return;
+
+  const { error: eDel } = await supabase
+    .from("campaign_group_post_communities")
+    .delete()
+    .in("post_id", ids);
+  if (eDel) throw new Error(`Falha ao limpar grupos: ${eDel.message}`);
+
+  if (communityIds.length > 0) {
+    const rows = ids.flatMap((post_id) =>
+      communityIds.map((community_id) => ({ post_id, community_id })),
+    );
+    const { error: eIns } = await supabase.from("campaign_group_post_communities").insert(rows);
+    if (eIns) throw new Error(`Falha ao aplicar grupos: ${eIns.message}`);
+  }
+
+  await rescheduleCampaign(campaignId);
+  revalidatePath(`/campanhas/${campaignId}`);
+}
+
 export async function setPostCommunitiesAction(
   campaignId: string,
   postId: string,
