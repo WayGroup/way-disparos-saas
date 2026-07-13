@@ -1,7 +1,7 @@
 "use client";
 import { useState, useTransition, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import type { CampaignWithContent, ChatMessage, Asset } from "@/lib/db/types";
+import type { CampaignWithContent, ChatMessage, Asset, Community } from "@/lib/db/types";
 import { approveCampaignAction } from "../../actions";
 import { toPieces, type Piece } from "@/lib/campaign-pieces";
 import { RefineChat } from "./refine-chat";
@@ -18,10 +18,12 @@ export function CampaignView({
   campaign,
   messages,
   assets,
+  groups,
 }: {
   campaign: CampaignWithContent;
   messages: ChatMessage[];
   assets: Asset[];
+  groups: Community[];
 }) {
   const router = useRouter();
   const [view, setView] = useState<View>("lista");
@@ -98,7 +100,7 @@ export function CampaignView({
               ) : (
                 <div className="space-y-5 max-w-3xl">
                   {campaign.group_posts.map((p) => (
-                    <PostCard key={p.id} campaignId={campaign.id} post={p} assets={assets} />
+                    <PostCard key={p.id} campaignId={campaign.id} post={p} assets={assets} groups={groups} />
                   ))}
                 </div>
               )}
@@ -123,6 +125,7 @@ export function CampaignView({
           post={selected.track === "grupos" ? (campaign.group_posts.find((p) => p.sort_order === selected.sort_order) ?? null) : null}
           campaignId={campaign.id}
           assets={assets}
+          groups={groups}
           onClose={() => setSelected(null)}
         />
       )}

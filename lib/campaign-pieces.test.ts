@@ -34,6 +34,7 @@ describe("groupByDate", () => {
   it("agrupa por dia, ordena por hora, sem-data por último", () => {
     const p = (key: string, send_at: string): Piece => ({
       key,
+      id: key,
       track: "api",
       sort_order: 0,
       send_at,

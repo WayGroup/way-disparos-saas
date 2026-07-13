@@ -117,6 +117,8 @@ export type CampaignGroupPost = {
   media: string;
   send_at: string;
   asset_id: string | null;
+  /** Grupos reais escolhidos para o disparo. `communities` acima é só a sugestão da IA. */
+  community_ids: string[];
 };
 
 export type CampaignWithContent = Campaign & {

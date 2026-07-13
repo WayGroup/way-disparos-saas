@@ -1,15 +1,16 @@
 "use client";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import type { CampaignGroupPost, Asset } from "@/lib/db/types";
+import type { CampaignGroupPost, Asset, Community } from "@/lib/db/types";
 import { updateGroupPostAction, setPostAssetAction, type PostFields } from "../../actions";
 import { CopyButton } from "./copy-button";
 import { formatSendAt } from "@/lib/schedule";
 import { MediaPicker } from "./media-picker";
+import { GroupMultiSelect } from "./group-multi-select";
 
 const COPY_REVEAL = "opacity-0 group-hover:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity";
 
-export function PostCard({ campaignId, post, assets, highlight = false }: { campaignId: string; post: CampaignGroupPost; assets: Asset[]; highlight?: boolean }) {
+export function PostCard({ campaignId, post, assets, groups, highlight = false }: { campaignId: string; post: CampaignGroupPost; assets: Asset[]; groups: Community[]; highlight?: boolean }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -64,13 +65,23 @@ export function PostCard({ campaignId, post, assets, highlight = false }: { camp
             <div className="font-mono text-[11px] uppercase tracking-widest text-ink2">Mensagem do post</div>
             <CopyButton text={post.copy} label="copiar mensagem" className={COPY_REVEAL} />
           </div>
-          <div className="flex items-center gap-2 font-mono text-xs text-muted mb-2">
-            <span className="truncate">Comunidades: {post.communities}</span>
-            <CopyButton text={post.communities} className={`shrink-0 ${COPY_REVEAL}`} />
-          </div>
           <p className="text-sm leading-relaxed whitespace-pre-wrap">{post.copy}</p>
           <div className="mt-3">
             <MediaPicker assets={assets} currentId={post.asset_id} suggestion={post.media} onPick={(id) => setPostAssetAction(campaignId, post.sort_order, id)} />
+          </div>
+          <div className="mt-4 pt-3 border-t border-line">
+            <GroupMultiSelect
+              campaignId={campaignId}
+              postId={post.id}
+              selected={post.community_ids}
+              suggestion={post.communities}
+              groups={groups}
+            />
+            {post.communities && (
+              <p className="mt-2 font-mono text-[11px] text-muted">
+                Sugestão da IA: {post.communities}
+              </p>
+            )}
           </div>
         </section>
 
@@ -85,11 +96,11 @@ export function PostCard({ campaignId, post, assets, highlight = false }: { camp
 
   return (
     <div className="rounded-xl border border-emerald/40 bg-white p-5 space-y-3">
+      {/* O alvo do disparo não se edita aqui: são os grupos reais, escolhidos no cartão. */}
       <div className="grid grid-cols-2 gap-3">
         <label className="block"><span className="text-[10px] font-mono uppercase text-muted">Offset</span><input value={f.offset_label} onChange={(e) => setF({ ...f, offset_label: e.target.value })} className="mt-1 w-full rounded-lg border border-line p-2 text-sm" /></label>
-        <label className="block"><span className="text-[10px] font-mono uppercase text-muted">Comunidades</span><input value={f.communities} onChange={(e) => setF({ ...f, communities: e.target.value })} className="mt-1 w-full rounded-lg border border-line p-2 text-sm" /></label>
+        <label className="block"><span className="text-[10px] font-mono uppercase text-muted">Papel</span><input value={f.role} onChange={(e) => setF({ ...f, role: e.target.value })} className="mt-1 w-full rounded-lg border border-line p-2 text-sm" /></label>
       </div>
-      <label className="block"><span className="text-[10px] font-mono uppercase text-muted">Papel</span><input value={f.role} onChange={(e) => setF({ ...f, role: e.target.value })} className="mt-1 w-full rounded-lg border border-line p-2 text-sm" /></label>
       <label className="block"><span className="text-[10px] font-mono uppercase text-muted">Código da mensagem</span><input value={f.message_code} onChange={(e) => setF({ ...f, message_code: e.target.value })} className="mt-1 w-full rounded-lg border border-line p-2 text-sm font-mono" /></label>
       <label className="block"><span className="text-[10px] font-mono uppercase text-muted">Mensagem do post</span><textarea value={f.copy} onChange={(e) => setF({ ...f, copy: e.target.value })} rows={3} className="mt-1 w-full rounded-lg border border-line p-2 text-sm" /></label>
       <label className="block"><span className="text-[10px] font-mono uppercase text-muted">Mídia sugerida</span><input value={f.media} onChange={(e) => setF({ ...f, media: e.target.value })} className="mt-1 w-full rounded-lg border border-line p-2 text-sm" /></label>

@@ -6,6 +6,8 @@ import type { CampaignWithContent, Asset } from "@/lib/db/types";
 
 export type Piece = {
   key: string;
+  /** id da linha de origem (campaign_touches ou campaign_group_posts). */
+  id: string;
   track: "api" | "grupos";
   sort_order: number;
   send_at: string;
@@ -15,6 +17,8 @@ export type Piece = {
   buttons: { type: "quick_reply" | "url"; text: string; url: string }[];
   meta_category?: "UTILITY" | "MARKETING";
   communities?: string;
+  /** Só na trilha grupos: os grupos reais escolhidos para o disparo. */
+  community_ids?: string[];
   imageUrl?: string;
   mediaMissing?: boolean;
   badge: string;
@@ -207,6 +211,7 @@ export function toPieces(campaign: CampaignWithContent, assets: Asset[]): Piece[
 
     pieces.push({
       key: `api-${t.sort_order}`,
+      id: t.id,
       track: "api",
       sort_order: t.sort_order,
       send_at: t.send_at,
@@ -233,6 +238,7 @@ export function toPieces(campaign: CampaignWithContent, assets: Asset[]): Piece[
 
     pieces.push({
       key: `grupos-${p.sort_order}`,
+      id: p.id,
       track: "grupos",
       sort_order: p.sort_order,
       send_at: p.send_at,
@@ -241,6 +247,7 @@ export function toPieces(campaign: CampaignWithContent, assets: Asset[]): Piece[
       message: p.copy,
       buttons: [],
       communities: p.communities,
+      community_ids: p.community_ids,
       imageUrl,
       mediaMissing: !!p.media && !p.asset_id,
       badge: p.message_code,

@@ -236,6 +236,26 @@ export async function setTouchStepAssetAction(campaignId: string, sortOrder: num
   revalidatePath(`/campanhas/${campaignId}`);
 }
 
+export async function setPostCommunitiesAction(
+  campaignId: string,
+  postId: string,
+  communityIds: string[],
+): Promise<void> {
+  const supabase = await createServerSupabase();
+  const { error } = await supabase
+    .from("campaign_group_post_communities")
+    .delete()
+    .eq("post_id", postId);
+  if (error) throw new Error(`Falha ao limpar grupos do post: ${error.message}`);
+
+  if (communityIds.length > 0) {
+    const rows = communityIds.map((community_id) => ({ post_id: postId, community_id }));
+    const { error: e2 } = await supabase.from("campaign_group_post_communities").insert(rows);
+    if (e2) throw new Error(`Falha ao salvar grupos do post: ${e2.message}`);
+  }
+  revalidatePath(`/campanhas/${campaignId}`);
+}
+
 export async function setPostAssetAction(campaignId: string, sortOrder: number, assetId: string): Promise<void> {
   const supabase = await createServerSupabase();
   const { error } = await supabase.from("campaign_group_posts").update({ asset_id: assetId || null }).eq("campaign_id", campaignId).eq("sort_order", sortOrder);
@@ -275,14 +295,26 @@ export async function duplicateCampaignAction(campaignId: string, newAnchor: str
       if (e1) throw new Error(`Falha ao duplicar toques: ${e1.message}`);
     }
     if (src.group_posts.length > 0) {
-      const { error: e2 } = await supabase.from("campaign_group_posts").insert(src.group_posts.map((p, idx) => ({
+      const { data: newPosts, error: e2 } = await supabase.from("campaign_group_posts").insert(src.group_posts.map((p, idx) => ({
         campaign_id: newId, sort_order: p.sort_order,
         offset_label: p.offset_label, role: p.role, communities: p.communities,
         copy: p.copy, media: p.media, asset_id: p.asset_id,
         message_code: recipe ? buildCode(recipe.recipe_type, gruposSlots[idx]?.code ?? "", anchorValue) : p.message_code,
         send_at: recipe ? computeSendAt(anchorValue, gruposSlots[idx]?.offset_days ?? 0, gruposSlots[idx]?.offset_time ?? "") : p.send_at,
-      })));
+      }))).select("id, sort_order");
       if (e2) throw new Error(`Falha ao duplicar posts: ${e2.message}`);
+
+      // A seleção de grupos vai junto: duplicar sem os alvos daria uma campanha inagendável.
+      const newIdBySortOrder = new Map((newPosts ?? []).map((p) => [p.sort_order as number, p.id as string]));
+      const links = src.group_posts.flatMap((p) => {
+        const postId = newIdBySortOrder.get(p.sort_order);
+        if (!postId) return [];
+        return p.community_ids.map((community_id) => ({ post_id: postId, community_id }));
+      });
+      if (links.length > 0) {
+        const { error: e3 } = await supabase.from("campaign_group_post_communities").insert(links);
+        if (e3) throw new Error(`Falha ao duplicar grupos dos posts: ${e3.message}`);
+      }
     }
   } catch (e) {
     // rollback compensatório: remove a cópia órfã antes de propagar o erro
