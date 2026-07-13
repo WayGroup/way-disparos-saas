@@ -13,6 +13,19 @@ export type Community = {
   identifier: string;
   sort_order: number;
   created_at: string;
+  /** JID do grupo no WhatsApp (…@g.us). Null enquanto não sincronizado com a Evolution. */
+  wa_group_id: string | null;
+  /** Nome do grupo como está no WhatsApp. Pode vir vazio. */
+  wa_subject: string;
+  active: boolean;
+  synced_at: string | null;
+};
+
+export type AppSettings = {
+  id: boolean;
+  sends_paused: boolean;
+  paused_reason: string;
+  updated_at: string;
 };
 
 export type Asset = {

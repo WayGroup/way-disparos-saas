@@ -4,6 +4,7 @@ export const NAV_ITEMS: { href: string; label: string }[] = [
   { href: "/receitas", label: "Receitas" },
   { href: "/midias", label: "Mídias" },
   { href: "/links", label: "Links" },
+  { href: "/whatsapp", label: "WhatsApp" },
   { href: "/base-conhecimento", label: "Base de conhecimento" },
 ];
 
