@@ -1,0 +1,67 @@
+# Evolution API v2 — o canal de envio da trilha Grupos.
+#
+# Serve tanto para testar na sua máquina quanto para rodar num VPS.
+# Suba com:  docker compose -f docker/evolution/docker-compose.yml up -d
+#
+# ATENÇÃO: o número pareado aqui é visto pelo WhatsApp como um celular real.
+# Use um número DEDICADO. Ele pode ser banido — é uma condição do canal, não um bug.
+
+services:
+  evolution:
+    container_name: evolution_api
+    image: evoapicloud/evolution-api:v2.1.1
+    restart: always
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+      - redis
+    environment:
+      # A chave que o app manda no header `apikey`. Troque por algo longo e aleatório
+      # e use o MESMO valor em EVOLUTION_API_KEY no .env.local / Vercel.
+      AUTHENTICATION_API_KEY: TROQUE-ESTA-CHAVE
+
+      SERVER_URL: http://localhost:8080
+
+      DATABASE_ENABLED: "true"
+      DATABASE_PROVIDER: postgresql
+      DATABASE_CONNECTION_URI: postgresql://evolution:evolution@postgres:5432/evolution
+      DATABASE_SAVE_DATA_INSTANCE: "true"
+      DATABASE_SAVE_DATA_NEW_MESSAGE: "false"
+      DATABASE_SAVE_MESSAGE_UPDATE: "false"
+      DATABASE_SAVE_DATA_CONTACTS: "false"
+      DATABASE_SAVE_DATA_CHATS: "false"
+
+      CACHE_REDIS_ENABLED: "true"
+      CACHE_REDIS_URI: redis://redis:6379/0
+      CACHE_REDIS_PREFIX_KEY: evolution
+      CACHE_LOCAL_ENABLED: "false"
+
+      # Sem QR no log; o app busca o QR pela API.
+      QRCODE_LIMIT: "10"
+      LOG_LEVEL: ERROR
+    volumes:
+      - evolution_instances:/evolution/instances
+
+  postgres:
+    container_name: evolution_postgres
+    image: postgres:16-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: evolution
+      POSTGRES_PASSWORD: evolution
+      POSTGRES_DB: evolution
+    volumes:
+      - evolution_pg:/var/lib/postgresql/data
+
+  redis:
+    container_name: evolution_redis
+    image: redis:7-alpine
+    restart: always
+    volumes:
+      - evolution_redis:/data
+
+volumes:
+  evolution_instances:
+  evolution_pg:
+  evolution_redis:
