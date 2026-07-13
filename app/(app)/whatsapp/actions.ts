@@ -2,7 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { getEvolutionConfig } from "@/lib/evolution/config";
-import { evoConnect, evoConnectionState, evoFetchAllGroups } from "@/lib/evolution/client";
+import { evoConnect, evoConnectionState, evoListGroups } from "@/lib/evolution/client";
 import { planCommunitySync, type SyncableCommunity } from "@/lib/evolution/sync";
 import type { EvoConnectionState, EvoQrCode } from "@/lib/evolution/types";
 
@@ -20,7 +20,7 @@ export type SyncResult = { inserted: number; linked: number; deactivated: number
 
 export async function syncGroupsAction(): Promise<SyncResult> {
   const cfg = getEvolutionConfig(process.env);
-  const groups = await evoFetchAllGroups(cfg);
+  const groups = await evoListGroups(cfg);
 
   const supabase = await createServerSupabase();
   const { data, error } = await supabase

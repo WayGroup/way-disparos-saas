@@ -38,11 +38,19 @@ export function GroupMultiSelect({
 
   // Sem seleção salva, parte da sugestão da IA — mas nada é gravado até o usuário confirmar.
   const [ids, setIds] = useState<string[]>(selected.length > 0 ? selected : suggested);
+  const [query, setQuery] = useState("");
   const dirty = ids.length !== selected.length || ids.some((id) => !selected.includes(id));
 
   function toggle(id: string) {
     setIds((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
   }
+
+  // Contas reais têm centenas de grupos: sem busca, a lista é uma parede de chips.
+  // Os selecionados aparecem sempre, mesmo fora da busca, para não sumirem de vista.
+  const q = query.trim().toLowerCase();
+  const visible = groups.filter(
+    (g) => ids.includes(g.id) || !q || (g.wa_subject || g.name).toLowerCase().includes(q),
+  );
 
   function save() {
     startTransition(async () => {
@@ -69,8 +77,15 @@ export function GroupMultiSelect({
         )}
       </div>
 
-      <div className="mt-1.5 flex flex-wrap gap-1.5">
-        {groups.map((g) => {
+      <input
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder={`Buscar entre ${groups.length} grupos…`}
+        className="mt-1.5 w-full rounded-lg border border-line p-2 text-xs"
+      />
+
+      <div className="mt-1.5 flex flex-wrap gap-1.5 max-h-44 overflow-y-auto">
+        {visible.map((g) => {
           const on = ids.includes(g.id);
           return (
             <button
@@ -88,6 +103,9 @@ export function GroupMultiSelect({
             </button>
           );
         })}
+        {visible.length === 0 && (
+          <p className="text-xs text-muted">Nenhum grupo com “{query}”.</p>
+        )}
       </div>
 
       {ids.length === 0 && (

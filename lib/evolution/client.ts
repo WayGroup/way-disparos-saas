@@ -14,7 +14,7 @@ const TIMEOUT_MS = 20_000;
 async function evoFetch<T>(
   cfg: EvolutionConfig,
   path: string,
-  init?: { method?: "GET" | "POST"; body?: unknown },
+  init?: { method?: "GET" | "POST"; body?: unknown; timeoutMs?: number },
 ): Promise<T> {
   const res = await fetch(evoUrl(cfg.baseUrl, path), {
     method: init?.method ?? "GET",
@@ -24,7 +24,7 @@ async function evoFetch<T>(
     },
     body: init?.body === undefined ? undefined : JSON.stringify(init.body),
     cache: "no-store",
-    signal: AbortSignal.timeout(TIMEOUT_MS),
+    signal: AbortSignal.timeout(init?.timeoutMs ?? TIMEOUT_MS),
   });
 
   if (!res.ok) {
@@ -56,26 +56,32 @@ export async function evoConnectionState(cfg: EvolutionConfig): Promise<EvoConne
 }
 
 /**
- * getParticipants é obrigatório no schema da Evolution e precisa ser a string "false".
- * Sem ele a chamada devolve 400.
+ * Lista os grupos do número conectado.
+ *
+ * NÃO usamos /group/fetchAllGroups: ele busca a metadata de cada grupo, um por um, e
+ * numa conta com muitos grupos simplesmente não responde (medido: >90s sem retorno com
+ * 218 grupos, mesmo com getParticipants=false).
+ *
+ * /chat/findChats lê do Postgres da própria Evolution e devolve tudo de uma vez
+ * (medido: 0,5s para os mesmos 218 grupos), com `remoteJid` e `pushName` — que é tudo
+ * o que precisamos: o JID e o nome do grupo.
  */
-export async function evoFetchAllGroups(cfg: EvolutionConfig): Promise<EvoGroup[]> {
-  const data = await evoFetch<unknown>(
-    cfg,
-    `/group/fetchAllGroups/${cfg.instance}?getParticipants=false`,
-  );
-  if (!Array.isArray(data)) return [];
-  return data
-    .filter((g): g is Record<string, unknown> => !!g && typeof g === "object")
-    .filter((g) => typeof g.id === "string" && (g.id as string).endsWith("@g.us"))
-    .map((g) => ({
-      id: g.id as string,
-      // Alguns grupos voltam sem subject (bug conhecido da Evolution).
-      subject: typeof g.subject === "string" ? g.subject : "",
-      size: typeof g.size === "number" ? g.size : undefined,
-      pictureUrl: typeof g.pictureUrl === "string" ? g.pictureUrl : null,
-      isCommunity: g.isCommunity === true,
-      announce: g.announce === true,
+export async function evoListGroups(cfg: EvolutionConfig): Promise<EvoGroup[]> {
+  const data = await evoFetch<unknown>(cfg, `/chat/findChats/${cfg.instance}`, {
+    method: "POST",
+    body: {},
+    timeoutMs: 60_000,
+  });
+
+  const list = Array.isArray(data) ? data : [];
+
+  return list
+    .filter((c): c is Record<string, unknown> => !!c && typeof c === "object")
+    .filter((c) => typeof c.remoteJid === "string" && (c.remoteJid as string).endsWith("@g.us"))
+    .map((c) => ({
+      id: c.remoteJid as string,
+      subject: typeof c.pushName === "string" ? c.pushName : "",
+      pictureUrl: typeof c.profilePicUrl === "string" ? c.profilePicUrl : null,
     }));
 }
 

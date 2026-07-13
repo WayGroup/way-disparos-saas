@@ -22,6 +22,7 @@ export function QuickSendForm({ groups, assets }: { groups: Community[]; assets:
   const [ids, setIds] = useState<string[]>([]);
   const [mode, setMode] = useState<"agora" | "agendar">("agora");
   const [when, setWhen] = useState("");
+  const [query, setQuery] = useState("");
 
   const [issues, setIssues] = useState<ScheduleIssue[]>([]);
   const [result, setResult] = useState<QuickSendResult | null>(null);
@@ -84,6 +85,11 @@ export function QuickSendForm({ groups, assets }: { groups: Community[]; assets:
 
   const canSend = ids.length > 0 && (text.trim() || assetId) && (mode === "agora" || when);
 
+  const q = query.trim().toLowerCase();
+  const visible = groups.filter(
+    (g) => ids.includes(g.id) || !q || (g.wa_subject || g.name).toLowerCase().includes(q),
+  );
+
   return (
     <div className="grid gap-5 grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px]">
       <div className="rounded-xl border border-line bg-white p-5 space-y-4">
@@ -111,8 +117,15 @@ export function QuickSendForm({ groups, assets }: { groups: Community[]; assets:
           <span className="text-[10px] font-mono uppercase text-muted">
             Grupos {ids.length > 0 && `· ${ids.length} selecionado(s)`}
           </span>
-          <div className="mt-1.5 flex flex-wrap gap-1.5">
-            {groups.map((g) => {
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={`Buscar entre ${groups.length} grupos…`}
+            className="mt-1.5 w-full rounded-lg border border-line p-2 text-xs"
+          />
+          {/* Selecionados aparecem sempre, mesmo fora da busca — senão somem de vista. */}
+          <div className="mt-1.5 flex flex-wrap gap-1.5 max-h-48 overflow-y-auto">
+            {visible.map((g) => {
               const on = ids.includes(g.id);
               return (
                 <button
@@ -130,6 +143,9 @@ export function QuickSendForm({ groups, assets }: { groups: Community[]; assets:
                 </button>
               );
             })}
+            {visible.length === 0 && (
+              <p className="text-xs text-muted">Nenhum grupo com “{query}”.</p>
+            )}
           </div>
         </div>
 
