@@ -1,27 +1,38 @@
 "use client";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import type { RecipeWithChildren, StandardLink } from "@/lib/db/types";
+import type { RecipeWithChildren, StandardLink, Community } from "@/lib/db/types";
 import { generateCampaignAction } from "../../actions";
+import { GroupChips } from "../../_components/group-chips";
 
-export function NewCampaignForm({ recipes, links }: { recipes: RecipeWithChildren[]; links: StandardLink[] }) {
+export function NewCampaignForm({
+  recipes,
+  links,
+  groups,
+}: {
+  recipes: RecipeWithChildren[];
+  links: StandardLink[];
+  groups: Community[];
+}) {
   const router = useRouter();
   const [recipeId, setRecipeId] = useState(recipes[0]?.id ?? "");
   const [name, setName] = useState("");
   const [values, setValues] = useState<Record<string, string>>({});
   const [customMode, setCustomMode] = useState<Record<string, boolean>>({});
   const [multiSel, setMultiSel] = useState<Record<string, Set<string>>>({});
+  const [communityIds, setCommunityIds] = useState<string[]>([]);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
   const recipe = recipes.find((r) => r.id === recipeId);
+  const hasGroupTrack = !!recipe?.slots.some((s) => s.track === "grupos");
 
   function generate() {
     if (!recipe) return;
     setError(null);
     startTransition(async () => {
       try {
-        const id = await generateCampaignAction(recipe.id, name, values);
+        const id = await generateCampaignAction(recipe.id, name, values, communityIds);
         router.push(`/campanhas/${id}`);
       } catch (e) {
         setError(e instanceof Error ? e.message : "Falha ao gerar campanha.");
@@ -131,13 +142,37 @@ export function NewCampaignForm({ recipes, links }: { recipes: RecipeWithChildre
               </label>
             );
           })}
+
+          {hasGroupTrack && (
+            <div className="pt-2 border-t border-line">
+              <span className="text-xs font-mono uppercase tracking-wide text-muted">
+                Grupos do disparo
+                {communityIds.length > 0 && ` · ${communityIds.length} selecionado(s)`}
+              </span>
+              <p className="text-xs text-muted mt-0.5 mb-1.5">
+                Todas as peças da trilha Grupos já nascem apontando para estes grupos. Dá para
+                mudar peça a peça depois.
+              </p>
+              {groups.length === 0 ? (
+                <p className="text-xs text-risk">
+                  Nenhum grupo habilitado. Escolha quais grupos a ferramenta pode usar em{" "}
+                  <a href="/disparos" className="underline">Disparos</a>.
+                </p>
+              ) : (
+                <GroupChips groups={groups} value={communityIds} onChange={setCommunityIds} disabled={pending} />
+              )}
+            </div>
+          )}
         </div>
       )}
 
       {error && <p className="text-sm text-risk">{error}</p>}
-      <div className="flex justify-end gap-3">
+      <div className="flex justify-end items-center gap-3">
+        {hasGroupTrack && communityIds.length === 0 && groups.length > 0 && (
+          <span className="text-xs text-muted">Escolha ao menos um grupo para continuar.</span>
+        )}
         <button onClick={() => router.push("/campanhas")} className="rounded-lg border border-line px-4 py-2.5 text-sm font-medium">Cancelar</button>
-        <button onClick={generate} disabled={pending || !recipe}
+        <button onClick={generate} disabled={pending || !recipe || (hasGroupTrack && communityIds.length === 0)}
           className="rounded-lg bg-emerald hover:bg-emeraldd transition text-white text-sm font-semibold px-5 py-2.5 disabled:opacity-50">
           {pending ? "Gerando com a IA… (pode levar até 1 min)" : "Gerar campanha →"}
         </button>

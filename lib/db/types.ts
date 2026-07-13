@@ -13,6 +13,59 @@ export type Community = {
   identifier: string;
   sort_order: number;
   created_at: string;
+  /** JID do grupo no WhatsApp (…@g.us). Null enquanto não sincronizado com a Evolution. */
+  wa_group_id: string | null;
+  /** Nome do grupo como está no WhatsApp. Pode vir vazio. */
+  wa_subject: string;
+  /** O grupo existe no WhatsApp na última sincronização. Quem decide é o sistema. */
+  active: boolean;
+  /** O grupo foi escolhido para uso na ferramenta. Quem decide é uma pessoa. */
+  enabled: boolean;
+  synced_at: string | null;
+};
+
+export type AppSettings = {
+  id: boolean;
+  sends_paused: boolean;
+  paused_reason: string;
+  updated_at: string;
+};
+
+export type SendStatus = "pendente" | "enviando" | "enviado" | "falhou" | "cancelado";
+
+export type SendMediaKind = "image" | "video" | "document" | "audio";
+
+export type SendMedia = {
+  url: string;
+  mediatype: SendMediaKind;
+  mimetype: string;
+  fileName: string;
+};
+
+/** O conteúdo congelado no momento do agendamento. É o jsonb da coluna `payload`. */
+export type SendPayload = {
+  text: string;
+  media: SendMedia | null;
+};
+
+export type ScheduledSend = {
+  id: string;
+  batch_id: string;
+  campaign_id: string | null;
+  post_id: string | null;
+  community_id: string | null;
+  wa_group_id: string;
+  wa_subject: string;
+  scheduled_at: string;
+  next_attempt_at: string | null;
+  status: SendStatus;
+  attempts: number;
+  last_error: string;
+  claimed_at: string | null;
+  sent_at: string | null;
+  wa_message_id: string | null;
+  payload: SendPayload;
+  created_at: string;
 };
 
 export type Asset = {
@@ -104,6 +157,8 @@ export type CampaignGroupPost = {
   media: string;
   send_at: string;
   asset_id: string | null;
+  /** Grupos reais escolhidos para o disparo. `communities` acima é só a sugestão da IA. */
+  community_ids: string[];
 };
 
 export type CampaignWithContent = Campaign & {

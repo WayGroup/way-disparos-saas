@@ -9,6 +9,13 @@ import { generateCampaign } from "@/lib/ai/generate";
 import { refineCampaign } from "@/lib/ai/refine";
 import { buildCode } from "@/lib/ai/nomenclature";
 import { computeSendAt } from "@/lib/schedule";
+import { listActiveGroups } from "@/lib/db/communities";
+import { listAssets } from "@/lib/db/assets";
+import { publicAssetUrl } from "@/lib/campaign-pieces";
+import { buildSendPayload } from "@/lib/sends/payload";
+import { planSends, validateSchedulable, type ScheduleIssue } from "@/lib/sends/plan";
+import { partitionSchedulable } from "@/lib/sends/reschedule";
+import { dispatchDue } from "@/lib/sends/dispatch";
 
 type GenLog = { campaign_id?: string; recipe_id: string; kind: string; ok: boolean; error?: string; duration_ms: number };
 
@@ -51,6 +58,7 @@ export async function generateCampaignAction(
   recipeId: string,
   name: string,
   inputs: Record<string, string>,
+  communityIds: string[] = [],
 ): Promise<string> {
   const recipe = await getRecipe(recipeId);
   if (!recipe) throw new Error("Receita não encontrada.");
@@ -96,7 +104,7 @@ export async function generateCampaignAction(
       if (e1) throw new Error(`Falha ao salvar toques: ${e1.message}`);
     }
     if (content.group_posts.length > 0) {
-      const { error: e2 } = await supabase.from("campaign_group_posts").insert(
+      const { data: newPosts, error: e2 } = await supabase.from("campaign_group_posts").insert(
         content.group_posts.map((p, idx) => ({
           campaign_id: campaignId,
           sort_order: idx,
@@ -104,8 +112,19 @@ export async function generateCampaignAction(
           message_code: buildCode(recipe.recipe_type, gruposSlots[idx]?.code ?? "", anchorValue),
           send_at: computeSendAt(anchorValue, gruposSlots[idx]?.offset_days ?? 0, gruposSlots[idx]?.offset_time ?? ""),
         })),
-      );
+      ).select("id");
       if (e2) throw new Error(`Falha ao salvar posts: ${e2.message}`);
+
+      // A seleção da campanha é COPIADA para cada peça — não herdada. A peça segue
+      // sendo a única fonte de verdade sobre para onde ela vai, e pode divergir depois.
+      const posts = newPosts ?? [];
+      if (communityIds.length > 0 && posts.length > 0) {
+        const links = posts.flatMap((p) =>
+          communityIds.map((community_id) => ({ post_id: p.id as string, community_id })),
+        );
+        const { error: e3 } = await supabase.from("campaign_group_post_communities").insert(links);
+        if (e3) throw new Error(`Falha ao vincular grupos: ${e3.message}`);
+      }
     }
   } catch (e) {
     // rollback compensatório: remove a campanha órfã antes de propagar o erro
@@ -120,19 +139,118 @@ export async function generateCampaignAction(
   await logGeneration(supabase, {
     campaign_id: campaignId, recipe_id: recipeId, kind: "generate", ok: true, duration_ms: Date.now() - startedAt,
   });
+
+  // A fila nasce montada — e travada: o worker só entrega envio de campanha aprovada.
+  // Se falhar, a campanha continua de pé; a fila se remonta em qualquer edição ou na
+  // aprovação. Não vale destruir uma geração que custou 1 min de IA por causa disto.
+  try {
+    await rescheduleCampaign(campaignId);
+  } catch (e) {
+    console.error(`Campanha ${campaignId} gerada, mas a fila não foi montada:`, e);
+  }
+
   revalidatePath("/campanhas");
   return campaignId;
 }
 
-export async function approveCampaignAction(id: string): Promise<void> {
+/**
+ * Monta as peças agendáveis da trilha Grupos, congelando texto e mídia no payload.
+ * A trilha API continua manual — não entra na fila.
+ */
+async function buildGroupPieces(campaignId: string) {
+  const [campaign, groups, assets] = await Promise.all([
+    getCampaign(campaignId),
+    listActiveGroups(),
+    listAssets(),
+  ]);
+  if (!campaign) throw new Error("Campanha não encontrada.");
+
+  const groupById = new Map(groups.map((g) => [g.id, g]));
+  const assetById = new Map(assets.map((a) => [a.id, a]));
+
+  const pieces = campaign.group_posts.map((post) => ({
+    post_id: post.id,
+    label: `${post.role} (${post.offset_label})`,
+    send_at: post.send_at,
+    payload: buildSendPayload(post.copy, post.asset_id ? (assetById.get(post.asset_id) ?? null) : null, publicAssetUrl),
+    targets: post.community_ids.flatMap((id) => {
+      const g = groupById.get(id);
+      // Grupo desativado ou sem JID some da lista de alvos; validate reclama depois.
+      return g?.wa_group_id ? [{ community_id: g.id, wa_group_id: g.wa_group_id, wa_subject: g.wa_subject }] : [];
+    }),
+  }));
+
+  return { campaign, pieces };
+}
+
+/**
+ * Remonta a fila da campanha a partir do conteúdo atual das peças.
+ *
+ * Cada linha da fila guarda um snapshot do texto e da mídia. Sem isto, editar a peça
+ * deixaria a fila velha — o grupo receberia a versão antiga. Só apaga os `pendente`:
+ * o que já saiu, está saindo ou falhou é intocável.
+ *
+ * Não mexe no status da campanha. Rascunho continua rascunho, e o worker — que só
+ * entrega envio de campanha aprovada — segue segurando a fila. É por isso que dá para
+ * montar a fila na geração sem que nada dispare.
+ */
+async function rescheduleCampaign(campaignId: string): Promise<number> {
+  const { pieces } = await buildGroupPieces(campaignId);
+  const { schedulable } = partitionSchedulable(pieces);
+
+  const supabase = await createServerSupabase();
+  const { error: eDel } = await supabase
+    .from("scheduled_sends")
+    .delete()
+    .eq("campaign_id", campaignId)
+    .eq("status", "pendente");
+  if (eDel) throw new Error(`Falha ao limpar a fila: ${eDel.message}`);
+
+  const planned = planSends(schedulable);
+  if (planned.length > 0) {
+    const batchId = crypto.randomUUID();
+    const rows = planned.map((s) => ({ ...s, batch_id: batchId, campaign_id: campaignId }));
+    const { error } = await supabase.from("scheduled_sends").insert(rows);
+    if (error) throw new Error(`Falha ao agendar envios: ${error.message}`);
+  }
+
+  revalidatePath(`/campanhas/${campaignId}`);
+  revalidatePath("/disparos");
+  return planned.length;
+}
+
+export type ScheduleResult =
+  | { ok: true; scheduled: number }
+  | { ok: false; issues: ScheduleIssue[] };
+
+/**
+ * Aprovar não é mais um selo: é o gatilho do envio. Valida tudo primeiro e,
+ * se houver qualquer problema, não escreve nada — nada de agendar meia campanha.
+ *
+ * Os problemas voltam como valor, não como exceção: em produção o Next.js mascara
+ * a mensagem de erros lançados numa Server Action, e o usuário precisa ver a lista.
+ */
+export async function approveAndScheduleAction(id: string): Promise<ScheduleResult> {
+  const { pieces } = await buildGroupPieces(id);
+
+  // Aprovar é rigoroso: qualquer peça inagendável bloqueia tudo. É o estado "vai pro ar".
+  const issues = validateSchedulable(pieces);
+  if (issues.length > 0) return { ok: false, issues };
+
+  const scheduled = await rescheduleCampaign(id);
+
   const supabase = await createServerSupabase();
   const { error } = await supabase
     .from("campaigns")
     .update({ status: "aprovada", updated_at: new Date().toISOString() })
     .eq("id", id);
   if (error) throw new Error(`Falha ao aprovar campanha: ${error.message}`);
+
   revalidatePath("/campanhas");
   revalidatePath(`/campanhas/${id}`);
+  revalidatePath("/disparos");
+
+  return { ok: true, scheduled };
 }
 
 export async function refineCampaignAction(
@@ -192,6 +310,9 @@ export async function refineCampaignAction(
   });
   if (e2) throw new Error(`Falha ao salvar reply do assistente: ${e2.message}`);
 
+  // O refino reescreve copy e mídia das peças; a fila carrega um snapshot delas.
+  await rescheduleCampaign(campaignId);
+
   revalidatePath(`/campanhas/${campaignId}`);
   return result.reply;
 }
@@ -223,6 +344,7 @@ export async function updateGroupPostAction(
     .eq("campaign_id", campaignId)
     .eq("sort_order", sortOrder);
   if (error) throw new Error(`Falha ao atualizar post: ${error.message}`);
+  await rescheduleCampaign(campaignId);
   revalidatePath(`/campanhas/${campaignId}`);
 }
 
@@ -236,10 +358,130 @@ export async function setTouchStepAssetAction(campaignId: string, sortOrder: num
   revalidatePath(`/campanhas/${campaignId}`);
 }
 
+export type SendNowResult =
+  | { ok: true; sent: number; failed: number; queued: number }
+  | { ok: false; issues: ScheduleIssue[] };
+
+/**
+ * "Enviar agora": enfileira com scheduled_at = agora e chama o despachante inline.
+ *
+ * É a MESMA lib do cron — mesmo claim, mesmo log, mesmas travas (inclusive o botão
+ * de pânico). O primeiro grupo sai em segundos; os demais nascem espaçados pelo
+ * jitter e o cron os entrega nos minutos seguintes. Não pulamos o anti-ban só
+ * porque o disparo é manual.
+ */
+export async function sendPieceNowAction(
+  campaignId: string,
+  postId: string,
+): Promise<SendNowResult> {
+  const { pieces } = await buildGroupPieces(campaignId);
+  const piece = pieces.find((p) => p.post_id === postId);
+  if (!piece) throw new Error("Peça não encontrada.");
+
+  // send_at vazio => planSends agenda para agora.
+  const now = { ...piece, send_at: "" };
+
+  const issues = validateSchedulable([now]);
+  if (issues.length > 0) return { ok: false, issues };
+
+  const supabase = await createServerSupabase();
+  const batchId = crypto.randomUUID();
+  const rows = planSends([now]).map((s) => ({ ...s, batch_id: batchId, campaign_id: campaignId }));
+
+  // O índice único parcial (post_id, wa_group_id) impede duplicar um envio vivo:
+  // se a peça já estiver na fila para o mesmo grupo, o insert falha — e é isso que
+  // queremos, em vez de mandar a mesma mensagem duas vezes.
+  const { data: inserted, error } = await supabase
+    .from("scheduled_sends")
+    .insert(rows)
+    .select("id");
+  if (error) {
+    if (error.code === "23505") {
+      throw new Error("Esta peça já está na fila (ou já foi enviada) para algum destes grupos.");
+    }
+    throw new Error(`Falha ao enfileirar envio: ${error.message}`);
+  }
+
+  // O despachante processa a fila inteira, não só o que acabei de inserir.
+  // Só conto como "meu" o que saiu destas linhas.
+  const myIds = new Set((inserted ?? []).map((r) => r.id as string));
+  const { results } = await dispatchDue();
+  const mine = results.filter((r) => myIds.has(r.id));
+
+  const sent = mine.filter((r) => r.ok).length;
+  const failed = mine.filter((r) => !r.ok).length;
+
+  revalidatePath(`/campanhas/${campaignId}`);
+  revalidatePath("/disparos");
+
+  return { ok: true, sent, failed, queued: Math.max(0, myIds.size - sent - failed) };
+}
+
+/**
+ * Editor em massa: sobrescreve os grupos de TODAS as peças da campanha.
+ *
+ * Não existe "grupo da campanha" persistido — a peça é a fonte de verdade. Isto aqui é
+ * conveniência (escolher uma vez em vez de cinco), não herança. Por isso sobrescreve
+ * mesmo quem tinha alvo customizado, e a UI avisa antes.
+ */
+export async function setCampaignCommunitiesAction(
+  campaignId: string,
+  communityIds: string[],
+): Promise<void> {
+  const supabase = await createServerSupabase();
+  const { data: posts, error } = await supabase
+    .from("campaign_group_posts")
+    .select("id")
+    .eq("campaign_id", campaignId);
+  if (error) throw new Error(`Falha ao carregar posts: ${error.message}`);
+
+  const ids = (posts ?? []).map((p) => p.id as string);
+  if (ids.length === 0) return;
+
+  const { error: eDel } = await supabase
+    .from("campaign_group_post_communities")
+    .delete()
+    .in("post_id", ids);
+  if (eDel) throw new Error(`Falha ao limpar grupos: ${eDel.message}`);
+
+  if (communityIds.length > 0) {
+    const rows = ids.flatMap((post_id) =>
+      communityIds.map((community_id) => ({ post_id, community_id })),
+    );
+    const { error: eIns } = await supabase.from("campaign_group_post_communities").insert(rows);
+    if (eIns) throw new Error(`Falha ao aplicar grupos: ${eIns.message}`);
+  }
+
+  await rescheduleCampaign(campaignId);
+  revalidatePath(`/campanhas/${campaignId}`);
+}
+
+export async function setPostCommunitiesAction(
+  campaignId: string,
+  postId: string,
+  communityIds: string[],
+): Promise<void> {
+  const supabase = await createServerSupabase();
+  const { error } = await supabase
+    .from("campaign_group_post_communities")
+    .delete()
+    .eq("post_id", postId);
+  if (error) throw new Error(`Falha ao limpar grupos do post: ${error.message}`);
+
+  if (communityIds.length > 0) {
+    const rows = communityIds.map((community_id) => ({ post_id: postId, community_id }));
+    const { error: e2 } = await supabase.from("campaign_group_post_communities").insert(rows);
+    if (e2) throw new Error(`Falha ao salvar grupos do post: ${e2.message}`);
+  }
+  await rescheduleCampaign(campaignId);
+  revalidatePath(`/campanhas/${campaignId}`);
+}
+
 export async function setPostAssetAction(campaignId: string, sortOrder: number, assetId: string): Promise<void> {
   const supabase = await createServerSupabase();
   const { error } = await supabase.from("campaign_group_posts").update({ asset_id: assetId || null }).eq("campaign_id", campaignId).eq("sort_order", sortOrder);
   if (error) throw new Error(`Falha ao anexar mídia: ${error.message}`);
+  await rescheduleCampaign(campaignId);
   revalidatePath(`/campanhas/${campaignId}`);
 }
 
@@ -275,14 +517,26 @@ export async function duplicateCampaignAction(campaignId: string, newAnchor: str
       if (e1) throw new Error(`Falha ao duplicar toques: ${e1.message}`);
     }
     if (src.group_posts.length > 0) {
-      const { error: e2 } = await supabase.from("campaign_group_posts").insert(src.group_posts.map((p, idx) => ({
+      const { data: newPosts, error: e2 } = await supabase.from("campaign_group_posts").insert(src.group_posts.map((p, idx) => ({
         campaign_id: newId, sort_order: p.sort_order,
         offset_label: p.offset_label, role: p.role, communities: p.communities,
         copy: p.copy, media: p.media, asset_id: p.asset_id,
         message_code: recipe ? buildCode(recipe.recipe_type, gruposSlots[idx]?.code ?? "", anchorValue) : p.message_code,
         send_at: recipe ? computeSendAt(anchorValue, gruposSlots[idx]?.offset_days ?? 0, gruposSlots[idx]?.offset_time ?? "") : p.send_at,
-      })));
+      }))).select("id, sort_order");
       if (e2) throw new Error(`Falha ao duplicar posts: ${e2.message}`);
+
+      // A seleção de grupos vai junto: duplicar sem os alvos daria uma campanha inagendável.
+      const newIdBySortOrder = new Map((newPosts ?? []).map((p) => [p.sort_order as number, p.id as string]));
+      const links = src.group_posts.flatMap((p) => {
+        const postId = newIdBySortOrder.get(p.sort_order);
+        if (!postId) return [];
+        return p.community_ids.map((community_id) => ({ post_id: postId, community_id }));
+      });
+      if (links.length > 0) {
+        const { error: e3 } = await supabase.from("campaign_group_post_communities").insert(links);
+        if (e3) throw new Error(`Falha ao duplicar grupos dos posts: ${e3.message}`);
+      }
     }
   } catch (e) {
     // rollback compensatório: remove a cópia órfã antes de propagar o erro

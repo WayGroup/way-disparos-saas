@@ -1,7 +1,7 @@
 "use client";
 import { useEffect } from "react";
 import type { Piece } from "@/lib/campaign-pieces";
-import type { CampaignTouch, CampaignGroupPost, Asset } from "@/lib/db/types";
+import type { CampaignTouch, CampaignGroupPost, Asset, Community } from "@/lib/db/types";
 import { pieceTime } from "@/lib/campaign-pieces";
 import { formatSendAt } from "@/lib/schedule";
 import { WhatsappPreview } from "./whatsapp-preview";
@@ -14,6 +14,7 @@ export function PieceDetailModal({
   post,
   campaignId,
   assets,
+  groups,
   onClose,
 }: {
   piece: Piece;
@@ -21,6 +22,7 @@ export function PieceDetailModal({
   post: CampaignGroupPost | null;
   campaignId: string;
   assets: Asset[];
+  groups: Community[];
   onClose: () => void;
 }) {
   useEffect(() => {
@@ -59,7 +61,7 @@ export function PieceDetailModal({
         <div className="grid gap-5 p-5 grid-cols-1 lg:grid-cols-[minmax(0,1fr)_340px]">
           <div className="min-w-0">
             {touch && <TouchCard campaignId={campaignId} touch={touch} assets={assets} />}
-            {post && <PostCard campaignId={campaignId} post={post} assets={assets} />}
+            {post && <PostCard campaignId={campaignId} post={post} assets={assets} groups={groups} />}
             {!touch && !post && <p className="text-sm text-muted">Peça não encontrada.</p>}
           </div>
           <div className="min-w-0">

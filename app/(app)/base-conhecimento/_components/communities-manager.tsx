@@ -10,11 +10,29 @@ export function CommunitiesManager({ communities }: { communities: Community[] }
   return (
     <div className="rounded-xl border border-line bg-white p-5">
       <h2 className="font-display font-bold">Comunidades do funil</h2>
-      <p className="text-sm text-muted mt-1">Usadas como alvo dos posts em grupo.</p>
+      <p className="text-sm text-muted mt-1">
+        Usadas como alvo dos posts em grupo. Só as vinculadas a um grupo do WhatsApp podem receber
+        disparo — escolha os grupos em <a href="/disparos" className="text-emerald underline">Disparos</a>.
+      </p>
       <ul className="mt-3 space-y-2">
         {communities.map((c) => (
           <li key={c.id} className="flex items-center justify-between text-sm">
-            <span>{c.name} <span className="font-mono text-xs text-muted">· {c.identifier}</span></span>
+            <span>
+              {c.name} <span className="font-mono text-xs text-muted">· {c.identifier}</span>
+              {c.enabled ? (
+                <span className="ml-2 rounded-full bg-emerald/10 text-emerald px-2 py-0.5 text-xs font-semibold">
+                  em uso
+                </span>
+              ) : c.wa_group_id ? (
+                <span className="ml-2 rounded-full bg-ink/8 text-muted px-2 py-0.5 text-xs font-semibold">
+                  fora de uso
+                </span>
+              ) : (
+                <span className="ml-2 rounded-full bg-risk/10 text-risk px-2 py-0.5 text-xs font-semibold">
+                  sem grupo
+                </span>
+              )}
+            </span>
             <button
               onClick={() => startTransition(async () => { await removeCommunityAction(c.id); })}
               disabled={pending}

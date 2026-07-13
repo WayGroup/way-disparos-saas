@@ -23,11 +23,23 @@ export async function getCampaign(id: string): Promise<CampaignWithContent | nul
     .from("campaign_touches").select("*").eq("campaign_id", id).order("sort_order");
   if (e1) throw new Error(`Falha ao carregar toques: ${e1.message}`);
   const { data: posts, error: e2 } = await supabase
-    .from("campaign_group_posts").select("*").eq("campaign_id", id).order("sort_order");
+    .from("campaign_group_posts")
+    .select("*, campaign_group_post_communities(community_id)")
+    .eq("campaign_id", id)
+    .order("sort_order");
   if (e2) throw new Error(`Falha ao carregar posts: ${e2.message}`);
+
+  const group_posts = (posts ?? []).map((p: Record<string, unknown>) => {
+    const { campaign_group_post_communities: links, ...post } = p;
+    return {
+      ...(post as Omit<CampaignGroupPost, "community_ids">),
+      community_ids: ((links ?? []) as { community_id: string }[]).map((l) => l.community_id),
+    };
+  });
+
   return {
     ...(campaign as Campaign),
     touches: (touches ?? []) as CampaignTouch[],
-    group_posts: (posts ?? []) as CampaignGroupPost[],
+    group_posts,
   };
 }
