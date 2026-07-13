@@ -412,7 +412,7 @@ export async function sendPieceNowAction(
   const failed = mine.filter((r) => !r.ok).length;
 
   revalidatePath(`/campanhas/${campaignId}`);
-  revalidatePath("/envios");
+  revalidatePath("/disparos");
 
   return { ok: true, sent, failed, queued: Math.max(0, myIds.size - sent - failed) };
 }

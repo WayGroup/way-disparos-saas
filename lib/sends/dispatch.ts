@@ -92,7 +92,7 @@ export async function dispatchDue(limit: number = DISPATCH_LIMIT): Promise<{
       p_error: result.error ?? null,
     });
     // Se a gravação do resultado falhar, a linha fica em 'enviando' e vira decisão
-    // humana em /envios. Nunca reenviamos por conta própria: a mensagem já saiu.
+    // humana em /disparos. Nunca reenviamos por conta própria: a mensagem já saiu.
     if (e) console.error(`Falha ao finalizar envio ${send.id}: ${e.message}`);
   }
 

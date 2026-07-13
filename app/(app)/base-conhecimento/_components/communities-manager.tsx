@@ -12,7 +12,7 @@ export function CommunitiesManager({ communities }: { communities: Community[] }
       <h2 className="font-display font-bold">Comunidades do funil</h2>
       <p className="text-sm text-muted mt-1">
         Usadas como alvo dos posts em grupo. Só as vinculadas a um grupo do WhatsApp podem receber
-        disparo — vincule em <a href="/whatsapp" className="text-emerald underline">Conexão WhatsApp</a>.
+        disparo — escolha os grupos em <a href="/disparos" className="text-emerald underline">Disparos</a>.
       </p>
       <ul className="mt-3 space-y-2">
         {communities.map((c) => (

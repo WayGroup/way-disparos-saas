@@ -59,7 +59,7 @@ export function SendNowButton({
           {sent.ok} enviado(s)
           {sent.failed > 0 && `, ${sent.failed} com falha`}
           {sent.queued > 0 && `, ${sent.queued} na fila (saem espaçados nos próximos minutos)`}.{" "}
-          <a href="/envios" className="underline">Ver em Envios</a>
+          <a href="/disparos" className="underline">Ver em Disparos</a>
         </p>
       )}
     </div>

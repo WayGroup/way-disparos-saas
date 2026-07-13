@@ -9,9 +9,7 @@ describe("nav", () => {
       "/receitas",
       "/midias",
       "/links",
-      "/disparo-rapido",
-      "/envios",
-      "/whatsapp",
+      "/disparos",
       "/base-conhecimento",
     ]);
   });

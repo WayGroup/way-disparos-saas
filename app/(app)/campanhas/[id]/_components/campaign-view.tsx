@@ -103,8 +103,8 @@ export function CampaignView({
             </div>
           ) : (
             <div className="rounded-xl border border-emerald/30 bg-emerald/5 p-4 text-sm text-emeraldd">
-              {scheduled} envio(s) na fila.{" "}
-              <a href="/envios" className="underline font-semibold">Ver em Envios</a>
+              Campanha aprovada · {scheduled} envio(s) destravados.{" "}
+              <a href="/disparos" className="underline font-semibold">Ver em Disparos</a>
             </div>
           )}
         </div>
