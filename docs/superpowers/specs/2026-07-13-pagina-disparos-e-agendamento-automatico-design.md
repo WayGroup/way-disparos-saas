@@ -79,4 +79,4 @@ Trilha API (segue manual) · herança de grupos por receita · agendar sem revis
 
 ## 9. Pré-requisito operacional registrado
 
-O número hoje conectado (`5511999999999`, perfil "uma pessoa do time") é um WhatsApp de trabalho real: 2.848 contatos e 220 grupos de cliente. A decisão tomada foi **testar nele, produzir noutro**: antes de qualquer disparo real, o canal deve ser trocado por um chip dedicado. Um ban leva junto o WhatsApp da pessoa e o acesso aos grupos.
+O número hoje conectado é o WhatsApp de trabalho de uma pessoa do time — com milhares de contatos e as centenas de grupos de cliente do Way. A decisão tomada foi **testar nele, produzir noutro**: antes de qualquer disparo real, o canal deve ser trocado por um chip dedicado. Um ban leva junto o WhatsApp dessa pessoa e o acesso a todos esses grupos.
