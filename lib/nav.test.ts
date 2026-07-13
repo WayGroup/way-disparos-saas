@@ -9,6 +9,8 @@ describe("nav", () => {
       "/receitas",
       "/midias",
       "/links",
+      "/disparo-rapido",
+      "/envios",
       "/whatsapp",
       "/base-conhecimento",
     ]);

@@ -14,6 +14,7 @@ import { listAssets } from "@/lib/db/assets";
 import { publicAssetUrl } from "@/lib/campaign-pieces";
 import { buildSendPayload } from "@/lib/sends/payload";
 import { planSends, validateSchedulable, type ScheduleIssue } from "@/lib/sends/plan";
+import { dispatchDue } from "@/lib/sends/dispatch";
 
 type GenLog = { campaign_id?: string; recipe_id: string; kind: string; ok: boolean; error?: string; duration_ms: number };
 
@@ -307,6 +308,65 @@ export async function setTouchStepAssetAction(campaignId: string, sortOrder: num
   const { error: e2 } = await supabase.from("campaign_touches").update({ window_steps: steps }).eq("campaign_id", campaignId).eq("sort_order", sortOrder);
   if (e2) throw new Error(`Falha ao anexar mídia: ${e2.message}`);
   revalidatePath(`/campanhas/${campaignId}`);
+}
+
+export type SendNowResult =
+  | { ok: true; sent: number; failed: number; queued: number }
+  | { ok: false; issues: ScheduleIssue[] };
+
+/**
+ * "Enviar agora": enfileira com scheduled_at = agora e chama o despachante inline.
+ *
+ * É a MESMA lib do cron — mesmo claim, mesmo log, mesmas travas (inclusive o botão
+ * de pânico). O primeiro grupo sai em segundos; os demais nascem espaçados pelo
+ * jitter e o cron os entrega nos minutos seguintes. Não pulamos o anti-ban só
+ * porque o disparo é manual.
+ */
+export async function sendPieceNowAction(
+  campaignId: string,
+  postId: string,
+): Promise<SendNowResult> {
+  const { pieces } = await buildGroupPieces(campaignId);
+  const piece = pieces.find((p) => p.post_id === postId);
+  if (!piece) throw new Error("Peça não encontrada.");
+
+  // send_at vazio => planSends agenda para agora.
+  const now = { ...piece, send_at: "" };
+
+  const issues = validateSchedulable([now]);
+  if (issues.length > 0) return { ok: false, issues };
+
+  const supabase = await createServerSupabase();
+  const batchId = crypto.randomUUID();
+  const rows = planSends([now]).map((s) => ({ ...s, batch_id: batchId, campaign_id: campaignId }));
+
+  // O índice único parcial (post_id, wa_group_id) impede duplicar um envio vivo:
+  // se a peça já estiver na fila para o mesmo grupo, o insert falha — e é isso que
+  // queremos, em vez de mandar a mesma mensagem duas vezes.
+  const { data: inserted, error } = await supabase
+    .from("scheduled_sends")
+    .insert(rows)
+    .select("id");
+  if (error) {
+    if (error.code === "23505") {
+      throw new Error("Esta peça já está na fila (ou já foi enviada) para algum destes grupos.");
+    }
+    throw new Error(`Falha ao enfileirar envio: ${error.message}`);
+  }
+
+  // O despachante processa a fila inteira, não só o que acabei de inserir.
+  // Só conto como "meu" o que saiu destas linhas.
+  const myIds = new Set((inserted ?? []).map((r) => r.id as string));
+  const { results } = await dispatchDue();
+  const mine = results.filter((r) => myIds.has(r.id));
+
+  const sent = mine.filter((r) => r.ok).length;
+  const failed = mine.filter((r) => !r.ok).length;
+
+  revalidatePath(`/campanhas/${campaignId}`);
+  revalidatePath("/envios");
+
+  return { ok: true, sent, failed, queued: Math.max(0, myIds.size - sent - failed) };
 }
 
 export async function setPostCommunitiesAction(

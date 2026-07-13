@@ -7,6 +7,7 @@ import { CopyButton } from "./copy-button";
 import { formatSendAt } from "@/lib/schedule";
 import { MediaPicker } from "./media-picker";
 import { GroupMultiSelect } from "./group-multi-select";
+import { SendNowButton } from "./send-now-button";
 
 const COPY_REVEAL = "opacity-0 group-hover:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity";
 
@@ -86,9 +87,10 @@ export function PostCard({ campaignId, post, assets, groups, highlight = false }
         </section>
 
         {/* rodapé */}
-        <div className="mt-5 pt-3 border-t border-line flex justify-end gap-3">
+        <div className="mt-5 pt-3 border-t border-line flex justify-end items-start gap-4">
           <button onClick={() => setEditing(true)} className="text-xs text-ink2 font-medium hover:underline">Editar</button>
           <button onClick={regenerate} disabled={pending} className="text-xs text-emeraldd font-medium hover:underline disabled:opacity-50">Regenerar</button>
+          <SendNowButton campaignId={campaignId} postId={post.id} groupCount={post.community_ids.length} />
         </div>
       </div>
     );
