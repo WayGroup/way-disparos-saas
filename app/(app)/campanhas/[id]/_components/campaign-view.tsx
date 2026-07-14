@@ -35,19 +35,28 @@ export function CampaignView({
   const [issues, setIssues] = useState<ScheduleIssue[]>([]);
   const [scheduled, setScheduled] = useState<number | null>(null);
   const [past, setPast] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   function approveAndSchedule() {
     setIssues([]);
     setScheduled(null);
     setPast([]);
+    setError(null);
     startApproveTransition(async () => {
-      const result = await approveAndScheduleAction(campaign.id);
-      if (result.ok) {
-        setScheduled(result.scheduled);
-        setPast(result.past);
-        router.refresh();
-      } else {
-        setIssues(result.issues);
+      try {
+        const result = await approveAndScheduleAction(campaign.id);
+        if (result.ok) {
+          setScheduled(result.scheduled);
+          // `?? []` de propósito: se um deploy trocar o formato da resposta enquanto a
+          // aba está aberta, a tela não pode quebrar em cima de um campo que sumiu.
+          setPast(result.past ?? []);
+          router.refresh();
+        } else {
+          setIssues(result.issues ?? []);
+        }
+      } catch (e) {
+        // Erro na tela, não tela de erro.
+        setError(e instanceof Error ? e.message : "Falha ao aprovar. Recarregue e tente de novo.");
       }
     });
   }
@@ -89,9 +98,13 @@ export function CampaignView({
         </div>
       </header>
 
-      {(issues.length > 0 || scheduled !== null) && (
+      {(issues.length > 0 || scheduled !== null || error) && (
         <div className="px-8 pt-4 shrink-0">
-          {issues.length > 0 ? (
+          {error ? (
+            <div className="rounded-xl border border-risk/30 bg-risk/5 p-4 text-sm text-risk">
+              {error}
+            </div>
+          ) : issues.length > 0 ? (
             <div className="rounded-xl border border-risk/30 bg-risk/5 p-4">
               <p className="text-sm font-semibold text-risk">
                 Nada foi agendado. Resolva antes de aprovar:

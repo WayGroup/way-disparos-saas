@@ -205,7 +205,10 @@ async function rescheduleCampaign(
     .from("scheduled_sends")
     .delete()
     .eq("campaign_id", campaignId)
-    .eq("status", "pendente");
+    .eq("status", "pendente")
+    // Um "Enviar agora" em voo (grupos seguintes, espaçados pelo jitter) não pode ser
+    // cancelado por uma edição feita nesse meio-tempo.
+    .eq("forced", false);
   if (eDel) throw new Error(`Falha ao limpar a fila: ${eDel.message}`);
 
   const planned = planSends(schedulable);
@@ -363,7 +366,7 @@ export async function setTouchStepAssetAction(campaignId: string, sortOrder: num
 }
 
 export type SendNowResult =
-  | { ok: true; sent: number; failed: number; queued: number }
+  | { ok: true; sent: number; failed: number; queued: number; skipped: number }
   | { ok: false; issues: ScheduleIssue[] };
 
 /**
@@ -389,25 +392,59 @@ export async function sendPieceNowAction(
   if (issues.length > 0) return { ok: false, issues };
 
   const supabase = await createServerSupabase();
-  const batchId = crypto.randomUUID();
-  const rows = planSends([now]).map((s) => ({ ...s, batch_id: batchId, campaign_id: campaignId }));
 
-  // O índice único parcial (post_id, wa_group_id) impede duplicar um envio vivo:
-  // se a peça já estiver na fila para o mesmo grupo, o insert falha — e é isso que
-  // queremos, em vez de mandar a mesma mensagem duas vezes.
+  // Desde que a campanha passou a montar a fila na geração, a peça JÁ ESTÁ enfileirada.
+  // Inserir outra linha para o mesmo (post_id, wa_group_id) viola o índice único de
+  // envios vivos — era o erro 23505 que estourava na tela. "Enviar agora" não insere
+  // por cima: ele ANTECIPA o que já está lá.
+  const { data: existing, error: eSel } = await supabase
+    .from("scheduled_sends")
+    .select("wa_group_id, status")
+    .eq("post_id", postId);
+  if (eSel) throw new Error(`Falha ao ler a fila da peça: ${eSel.message}`);
+
+  // Grupo que já recebeu (ou está recebendo) não recebe de novo. É o mesmo cuidado do
+  // índice único — só que agora a gente explica em vez de estourar.
+  const jaSaiu = new Set(
+    (existing ?? [])
+      .filter((r) => r.status === "enviado" || r.status === "enviando")
+      .map((r) => r.wa_group_id as string),
+  );
+
+  const alvos = now.targets.filter((t) => !jaSaiu.has(t.wa_group_id));
+  const skipped = now.targets.length - alvos.length;
+
+  if (alvos.length === 0) {
+    return { ok: true, sent: 0, failed: 0, queued: 0, skipped };
+  }
+
+  // Apaga os pendentes desta peça e refaz: assim o payload leva a versão atual do texto
+  // e da mídia, não um snapshot velho.
+  const { error: eDel } = await supabase
+    .from("scheduled_sends")
+    .delete()
+    .eq("post_id", postId)
+    .eq("status", "pendente");
+  if (eDel) throw new Error(`Falha ao limpar a fila da peça: ${eDel.message}`);
+
+  const batchId = crypto.randomUUID();
+  const rows = planSends([{ ...now, targets: alvos }]).map((s) => ({
+    ...s,
+    batch_id: batchId,
+    campaign_id: campaignId,
+    // Pula o portão da aprovação: alguém clicou em "Enviar agora" e confirmou o aviso.
+    // Esse clique É a aprovação desta peça. Sem isto, numa campanha em rascunho o clique
+    // não faria nada — o claim só entrega campanha aprovada.
+    forced: true,
+  }));
+
   const { data: inserted, error } = await supabase
     .from("scheduled_sends")
     .insert(rows)
     .select("id");
-  if (error) {
-    if (error.code === "23505") {
-      throw new Error("Esta peça já está na fila (ou já foi enviada) para algum destes grupos.");
-    }
-    throw new Error(`Falha ao enfileirar envio: ${error.message}`);
-  }
+  if (error) throw new Error(`Falha ao enfileirar envio: ${error.message}`);
 
   // O despachante processa a fila inteira, não só o que acabei de inserir.
-  // Só conto como "meu" o que saiu destas linhas.
   const myIds = new Set((inserted ?? []).map((r) => r.id as string));
   const { results } = await dispatchDue();
   const mine = results.filter((r) => myIds.has(r.id));
@@ -418,7 +455,7 @@ export async function sendPieceNowAction(
   revalidatePath(`/campanhas/${campaignId}`);
   revalidatePath("/disparos");
 
-  return { ok: true, sent, failed, queued: Math.max(0, myIds.size - sent - failed) };
+  return { ok: true, sent, failed, queued: Math.max(0, myIds.size - sent - failed), skipped };
 }
 
 /**
