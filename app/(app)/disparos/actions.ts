@@ -9,7 +9,7 @@ import { evoConnect, evoConnectionState, evoListGroups } from "@/lib/evolution/c
 import { planCommunitySync, type SyncableCommunity } from "@/lib/evolution/sync";
 import type { EvoConnectionState, EvoQrCode } from "@/lib/evolution/types";
 import { buildSendPayload } from "@/lib/sends/payload";
-import { isStale, planSends, validateSchedulable, type ScheduleIssue } from "@/lib/sends/plan";
+import { isPast, planSends, validateSchedulable, type ScheduleIssue } from "@/lib/sends/plan";
 import { dispatchDue } from "@/lib/sends/dispatch";
 
 function revalidateAll() {
@@ -200,12 +200,12 @@ export async function quickSendAction(input: QuickSendInput): Promise<QuickSendR
 
   const issues = validateSchedulable([piece], { allowImmediate: true });
 
-  // Agendar para o passado é sempre engano — a mensagem sairia em rajada, na hora.
-  if (piece.send_at && isStale(piece.send_at, new Date())) {
+  // Nada é agendado para trás. Se a intenção era mandar já, o botão é "Agora".
+  if (piece.send_at && isPast(piece.send_at, new Date())) {
     issues.push({
       post_id: null,
       label: "Disparo rápido",
-      message: "Essa data já passou. Escolha um horário no futuro ou envie agora.",
+      message: "Essa data já passou. Escolha um horário no futuro ou clique em Agora.",
     });
   }
 

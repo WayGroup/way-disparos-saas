@@ -196,9 +196,9 @@ async function buildGroupPieces(campaignId: string) {
  */
 async function rescheduleCampaign(
   campaignId: string,
-): Promise<{ scheduled: number; stale: string[] }> {
+): Promise<{ scheduled: number; past: string[] }> {
   const { pieces } = await buildGroupPieces(campaignId);
-  const { schedulable, stale } = partitionSchedulable(pieces);
+  const { schedulable, past } = partitionSchedulable(pieces);
 
   const supabase = await createServerSupabase();
   const { error: eDel } = await supabase
@@ -218,11 +218,11 @@ async function rescheduleCampaign(
 
   revalidatePath(`/campanhas/${campaignId}`);
   revalidatePath("/disparos");
-  return { scheduled: planned.length, stale: stale.map((p) => p.label) };
+  return { scheduled: planned.length, past: past.map((p) => p.label) };
 }
 
 export type ScheduleResult =
-  | { ok: true; scheduled: number; stale: string[] }
+  | { ok: true; scheduled: number; past: string[] }
   | { ok: false; issues: ScheduleIssue[] };
 
 /**
@@ -239,9 +239,9 @@ export async function approveAndScheduleAction(id: string): Promise<ScheduleResu
   const issues = validateSchedulable(pieces);
   if (issues.length > 0) return { ok: false, issues };
 
-  // Peça vencida não bloqueia a aprovação — uma campanha pode ter toques antigos e
-  // futuros ao mesmo tempo. Ela só não entra na fila, e quem aprova fica sabendo.
-  const { scheduled, stale } = await rescheduleCampaign(id);
+  // Peça no passado não bloqueia a aprovação — uma campanha pode ter toques antigos e
+  // futuros ao mesmo tempo. Ela só nunca entra na fila, e quem aprova fica sabendo.
+  const { scheduled, past } = await rescheduleCampaign(id);
 
   const supabase = await createServerSupabase();
   const { error } = await supabase
@@ -254,7 +254,7 @@ export async function approveAndScheduleAction(id: string): Promise<ScheduleResu
   revalidatePath(`/campanhas/${id}`);
   revalidatePath("/disparos");
 
-  return { ok: true, scheduled, stale };
+  return { ok: true, scheduled, past };
 }
 
 export async function refineCampaignAction(

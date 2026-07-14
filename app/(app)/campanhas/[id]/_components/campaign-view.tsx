@@ -34,17 +34,17 @@ export function CampaignView({
   const [approvePending, startApproveTransition] = useTransition();
   const [issues, setIssues] = useState<ScheduleIssue[]>([]);
   const [scheduled, setScheduled] = useState<number | null>(null);
-  const [stale, setStale] = useState<string[]>([]);
+  const [past, setPast] = useState<string[]>([]);
 
   function approveAndSchedule() {
     setIssues([]);
     setScheduled(null);
-    setStale([]);
+    setPast([]);
     startApproveTransition(async () => {
       const result = await approveAndScheduleAction(campaign.id);
       if (result.ok) {
         setScheduled(result.scheduled);
-        setStale(result.stale);
+        setPast(result.past);
         router.refresh();
       } else {
         setIssues(result.issues);
@@ -107,14 +107,14 @@ export function CampaignView({
           ) : (
             <div className="rounded-xl border border-emerald/30 bg-emerald/5 p-4 text-sm text-emeraldd">
               <p>
-                Campanha aprovada · {scheduled} envio(s) destravados.{" "}
+                Campanha aprovada · {scheduled} envio(s) destravados, todos com hora à frente.{" "}
                 <a href="/disparos" className="underline font-semibold">Ver em Disparos</a>
               </p>
-              {stale.length > 0 && (
+              {past.length > 0 && (
                 <p className="mt-2 text-risk">
-                  <strong>{stale.length} peça(s) ficaram de fora</strong> — a data já passou, então
-                  elas não entram na fila: {stale.join(", ")}. Para enviar mesmo assim, duplique a
-                  campanha com uma data nova.
+                  <strong>{past.length} peça(s) não entraram na fila</strong> — a hora delas já
+                  passou, e nada é agendado para trás: {past.join(", ")}. Para enviar mesmo assim,
+                  duplique a campanha com uma data nova.
                 </p>
               )}
             </div>

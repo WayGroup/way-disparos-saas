@@ -28,24 +28,27 @@ export type PlannedSend = {
 export type PlanOptions = JitterOptions & { now?: Date };
 
 /**
- * Um envio só sai se estiver atrasado no máximo 2 horas.
+ * NADA É AGENDADO PARA TRÁS.
  *
- * Sem essa janela, aprovar uma campanha cuja data já passou solta a fila inteira de uma
- * vez: o claim entrega tudo que tem `scheduled_at <= now()`, e o jitter — que mora no
- * scheduled_at — também está todo no passado. Resultado: rajada, conteúdo desatualizado,
- * e o número no caminho do ban.
+ * Agendar e entregar têm relógios diferentes, e confundi-los é perigoso:
  *
- * Duas horas cobre o atraso legítimo (deploy, worker fora do ar, cron engasgado) sem
- * cobrir "essa mensagem era de ontem".
+ * - AGENDAR (aqui): tolerância zero. Uma peça cuja hora já passou não entra na fila.
+ *   Sem isso, aprovar uma campanha vencida soltaria tudo de uma vez — o claim entrega
+ *   qualquer coisa com `scheduled_at <= now()`, e o jitter anti-ban, que mora no
+ *   scheduled_at, também estaria no passado. Rajada de mensagens velhas nos grupos.
+ *
+ * - ENTREGAR (na função claim, no banco): folga de 2h. O cron acorda de minuto em
+ *   minuto, então todo envio é entregue alguns segundos "atrasado". Essa folga cobre
+ *   worker fora do ar e deploy longo — não cobre agendar para o passado, porque isso
+ *   nunca chega lá.
+ *
+ * `send_at` vazio significa "agora" e nunca é passado. Data inválida é problema do validate.
  */
-export const STALE_AFTER_MS = 2 * 60 * 60 * 1000;
-
-/** `send_at` vazio significa "agora" e nunca é velho. Data inválida é problema do validate. */
-export function isStale(sendAt: string, now: Date): boolean {
+export function isPast(sendAt: string, now: Date): boolean {
   if (!sendAt) return false;
   const iso = toInstant(sendAt);
   if (!iso) return false;
-  return now.getTime() - new Date(iso).getTime() > STALE_AFTER_MS;
+  return new Date(iso).getTime() <= now.getTime();
 }
 
 /**

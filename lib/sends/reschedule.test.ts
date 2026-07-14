@@ -25,10 +25,10 @@ describe("partitionSchedulable", () => {
   });
 
   it("tudo válido não bloqueia nada", () => {
-    const { schedulable, blocked, stale } = partitionSchedulable([base()], NOW);
+    const { schedulable, blocked, past } = partitionSchedulable([base()], NOW);
     expect(schedulable).toHaveLength(1);
     expect(blocked).toEqual([]);
-    expect(stale).toEqual([]);
+    expect(past).toEqual([]);
   });
 
   it("peça sem texto e sem mídia é bloqueada", () => {
@@ -47,51 +47,60 @@ describe("partitionSchedulable", () => {
   });
 
   it("lista vazia não explode", () => {
-    expect(partitionSchedulable([], NOW)).toEqual({ schedulable: [], blocked: [], stale: [] });
+    expect(partitionSchedulable([], NOW)).toEqual({ schedulable: [], blocked: [], past: [] });
   });
 });
 
-// A regra: um envio só sai se estiver atrasado no máximo 2 horas.
-describe("peças vencidas não entram na fila", () => {
-  it("peça de ontem é vencida — nunca é agendada", () => {
+// A REGRA: nada é agendado para trás. Nenhuma peça no passado entra na fila.
+describe("nada é agendado para trás", () => {
+  it("peça de ontem nunca é agendada", () => {
     const ontem = base({ send_at: "2026-07-19 10:00" });
-    const { schedulable, stale, blocked } = partitionSchedulable([ontem], NOW);
+    const { schedulable, past, blocked } = partitionSchedulable([ontem], NOW);
     expect(schedulable).toEqual([]);
-    expect(stale.map((p) => p.label)).toEqual(["Convite"]);
-    // Vencida não é "inválida": não bloqueia a aprovação, só fica de fora.
+    expect(past.map((p) => p.label)).toEqual(["Convite"]);
+    // No passado não é "inválida": não bloqueia a aprovação, só fica de fora.
     expect(blocked).toEqual([]);
   });
 
-  it("atraso de 30 minutos ainda sai — worker pode ter engasgado", () => {
-    const atrasada = base({ send_at: "2026-07-20 09:30" });
-    const { schedulable, stale } = partitionSchedulable([atrasada], NOW);
-    expect(schedulable).toHaveLength(1);
-    expect(stale).toEqual([]);
-  });
-
-  it("atraso de 3 horas já é velho demais", () => {
-    const velha = base({ send_at: "2026-07-20 07:00" });
-    const { schedulable, stale } = partitionSchedulable([velha], NOW);
+  it("um minuto no passado já é passado — sem tolerância", () => {
+    const { schedulable, past } = partitionSchedulable([base({ send_at: "2026-07-20 09:59" })], NOW);
     expect(schedulable).toEqual([]);
-    expect(stale).toHaveLength(1);
+    expect(past).toHaveLength(1);
   });
 
-  it("campanha meio vencida: só as peças futuras entram na fila", () => {
+  it("exatamente agora conta como passado — a hora já chegou", () => {
+    const { schedulable, past } = partitionSchedulable([base({ send_at: "2026-07-20 10:00" })], NOW);
+    expect(schedulable).toEqual([]);
+    expect(past).toHaveLength(1);
+  });
+
+  it("um minuto à frente entra na fila", () => {
+    const { schedulable, past } = partitionSchedulable([base({ send_at: "2026-07-20 10:01" })], NOW);
+    expect(schedulable).toHaveLength(1);
+    expect(past).toEqual([]);
+  });
+
+  it("campanha meio vencida: SÓ as peças futuras entram na fila", () => {
     const pieces = [
       base({ post_id: "p1", label: "Aviso -3 dias", send_at: "2026-07-17 10:00" }),
       base({ post_id: "p2", label: "Lembrete -1 dia", send_at: "2026-07-19 10:00" }),
-      base({ post_id: "p3", label: "Hoje à noite", send_at: "2026-07-20 20:00" }),
+      base({ post_id: "p3", label: "Hoje de manhã", send_at: "2026-07-20 08:00" }),
+      base({ post_id: "p4", label: "Hoje à noite", send_at: "2026-07-20 20:00" }),
     ];
-    const { schedulable, stale } = partitionSchedulable(pieces, NOW);
-    expect(schedulable.map((p) => p.post_id)).toEqual(["p3"]);
-    expect(stale.map((p) => p.label)).toEqual(["Aviso -3 dias", "Lembrete -1 dia"]);
+    const { schedulable, past } = partitionSchedulable(pieces, NOW);
+    expect(schedulable.map((p) => p.post_id)).toEqual(["p4"]);
+    expect(past.map((p) => p.label)).toEqual([
+      "Aviso -3 dias",
+      "Lembrete -1 dia",
+      "Hoje de manhã",
+    ]);
   });
 
   // Numa campanha toda peça tem hora marcada. `send_at` vazio ali é erro, não "agora".
   it("peça de campanha sem data é bloqueada, não tratada como 'agora'", () => {
-    const { schedulable, blocked, stale } = partitionSchedulable([base({ send_at: "" })], NOW);
+    const { schedulable, blocked, past } = partitionSchedulable([base({ send_at: "" })], NOW);
     expect(schedulable).toEqual([]);
-    expect(stale).toEqual([]);
+    expect(past).toEqual([]);
     expect(blocked[0].message).toMatch(/Sem data/);
   });
 });
