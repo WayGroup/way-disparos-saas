@@ -31,7 +31,14 @@ export type AppSettings = {
   updated_at: string;
 };
 
-export type SendStatus = "pendente" | "enviando" | "enviado" | "falhou" | "cancelado";
+export type SendStatus =
+  | "pendente"
+  | "enviando"
+  | "enviado"
+  | "falhou"
+  | "cancelado"
+  /** Passou da janela de 2h de atraso. Não foi enviado — de propósito. */
+  | "expirado";
 
 export type SendMediaKind = "image" | "video" | "document" | "audio";
 

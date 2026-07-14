@@ -144,7 +144,8 @@ export function ConnectionStrip({
       {paused && (
         <p className="border-t border-risk/30 bg-risk/10 px-4 py-2 text-xs text-risk">
           <strong>Envios pausados.</strong> Nada cruza a linha do agora — nem o agendado, nem o
-          avulso. A fila continua crescendo e será entregue quando você retomar.
+          avulso. A fila espera intacta; ao retomar, o que estiver atrasado mais de 2h não é
+          entregue (marcado como <em>atrasado demais</em>, com opção de reenviar).
           {pausedReason && <span className="font-mono"> · {pausedReason}</span>}
         </p>
       )}

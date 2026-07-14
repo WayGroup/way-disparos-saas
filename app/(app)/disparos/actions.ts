@@ -9,7 +9,7 @@ import { evoConnect, evoConnectionState, evoListGroups } from "@/lib/evolution/c
 import { planCommunitySync, type SyncableCommunity } from "@/lib/evolution/sync";
 import type { EvoConnectionState, EvoQrCode } from "@/lib/evolution/types";
 import { buildSendPayload } from "@/lib/sends/payload";
-import { planSends, validateSchedulable, type ScheduleIssue } from "@/lib/sends/plan";
+import { isStale, planSends, validateSchedulable, type ScheduleIssue } from "@/lib/sends/plan";
 import { dispatchDue } from "@/lib/sends/dispatch";
 
 function revalidateAll() {
@@ -134,7 +134,8 @@ export async function retrySendAction(id: string): Promise<void> {
       scheduled_at: new Date().toISOString(),
     })
     .eq("id", id)
-    .in("status", ["falhou", "cancelado"]);
+    // Reenviar um expirado é decisão consciente: a mensagem está atrasada e você sabe.
+    .in("status", ["falhou", "cancelado", "expirado"]);
   if (error) throw new Error(`Falha ao reenviar: ${error.message}`);
   revalidatePath("/disparos");
 }
@@ -197,10 +198,17 @@ export async function quickSendAction(input: QuickSendInput): Promise<QuickSendR
     }),
   };
 
-  // send_at vazio é válido aqui (= agora), então a queixa de "sem data" não se aplica.
-  const issues = validateSchedulable([piece]).filter(
-    (i) => !(piece.send_at === "" && i.message.startsWith("Sem data")),
-  );
+  const issues = validateSchedulable([piece], { allowImmediate: true });
+
+  // Agendar para o passado é sempre engano — a mensagem sairia em rajada, na hora.
+  if (piece.send_at && isStale(piece.send_at, new Date())) {
+    issues.push({
+      post_id: null,
+      label: "Disparo rápido",
+      message: "Essa data já passou. Escolha um horário no futuro ou envie agora.",
+    });
+  }
+
   if (issues.length > 0) return { ok: false, issues };
 
   const supabase = await createServerSupabase();

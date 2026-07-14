@@ -28,6 +28,27 @@ export type PlannedSend = {
 export type PlanOptions = JitterOptions & { now?: Date };
 
 /**
+ * Um envio só sai se estiver atrasado no máximo 2 horas.
+ *
+ * Sem essa janela, aprovar uma campanha cuja data já passou solta a fila inteira de uma
+ * vez: o claim entrega tudo que tem `scheduled_at <= now()`, e o jitter — que mora no
+ * scheduled_at — também está todo no passado. Resultado: rajada, conteúdo desatualizado,
+ * e o número no caminho do ban.
+ *
+ * Duas horas cobre o atraso legítimo (deploy, worker fora do ar, cron engasgado) sem
+ * cobrir "essa mensagem era de ontem".
+ */
+export const STALE_AFTER_MS = 2 * 60 * 60 * 1000;
+
+/** `send_at` vazio significa "agora" e nunca é velho. Data inválida é problema do validate. */
+export function isStale(sendAt: string, now: Date): boolean {
+  if (!sendAt) return false;
+  const iso = toInstant(sendAt);
+  if (!iso) return false;
+  return now.getTime() - new Date(iso).getTime() > STALE_AFTER_MS;
+}
+
+/**
  * Materializa as peças em linhas de fila: uma por (peça × grupo).
  *
  * O jitter reinicia a cada peça — o primeiro grupo de cada uma cai exatamente no
@@ -67,11 +88,22 @@ export type ScheduleIssue = {
   message: string;
 };
 
+export type ValidateOptions = {
+  /**
+   * `send_at` vazio significa "agora". Numa campanha isso é erro (toda peça tem hora
+   * marcada); no "Enviar agora" e no disparo rápido é justamente o pedido.
+   */
+  allowImmediate?: boolean;
+};
+
 /**
  * O portão antes de gravar qualquer coisa na fila. Se alguma peça tem problema,
  * "Aprovar e agendar" falha inteiro — nada de agendar meia campanha.
  */
-export function validateSchedulable(pieces: (PlanPiece & { label: string })[]): ScheduleIssue[] {
+export function validateSchedulable(
+  pieces: (PlanPiece & { label: string })[],
+  opts: ValidateOptions = {},
+): ScheduleIssue[] {
   const issues: ScheduleIssue[] = [];
 
   for (const piece of pieces) {
@@ -79,7 +111,7 @@ export function validateSchedulable(pieces: (PlanPiece & { label: string })[]): 
       issues.push({ post_id: piece.post_id, label: piece.label, message });
 
     if (!piece.send_at) {
-      issue("Sem data e hora de envio.");
+      if (!opts.allowImmediate) issue("Sem data e hora de envio.");
     } else if (!toInstant(piece.send_at)) {
       issue(`Data de envio inválida: "${piece.send_at}".`);
     }

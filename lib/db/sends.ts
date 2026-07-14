@@ -56,6 +56,7 @@ export async function countSendsByStatus(): Promise<Record<DisplayStatus, number
     enviando: 0,
     enviado: 0,
     falhou: 0,
+    expirado: 0,
     cancelado: 0,
   };
 

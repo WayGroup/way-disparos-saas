@@ -194,9 +194,11 @@ async function buildGroupPieces(campaignId: string) {
  * entrega envio de campanha aprovada — segue segurando a fila. É por isso que dá para
  * montar a fila na geração sem que nada dispare.
  */
-async function rescheduleCampaign(campaignId: string): Promise<number> {
+async function rescheduleCampaign(
+  campaignId: string,
+): Promise<{ scheduled: number; stale: string[] }> {
   const { pieces } = await buildGroupPieces(campaignId);
-  const { schedulable } = partitionSchedulable(pieces);
+  const { schedulable, stale } = partitionSchedulable(pieces);
 
   const supabase = await createServerSupabase();
   const { error: eDel } = await supabase
@@ -216,11 +218,11 @@ async function rescheduleCampaign(campaignId: string): Promise<number> {
 
   revalidatePath(`/campanhas/${campaignId}`);
   revalidatePath("/disparos");
-  return planned.length;
+  return { scheduled: planned.length, stale: stale.map((p) => p.label) };
 }
 
 export type ScheduleResult =
-  | { ok: true; scheduled: number }
+  | { ok: true; scheduled: number; stale: string[] }
   | { ok: false; issues: ScheduleIssue[] };
 
 /**
@@ -237,7 +239,9 @@ export async function approveAndScheduleAction(id: string): Promise<ScheduleResu
   const issues = validateSchedulable(pieces);
   if (issues.length > 0) return { ok: false, issues };
 
-  const scheduled = await rescheduleCampaign(id);
+  // Peça vencida não bloqueia a aprovação — uma campanha pode ter toques antigos e
+  // futuros ao mesmo tempo. Ela só não entra na fila, e quem aprova fica sabendo.
+  const { scheduled, stale } = await rescheduleCampaign(id);
 
   const supabase = await createServerSupabase();
   const { error } = await supabase
@@ -250,7 +254,7 @@ export async function approveAndScheduleAction(id: string): Promise<ScheduleResu
   revalidatePath(`/campanhas/${id}`);
   revalidatePath("/disparos");
 
-  return { ok: true, scheduled };
+  return { ok: true, scheduled, stale };
 }
 
 export async function refineCampaignAction(
@@ -378,10 +382,10 @@ export async function sendPieceNowAction(
   const piece = pieces.find((p) => p.post_id === postId);
   if (!piece) throw new Error("Peça não encontrada.");
 
-  // send_at vazio => planSends agenda para agora.
+  // send_at vazio => planSends agenda para agora. É o pedido, não a falta de uma data.
   const now = { ...piece, send_at: "" };
 
-  const issues = validateSchedulable([now]);
+  const issues = validateSchedulable([now], { allowImmediate: true });
   if (issues.length > 0) return { ok: false, issues };
 
   const supabase = await createServerSupabase();

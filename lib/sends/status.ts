@@ -8,6 +8,7 @@ export const DISPLAY_STATUSES: DisplayStatus[] = [
   "enviando",
   "enviado",
   "falhou",
+  "expirado",
   "cancelado",
 ];
 

@@ -12,6 +12,7 @@ const STATUS_STYLE: Record<DisplayStatus, string> = {
   enviando: "border-risk/40 bg-risk/10 text-risk",
   enviado: "border-line bg-paper text-muted",
   falhou: "border-risk bg-risk/15 text-risk",
+  expirado: "border-line bg-paper text-muted line-through",
   cancelado: "border-line bg-paper text-muted line-through",
 };
 
@@ -21,6 +22,7 @@ const STATUS_LABEL: Record<DisplayStatus, string> = {
   enviando: "enviando",
   enviado: "enviado",
   falhou: "falhou",
+  expirado: "atrasado demais",
   cancelado: "cancelado",
 };
 
@@ -190,7 +192,7 @@ export function QueueTimeline({
                               cancelar
                             </button>
                           )}
-                          {(st === "falhou" || st === "cancelado") && (
+                          {(st === "falhou" || st === "cancelado" || st === "expirado") && (
                             <button
                               onClick={() => run(() => retrySendAction(send.id))}
                               disabled={pending}
