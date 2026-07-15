@@ -26,10 +26,36 @@ export type GroupPostUpdate = {
   media: string;
 };
 
+export type NewTouch = {
+  offset_label: string;
+  offset_days: number;
+  offset_time: string;
+  role: string;
+  meta_category: "UTILITY" | "MARKETING";
+  template_body: string;
+  buttons: { type: "quick_reply" | "url"; text: string; url: string }[];
+  window_steps: { media: string; caption: string }[];
+  fallback_copy: string;
+  crm_action: string;
+  risk_flag: boolean;
+};
+
+export type NewGroupPost = {
+  offset_label: string;
+  offset_days: number;
+  offset_time: string;
+  role: string;
+  communities: string;
+  copy: string;
+  media: string;
+};
+
 export type RefineResult = {
   reply: string;
   touch_updates: TouchUpdate[];
   group_post_updates: GroupPostUpdate[];
+  new_touches: NewTouch[];
+  new_group_posts: NewGroupPost[];
 };
 
 export async function refineCampaign(
