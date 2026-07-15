@@ -67,9 +67,11 @@ export function PostCard({ campaignId, post, assets, groups, highlight = false }
             <CopyButton text={post.copy} label="copiar mensagem" className={COPY_REVEAL} />
           </div>
           <p className="text-sm leading-relaxed whitespace-pre-wrap">{post.copy}</p>
-          <div className="mt-3">
-            <MediaPicker assets={assets} currentId={post.asset_id} suggestion={post.media} onPick={(id) => setPostAssetAction(campaignId, post.sort_order, id)} />
-          </div>
+          {post.media && (
+            <div className="mt-3">
+              <MediaPicker assets={assets} currentId={post.asset_id} suggestion={post.media} onPick={(id) => setPostAssetAction(campaignId, post.sort_order, id)} />
+            </div>
+          )}
           <div className="mt-3 flex items-center justify-between gap-3">
             <span className="text-[11px] text-muted">
               Prévia do link {post.link_preview ? "— mostra o card com imagem" : "— só o texto, sem card"}

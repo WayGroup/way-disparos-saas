@@ -97,7 +97,9 @@ export function TouchCard({ campaignId, touch, assets, highlight = false }: { ca
                     <p className="text-sm leading-relaxed">{w.caption}</p>
                     <CopyButton text={w.caption} className={`shrink-0 ${COPY_REVEAL_STEP}`} />
                   </div>
-                  <MediaPicker assets={assets} currentId={w.asset_id ?? null} suggestion={w.media} onPick={(id) => setTouchStepAssetAction(campaignId, touch.sort_order, wi, id)} />
+                  {w.media && (
+                    <MediaPicker assets={assets} currentId={w.asset_id ?? null} suggestion={w.media} onPick={(id) => setTouchStepAssetAction(campaignId, touch.sort_order, wi, id)} />
+                  )}
                 </div>
               ))}
             </div>
