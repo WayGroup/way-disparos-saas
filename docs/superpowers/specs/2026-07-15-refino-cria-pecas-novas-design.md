@@ -72,8 +72,9 @@ como no resto do schema.
 
 `buildRefinePrompt` passa a incluir:
 
-- A **âncora** da campanha (label + valor) e, em cada peça listada, o `offset_days`
-  atual (além do `offset_label`), para a IA posicionar as novas no tempo.
+- A **âncora** da campanha (label + valor) e, em cada peça listada, o `send_at`
+  atual (além do `offset_label`) — as peças não guardam `offset_days`, então a IA
+  infere o offset relativo comparando `send_at` com a âncora.
 - Instrução: para **editar**, use `*_updates` com o mesmo `sort_order` (como hoje);
   para **adicionar**, use `new_touches`/`new_group_posts` com `offset_days`
   (negativo = antes da âncora), `offset_time` e `offset_label`.
