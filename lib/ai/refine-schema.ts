@@ -9,7 +9,7 @@ export const REFINE_SCHEMA = {
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["sort_order", "offset_label", "role", "meta_category", "template_body", "buttons", "window_steps", "fallback_copy", "crm_action", "risk_flag"],
+        required: ["sort_order", "offset_label", "role", "meta_category", "template_body", "buttons", "window_steps", "fallback_copy", "crm_action", "risk_flag", "utility_alt"],
         properties: {
           sort_order: { type: "integer" },
           offset_label: { type: "string" },
@@ -41,6 +41,28 @@ export const REFINE_SCHEMA = {
           fallback_copy: { type: "string" },
           crm_action: { type: "string" },
           risk_flag: { type: "boolean" },
+          utility_alt: {
+            type: ["object", "null"],
+            additionalProperties: false,
+            required: ["template_body", "buttons", "risk_flag"],
+            properties: {
+              template_body: { type: "string" },
+              buttons: {
+                type: "array",
+                items: {
+                  type: "object",
+                  additionalProperties: false,
+                  required: ["type", "text", "url"],
+                  properties: {
+                    type: { type: "string", enum: ["quick_reply", "url"] },
+                    text: { type: "string" },
+                    url: { type: "string" },
+                  },
+                },
+              },
+              risk_flag: { type: "boolean" },
+            },
+          },
         },
       },
     },
@@ -65,7 +87,7 @@ export const REFINE_SCHEMA = {
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["offset_label", "offset_days", "offset_time", "role", "meta_category", "template_body", "buttons", "window_steps", "fallback_copy", "crm_action", "risk_flag"],
+        required: ["offset_label", "offset_days", "offset_time", "role", "meta_category", "template_body", "buttons", "window_steps", "fallback_copy", "crm_action", "risk_flag", "utility_alt"],
         properties: {
           offset_label: { type: "string" },
           offset_days: { type: "integer" },
@@ -98,6 +120,28 @@ export const REFINE_SCHEMA = {
           fallback_copy: { type: "string" },
           crm_action: { type: "string" },
           risk_flag: { type: "boolean" },
+          utility_alt: {
+            type: ["object", "null"],
+            additionalProperties: false,
+            required: ["template_body", "buttons", "risk_flag"],
+            properties: {
+              template_body: { type: "string" },
+              buttons: {
+                type: "array",
+                items: {
+                  type: "object",
+                  additionalProperties: false,
+                  required: ["type", "text", "url"],
+                  properties: {
+                    type: { type: "string", enum: ["quick_reply", "url"] },
+                    text: { type: "string" },
+                    url: { type: "string" },
+                  },
+                },
+              },
+              risk_flag: { type: "boolean" },
+            },
+          },
         },
       },
     },
