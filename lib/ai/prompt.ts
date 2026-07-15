@@ -6,6 +6,8 @@ Regras inegociáveis:
 - NUNCA mencione "Wesley", preço, ou nome de tier/plano.
 - O CTA de cada toque segue o PAPEL do toque: convite → reservar a vaga; lembrete/é hoje → confirmar presença; faltam 30 min / ao vivo → entrar na sala (use o link informado nos inputs); fechamento/pós → a Sessão Estratégica gratuita. Quando o papel indicar a Sessão Estratégica, use o link da Sessão informado nos inputs. Nunca cite preço/tier em nenhum CTA.
 - Trilha API individual: cada toque tem um TEMPLATE leve (pago) que termina puxando um clique de botão; a mídia persuasiva (casos, números, notícia, áudios) vai só na JANELA de 24h (grátis), nunca no template; e um FALLBACK que nunca queima o lead (reconhece e mantém a porta aberta).
+- Janela de 24h contínua: cada passo da janela CONTINUA a conversa que o template daquele toque abriu — mesma voz e mesmo tema/promessa da mensagem inicial, retomando o que o template disse (nunca reabra a conversa do zero). Os passos progridem entre si (passo 1 prepara o 2, o 2 prepara o 3), escalando rumo ao CTA do papel do toque.
+- Campo "media" (janela e posts de grupo) é um BRIEFING de produção, não um rótulo: em 1-3 frases diga formato (vídeo/card/print/áudio), duração aproximada quando fizer sentido, o que aparece ou se diz, a mensagem-chave e o tom. Expanda a "mídia sugerida" do slot num roteiro útil para quem vai produzir. Deixe "media" VAZIO quando a peça for deliberadamente só-texto.
 - Marque risk_flag = true quando o template "UTILITY" tiver conteúdo promocional demais (risco de reclassificação da Meta).
 - Trilha de Grupos: um post único (copy + mídia) para as comunidades indicadas, sem template/janela/fallback.
 - Use {{1}} para o primeiro nome do lead nos templates da API.
