@@ -9,6 +9,7 @@ import { generateCampaign } from "@/lib/ai/generate";
 import { refineCampaign } from "@/lib/ai/refine";
 import { buildCode } from "@/lib/ai/nomenclature";
 import { computeSendAt } from "@/lib/schedule";
+import { nextSortOrder, pickReferenceGroups, slugCode, formatAddedSeal } from "@/lib/campaign-refine";
 import { listActiveGroups } from "@/lib/db/communities";
 import { listAssets } from "@/lib/db/assets";
 import { publicAssetUrl } from "@/lib/campaign-pieces";
@@ -320,11 +321,70 @@ export async function refineCampaignAction(
     if (error) throw new Error(`Falha ao atualizar post ${sort_order}: ${error.message}`);
   }
 
+  // Peças novas precisam da âncora para datar; sem ela, não inserimos peça quebrada.
+  const hasNew = result.new_touches.length > 0 || result.new_group_posts.length > 0;
+  if (hasNew && !anchorValue) {
+    throw new Error("Não consigo datar peças novas sem a âncora da campanha. Confira a receita.");
+  }
+
+  let addedTouches = 0;
+  let addedPosts = 0;
+
+  if (result.new_touches.length > 0) {
+    let so = nextSortOrder(campaign.touches);
+    const rows = result.new_touches.map((t) => {
+      const { offset_days, offset_time, ...fields } = t;
+      return {
+        campaign_id: campaignId,
+        sort_order: so++,
+        ...fields,
+        template_name: buildCode(recipe?.recipe_type ?? "", slugCode(t.role), anchorValue),
+        send_at: computeSendAt(anchorValue, offset_days, offset_time),
+      };
+    });
+    const { error } = await supabase.from("campaign_touches").insert(rows);
+    if (error) throw new Error(`Falha ao adicionar toques: ${error.message}`);
+    addedTouches = rows.length;
+  }
+
+  if (result.new_group_posts.length > 0) {
+    const inheritedGroups = pickReferenceGroups(campaign.group_posts);
+    let so = nextSortOrder(campaign.group_posts);
+    const rows = result.new_group_posts.map((p) => {
+      const { offset_days, offset_time, ...fields } = p;
+      return {
+        campaign_id: campaignId,
+        sort_order: so++,
+        ...fields,
+        message_code: buildCode(recipe?.recipe_type ?? "", slugCode(p.role), anchorValue),
+        send_at: computeSendAt(anchorValue, offset_days, offset_time),
+      };
+    });
+    const { data: inserted, error } = await supabase
+      .from("campaign_group_posts")
+      .insert(rows)
+      .select("id");
+    if (error) throw new Error(`Falha ao adicionar posts: ${error.message}`);
+    addedPosts = rows.length;
+
+    const posts = inserted ?? [];
+    if (inheritedGroups.length > 0 && posts.length > 0) {
+      const links = posts.flatMap((row) =>
+        inheritedGroups.map((community_id) => ({ post_id: row.id as string, community_id })),
+      );
+      const { error: eLink } = await supabase.from("campaign_group_post_communities").insert(links);
+      if (eLink) throw new Error(`Falha ao vincular grupos das peças novas: ${eLink.message}`);
+    }
+  }
+
+  // Selo factual: o que foi REALMENTE inserido, não o que a IA disse.
+  const finalReply = formatAddedSeal(addedPosts, addedTouches) + result.reply;
+
   // Persiste reply do assistente
   const { error: e2 } = await supabase.from("chat_messages").insert({
     campaign_id: campaignId,
     role: "assistant",
-    content: result.reply,
+    content: finalReply,
   });
   if (e2) throw new Error(`Falha ao salvar reply do assistente: ${e2.message}`);
 
@@ -332,7 +392,7 @@ export async function refineCampaignAction(
   await rescheduleCampaign(campaignId);
 
   revalidatePath(`/campanhas/${campaignId}`);
-  return result.reply;
+  return finalReply;
 }
 
 export async function updateTouchAction(
