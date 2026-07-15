@@ -188,6 +188,20 @@ export function weekDays(centerDateKey: string): string[] {
 }
 
 // ---------------------------------------------------------------------------
+// stepMediaMissing
+// ---------------------------------------------------------------------------
+
+/**
+ * Um passo da Janela 24h só "falta mídia" se pede mídia (briefing não-vazio) e
+ * ainda não tem asset anexado. Passo só-texto (briefing vazio) nunca acusa falta.
+ */
+export function stepMediaMissing(
+  steps: { media: string; asset_id?: string }[]
+): boolean {
+  return steps.some((s) => s.media !== "" && !s.asset_id);
+}
+
+// ---------------------------------------------------------------------------
 // toPieces
 // ---------------------------------------------------------------------------
 
@@ -221,7 +235,7 @@ export function toPieces(campaign: CampaignWithContent, assets: Asset[]): Piece[
       buttons: t.buttons,
       meta_category: t.meta_category,
       imageUrl,
-      mediaMissing: t.window_steps.some((s) => !s.asset_id),
+      mediaMissing: stepMediaMissing(t.window_steps),
       badge: t.template_name,
     });
   }

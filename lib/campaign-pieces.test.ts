@@ -6,6 +6,7 @@ import {
   groupByDate,
   monthMatrix,
   weekDays,
+  stepMediaMissing,
   type Piece,
 } from "@/lib/campaign-pieces";
 
@@ -79,5 +80,22 @@ describe("weekDays", () => {
     expect(w[0]).toBe("2026-07-13"); // segunda
     expect(w[6]).toBe("2026-07-19"); // domingo
     expect(w).toContain("2026-07-14");
+  });
+});
+
+describe("stepMediaMissing", () => {
+  it("acusa falta só quando o passo pede mídia e não tem asset", () => {
+    expect(stepMediaMissing([{ media: "Vídeo 20s", asset_id: undefined }])).toBe(true);
+    expect(stepMediaMissing([{ media: "Vídeo 20s", asset_id: "a1" }])).toBe(false);
+    expect(stepMediaMissing([{ media: "", asset_id: undefined }])).toBe(false); // passo só-texto
+    expect(stepMediaMissing([])).toBe(false);
+  });
+  it("basta um passo com mídia faltando entre vários", () => {
+    expect(
+      stepMediaMissing([
+        { media: "", asset_id: undefined },
+        { media: "Card contagem", asset_id: undefined },
+      ])
+    ).toBe(true);
   });
 });
