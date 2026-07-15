@@ -130,7 +130,7 @@ export function PostCard({ campaignId, post, assets, groups, highlight = false }
       </div>
       <label className="block"><span className="text-[10px] font-mono uppercase text-muted">Código da mensagem</span><input value={f.message_code} onChange={(e) => setF({ ...f, message_code: e.target.value })} className="mt-1 w-full rounded-lg border border-line p-2 text-sm font-mono" /></label>
       <label className="block"><span className="text-[10px] font-mono uppercase text-muted">Mensagem do post</span><textarea value={f.copy} onChange={(e) => setF({ ...f, copy: e.target.value })} rows={3} className="mt-1 w-full rounded-lg border border-line p-2 text-sm" /></label>
-      <label className="block"><span className="text-[10px] font-mono uppercase text-muted">Mídia sugerida</span><input value={f.media} onChange={(e) => setF({ ...f, media: e.target.value })} className="mt-1 w-full rounded-lg border border-line p-2 text-sm" /></label>
+      <label className="block"><span className="text-[10px] font-mono uppercase text-muted">Briefing da mídia</span><textarea value={f.media} onChange={(e) => setF({ ...f, media: e.target.value })} rows={3} placeholder="Deixe vazio para peça só-texto (sem anexo)." className="mt-1 w-full rounded-lg border border-line p-2 text-sm" /></label>
       <div className="flex gap-2 pt-1">
         <button onClick={save} disabled={pending} className="rounded-lg bg-emerald hover:bg-emeraldd text-white text-sm font-semibold px-3 py-1.5 disabled:opacity-50">{pending ? "Salvando…" : "Salvar"}</button>
         <button onClick={() => setEditing(false)} className="rounded-lg border border-line text-sm px-3 py-1.5">Cancelar</button>

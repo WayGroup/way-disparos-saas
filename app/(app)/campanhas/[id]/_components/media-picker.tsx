@@ -62,8 +62,11 @@ export function MediaPicker({
 
   return (
     <div className="mt-1">
-      {!current && suggestion && (
-        <p className="font-mono text-[11px] text-muted mb-1">Sugestão: {suggestion}</p>
+      {suggestion && (
+        <div className="mb-2 rounded-lg border border-line bg-paper px-3 py-2">
+          <p className="font-mono text-[10px] uppercase tracking-widest text-muted mb-1">Briefing da mídia</p>
+          <p className="text-xs leading-relaxed whitespace-pre-wrap text-ink2">{suggestion}</p>
+        </div>
       )}
       <div className="flex flex-wrap items-center gap-2">
         <select
