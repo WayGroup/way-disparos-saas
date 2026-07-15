@@ -15,12 +15,14 @@ const campaign: CampaignWithContent = {
 
 describe("buildRefinePrompt", () => {
   it("inclui base, estado atual (toques/posts com sort_order) e o pedido do usuário", () => {
-    const out = buildRefinePrompt(campaign, "reescreve o toque 1 mais agressivo", "BASE_WAY");
+    const out = buildRefinePrompt(campaign, "reescreve o toque 1 mais agressivo", "BASE_WAY", "Data e hora do webinário", "2026-06-27 19:00");
     expect(out).toContain("BASE_WAY");
     expect(out).toContain("reescreve o toque 1 mais agressivo");
     expect(out).toContain("Oi {{1}}"); // estado atual do toque
     expect(out).toContain("Galera"); // estado atual do post
     expect(out).toContain("API"); // identifica a trilha
     expect(out).toMatch(/sort_order.*0/s);
+    expect(out).toContain("2026-06-27 19:00"); // âncora no prompt
+    expect(out).toContain("new_group_posts"); // instrução de adicionar peças
   });
 });

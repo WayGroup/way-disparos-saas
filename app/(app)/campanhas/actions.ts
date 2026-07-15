@@ -275,7 +275,13 @@ export async function refineCampaignAction(
   if (!campaign) throw new Error("Campanha não encontrada.");
   const brandText = compileBrandKnowledge(await listBrandBlocks());
 
-  const result = await refineCampaign(campaign, trimmed, brandText);
+  // A âncora vem da receita (input is_anchor) + os valores da campanha. Necessária
+  // para datar peças novas; a receita pode ter sido apagada (recipe_id null).
+  const recipe = campaign.recipe_id ? await getRecipe(campaign.recipe_id) : null;
+  const anchorLabel = recipe?.inputs.find((i) => i.is_anchor)?.label ?? "";
+  const anchorValue = anchorLabel ? (campaign.inputs[anchorLabel] ?? "") : "";
+
+  const result = await refineCampaign(campaign, trimmed, brandText, anchorLabel, anchorValue);
 
   const supabase = await createServerSupabase();
 

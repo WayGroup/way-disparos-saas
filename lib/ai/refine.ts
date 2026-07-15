@@ -62,6 +62,8 @@ export async function refineCampaign(
   campaign: CampaignWithContent,
   userMessage: string,
   brandText: string,
+  anchorLabel: string,
+  anchorValue: string,
 ): Promise<RefineResult> {
   const client = new Anthropic(); // lê ANTHROPIC_API_KEY do ambiente (servidor)
   // Streaming evita timeout de request em refinos longos; finalMessage() junta tudo.
@@ -70,7 +72,7 @@ export async function refineCampaign(
     max_tokens: 16000,
     thinking: { type: "adaptive" },
     system: SYSTEM_PROMPT,
-    messages: [{ role: "user", content: buildRefinePrompt(campaign, userMessage, brandText) }],
+    messages: [{ role: "user", content: buildRefinePrompt(campaign, userMessage, brandText, anchorLabel, anchorValue) }],
     output_config: { format: { type: "json_schema", schema: REFINE_SCHEMA } },
   };
   const stream = client.messages.stream(params as Parameters<typeof client.messages.stream>[0]);

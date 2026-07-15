@@ -4,19 +4,21 @@ export function buildRefinePrompt(
   campaign: CampaignWithContent,
   userMessage: string,
   brandText: string,
+  anchorLabel: string,
+  anchorValue: string,
 ): string {
   const touches = campaign.touches
     .map(
       (t) =>
-        `- [API] sort_order ${t.sort_order} · ${t.offset_label} · ${t.role} · ${t.meta_category}\n  template: ${t.template_body}\n  botões: ${t.buttons.map((b) => b.type === "url" ? `${b.text} → ${b.url}` : b.text).join(" | ")}\n  janela: ${t.window_steps.map((w) => `${w.media}: ${w.caption}`).join(" / ")}\n  fallback: ${t.fallback_copy}\n  crm: ${t.crm_action} · risco: ${t.risk_flag}`,
+        `- [API] sort_order ${t.sort_order} · ${t.offset_label} · envia ${t.send_at || "—"} · ${t.role} · ${t.meta_category}\n  template: ${t.template_body}\n  botões: ${t.buttons.map((b) => b.type === "url" ? `${b.text} → ${b.url}` : b.text).join(" | ")}\n  janela: ${t.window_steps.map((w) => `${w.media}: ${w.caption}`).join(" / ")}\n  fallback: ${t.fallback_copy}\n  crm: ${t.crm_action} · risco: ${t.risk_flag}`,
     )
     .join("\n");
   const posts = campaign.group_posts
     .map(
       (p) =>
-        `- [GRUPOS] sort_order ${p.sort_order} · ${p.offset_label} · ${p.role} · comunidades ${p.communities}\n  copy: ${p.copy}\n  mídia: ${p.media}`,
+        `- [GRUPOS] sort_order ${p.sort_order} · ${p.offset_label} · envia ${p.send_at || "—"} · ${p.role} · comunidades ${p.communities}\n  copy: ${p.copy}\n  mídia: ${p.media}`,
     )
     .join("\n");
 
-  return `# Base de conhecimento da marca\n${brandText}\n\n# Estado atual da campanha "${campaign.name}"\n## Trilha API individual\n${touches}\n\n## Trilha Grupos\n${posts}\n\n# Pedido do usuário\n${userMessage}\n\nAplique SÓ o que o pedido pede, respeitando as regras da marca. Retorne uma resposta curta de chat (reply) explicando o que mudou, e a lista de atualizações: para cada toque/post alterado, devolva o objeto COMPLETO atualizado com o mesmo sort_order e trilha. Não inclua toques/posts que você não alterou.`;
+  return `# Base de conhecimento da marca\n${brandText}\n\n# Âncora da campanha\n${anchorLabel || "(sem âncora)"}: ${anchorValue || "(não informada)"}\nCada peça é agendada por um offset em dias relativo a esta âncora (negativo = antes). Compare o "envia" de cada peça com a âncora para inferir o offset atual.\n\n# Estado atual da campanha "${campaign.name}"\n## Trilha API individual\n${touches}\n\n## Trilha Grupos\n${posts}\n\n# Pedido do usuário\n${userMessage}\n\nAplique SÓ o que o pedido pede, respeitando as regras da marca.\n\n- Para EDITAR uma peça existente: devolva o objeto COMPLETO em touch_updates/group_post_updates com o MESMO sort_order. Não inclua peças que você não alterou.\n- Para ADICIONAR peças novas: use new_touches/new_group_posts. Cada peça nova precisa de offset_days (int, negativo = antes da âncora), offset_time ("HH:mm") e offset_label (rótulo humano coerente, ex. "D-7"). NÃO invente sort_order para peças novas — o sistema atribui.\n- No reply (chat curto), relate APENAS o que você de fato devolveu: quantas peças adicionadas e quantas editadas. Nunca afirme ter criado algo que não está em new_touches/new_group_posts.`;
 }
