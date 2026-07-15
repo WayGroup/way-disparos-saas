@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildTimeline, countdown, dayKey, dayLabel, timeLabel } from "@/lib/sends/timeline";
+import { buildTimeline, countdown, dayKey, dayLabel, shortStamp, timeLabel } from "@/lib/sends/timeline";
 
 // 20/07/2026 às 10:00 em São Paulo = 13:00 UTC
 const NOW = new Date("2026-07-20T13:00:00.000Z");
@@ -15,6 +15,15 @@ describe("dayKey e timeLabel", () => {
 
   it("meia-noite de São Paulo", () => {
     expect(timeLabel("2026-07-20T03:00:00.000Z")).toBe("00:00");
+  });
+});
+
+describe("shortStamp", () => {
+  it("carimba data e hora no fuso de São Paulo", () => {
+    expect(shortStamp("2026-07-14T22:07:00.000Z")).toBe("14/07 · 19:07");
+  });
+  it("vira o dia corretamente à noite (UTC já é o dia seguinte)", () => {
+    expect(shortStamp("2026-07-21T01:30:00.000Z")).toBe("20/07 · 22:30");
   });
 });
 

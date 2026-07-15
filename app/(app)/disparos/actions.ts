@@ -141,6 +141,22 @@ export async function retrySendAction(id: string): Promise<void> {
 }
 
 /**
+ * Dispensa uma falha ou expirado do bloco de atenção sem reenviar: vira `cancelado`
+ * e sai da Fila para o Histórico. É como você diz "já resolvi / deixa pra lá" e limpa
+ * a lista do que ainda pede decisão.
+ */
+export async function dismissSendAction(id: string): Promise<void> {
+  const supabase = await createServerSupabase();
+  const { error } = await supabase
+    .from("scheduled_sends")
+    .update({ status: "cancelado" })
+    .eq("id", id)
+    .in("status", ["falhou", "expirado"]);
+  if (error) throw new Error(`Falha ao dispensar envio: ${error.message}`);
+  revalidatePath("/disparos");
+}
+
+/**
  * Linha presa em `enviando`: a função morreu entre chamar a Evolution e gravar o
  * resultado. A mensagem PODE ter saído — por isso o sistema nunca reprocessa sozinho.
  * Marca como falha e deixa a decisão de reenviar com quem conferiu o grupo.

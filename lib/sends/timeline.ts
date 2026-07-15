@@ -56,6 +56,12 @@ export function dayLabel(iso: string, now: Date): string {
   return `${DIAS[dow]} · ${d} ${MESES[m - 1]}`;
 }
 
+/** Carimbo compacto para o livro-caixa do Histórico: "14/07 · 19:07" no fuso de SP. */
+export function shortStamp(iso: string): string {
+  const { d, m, hh, mm } = parts(iso);
+  return `${String(d).padStart(2, "0")}/${String(m).padStart(2, "0")} · ${hh}:${mm}`;
+}
+
 export type TimelineDay<T> = { key: string; label: string; sends: T[] };
 
 export type Timeline<T> = {

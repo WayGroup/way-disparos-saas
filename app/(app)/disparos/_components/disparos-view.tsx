@@ -1,11 +1,13 @@
 "use client";
 import { useState } from "react";
+import Link from "next/link";
 import type { Asset, Community } from "@/lib/db/types";
-import type { SendWithContext } from "@/lib/db/sends";
-import type { DisplayStatus } from "@/lib/sends/status";
+import type { SendWithContext, HistoryPage, SendCampaign } from "@/lib/db/sends";
 import type { EvoConnectionState } from "@/lib/evolution/types";
+import { displayStatus } from "@/lib/sends/status";
 import { ConnectionStrip } from "./connection-strip";
-import { QueueTimeline } from "./queue-timeline";
+import { Fila } from "./fila";
+import { Historico } from "./historico";
 import { QuickSendPanel } from "./quick-send-panel";
 
 export function DisparosView({
@@ -14,24 +16,53 @@ export function DisparosView({
   groups,
   activeGroups,
   assets,
-  sends,
-  counts,
   paused,
   pausedReason,
+  view,
+  queueSends,
+  history,
+  campaigns,
+  campaignId,
+  historyStatus,
 }: {
   state: EvoConnectionState | null;
   configError: string | null;
-  /** Todos os grupos sincronizados — a gaveta de conexão gerencia estes. */
   groups: Community[];
-  /** Só os habilitados — os únicos que podem receber disparo. */
   activeGroups: Community[];
   assets: Asset[];
-  sends: SendWithContext[];
-  counts: Record<DisplayStatus, number>;
   paused: boolean;
   pausedReason: string;
+  view: "fila" | "historico";
+  queueSends: SendWithContext[];
+  history: HistoryPage | null;
+  campaigns: SendCampaign[];
+  campaignId: string;
+  historyStatus: string;
 }) {
   const [composing, setComposing] = useState(false);
+
+  // Badge da aba Fila: quantos itens pedem decisão agora (falha/expirado). Stuck é raro
+  // e depende do relógio, então fica de fora do contador — a Fila mesma o destaca.
+  const attentionCount = queueSends.filter((s) => {
+    const st = displayStatus(s);
+    return st === "falhou" || st === "expirado";
+  }).length;
+
+  const tab = (target: "fila" | "historico", label: string, badge?: number) => (
+    <Link
+      href={target === "fila" ? "/disparos" : "/disparos?view=historico"}
+      className={`relative rounded-lg px-4 py-1.5 text-sm font-semibold transition ${
+        view === target ? "bg-white shadow-sm ring-1 ring-line" : "text-muted hover:text-ink"
+      }`}
+    >
+      {label}
+      {badge ? (
+        <span className="ml-1.5 rounded-full bg-risk/15 px-1.5 text-xs font-medium text-risk">
+          {badge}
+        </span>
+      ) : null}
+    </Link>
+  );
 
   return (
     <div className="mx-auto max-w-5xl p-8">
@@ -60,8 +91,24 @@ export function DisparosView({
         />
       </div>
 
-      <div className="mt-8">
-        <QueueTimeline sends={sends} counts={counts} paused={paused} />
+      <div className="mt-8 flex items-center gap-1 border-b border-line pb-3">
+        {tab("fila", "Fila", attentionCount)}
+        {tab("historico", "Histórico")}
+      </div>
+
+      <div className="mt-5">
+        {view === "fila" ? (
+          <Fila sends={queueSends} paused={paused} />
+        ) : (
+          history && (
+            <Historico
+              data={history}
+              campaigns={campaigns}
+              campaignId={campaignId}
+              status={historyStatus}
+            />
+          )
+        )}
       </div>
 
       {composing && (
