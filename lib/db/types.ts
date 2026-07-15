@@ -151,6 +151,11 @@ export type CampaignTouch = {
   fallback_copy: string;
   crm_action: string;
   risk_flag: boolean;
+  utility_alt: {
+    template_body: string;
+    buttons: { type: "quick_reply" | "url"; text: string; url: string }[];
+    risk_flag: boolean;
+  } | null;
   send_at: string;
 };
 
