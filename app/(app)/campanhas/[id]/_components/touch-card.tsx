@@ -5,6 +5,7 @@ import type { CampaignTouch, Asset } from "@/lib/db/types";
 import { updateTouchAction, setTouchStepAssetAction, type TouchFields } from "../../actions";
 import { CopyButton } from "./copy-button";
 import { formatSendAt } from "@/lib/schedule";
+import { utilityAltName } from "@/lib/campaign-touch";
 import { MediaPicker } from "./media-picker";
 
 const COPY_REVEAL = "opacity-0 group-hover:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity";
@@ -18,7 +19,7 @@ export function TouchCard({ campaignId, touch, assets, highlight = false }: { ca
     offset_label: touch.offset_label, role: touch.role, meta_category: touch.meta_category,
     template_body: touch.template_body, buttons: touch.buttons, window_steps: touch.window_steps,
     fallback_copy: touch.fallback_copy, crm_action: touch.crm_action, risk_flag: touch.risk_flag,
-    template_name: touch.template_name,
+    template_name: touch.template_name, utility_alt: touch.utility_alt,
   });
 
   function save() {
@@ -86,6 +87,36 @@ export function TouchCard({ campaignId, touch, assets, highlight = false }: { ca
               </div>
             )}
           </section>
+
+          {/* versão UTILITY alternativa */}
+          {touch.utility_alt && touch.utility_alt.template_body && (
+            <section className="group rounded-xl border border-line p-4">
+              <div className="flex items-center justify-between border-b border-line pb-2 mb-3">
+                <div className="font-mono text-[11px] uppercase tracking-widest text-utility">Versão UTILITY <span className="text-muted">· alternativa</span></div>
+                <div className="flex items-center gap-2 shrink-0">
+                  {touch.utility_alt.risk_flag && <span className="rounded-full bg-risk/15 text-risk text-[11px] font-mono px-2 py-0.5">⚠ risco reclassificação</span>}
+                  <CopyButton text={touch.utility_alt.template_body} label="copiar texto" className={COPY_REVEAL} />
+                </div>
+              </div>
+              <p className="text-sm leading-relaxed whitespace-pre-wrap">{touch.utility_alt.template_body}</p>
+              {touch.utility_alt.buttons.length > 0 && (
+                <div className="mt-3 flex items-center gap-2 flex-wrap">
+                  {touch.utility_alt.buttons.map((b, bi) => (
+                    <span key={bi} className="inline-flex items-center gap-1 rounded-md border border-line px-2 py-0.5 text-xs">
+                      <span>{b.type === "url" ? "🔗" : "↩"}</span>
+                      <span>{b.text}</span>
+                      {b.type === "url" && b.url && <a href={b.url} target="_blank" rel="noreferrer" className="text-emeraldd underline truncate max-w-[160px]">{b.url}</a>}
+                    </span>
+                  ))}
+                </div>
+              )}
+              <div className="mt-3 flex items-center gap-2 text-xs">
+                <span className="font-mono text-muted">nome sugerido:</span>
+                <span className="font-mono bg-paper border border-line rounded px-2 py-0.5">{utilityAltName(touch.template_name)}</span>
+                <CopyButton text={utilityAltName(touch.template_name)} label="copiar nome" />
+              </div>
+            </section>
+          )}
 
           {/* janela 24h */}
           <section className="rounded-xl border border-line p-4">
@@ -160,6 +191,9 @@ export function TouchCard({ campaignId, touch, assets, highlight = false }: { ca
       <label className="block"><span className="text-[10px] font-mono uppercase text-muted">Fallback</span><textarea value={f.fallback_copy} onChange={(e) => setF({ ...f, fallback_copy: e.target.value })} rows={2} className="mt-1 w-full rounded-lg border border-line p-2 text-sm" /></label>
       <label className="block"><span className="text-[10px] font-mono uppercase text-muted">Ação de CRM</span><input value={f.crm_action} onChange={(e) => setF({ ...f, crm_action: e.target.value })} className="mt-1 w-full rounded-lg border border-line p-2 text-sm" /></label>
       <label className="flex items-center gap-2 text-sm text-muted"><input type="checkbox" checked={f.risk_flag} onChange={(e) => setF({ ...f, risk_flag: e.target.checked })} className="accent-emerald" /> marcar risco de reclassificação</label>
+      {f.utility_alt && (
+        <label className="block"><span className="text-[10px] font-mono uppercase text-muted">Corpo da versão UTILITY</span><textarea value={f.utility_alt.template_body} onChange={(e) => setF({ ...f, utility_alt: f.utility_alt ? { ...f.utility_alt, template_body: e.target.value } : null })} rows={3} className="mt-1 w-full rounded-lg border border-line p-2 text-sm" /></label>
+      )}
       <p className="text-[11px] text-muted font-mono">A janela de 24h (mídias) é ajustada pelo chat de refino.</p>
       <div className="flex gap-2 pt-1">
         <button onClick={save} disabled={pending} className="rounded-lg bg-emerald hover:bg-emeraldd text-white text-sm font-semibold px-3 py-1.5 disabled:opacity-50">{pending ? "Salvando…" : "Salvar"}</button>

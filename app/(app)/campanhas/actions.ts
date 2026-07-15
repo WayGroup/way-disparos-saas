@@ -44,6 +44,11 @@ export type TouchFields = {
   crm_action: string;
   risk_flag: boolean;
   template_name: string;
+  utility_alt: {
+    template_body: string;
+    buttons: { type: "quick_reply" | "url"; text: string; url: string }[];
+    risk_flag: boolean;
+  } | null;
 };
 
 export type PostFields = {
@@ -641,6 +646,7 @@ export async function duplicateCampaignAction(campaignId: string, newAnchor: str
         offset_label: t.offset_label, role: t.role, meta_category: t.meta_category,
         template_body: t.template_body, buttons: t.buttons, window_steps: t.window_steps,
         fallback_copy: t.fallback_copy, crm_action: t.crm_action, risk_flag: t.risk_flag,
+        utility_alt: t.utility_alt,
         template_name: recipe ? buildCode(recipe.recipe_type, apiSlots[idx]?.code ?? "", anchorValue) : t.template_name,
         send_at: recipe ? computeSendAt(anchorValue, apiSlots[idx]?.offset_days ?? 0, apiSlots[idx]?.offset_time ?? "") : t.send_at,
       })));
