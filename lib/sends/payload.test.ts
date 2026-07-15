@@ -66,10 +66,11 @@ describe("mediaTypeFromKind", () => {
 });
 
 describe("buildSendPayload", () => {
-  it("sem asset, só o texto (trimado)", () => {
+  it("sem asset, só o texto (trimado), prévia de link desligada por padrão", () => {
     expect(buildSendPayload("  Bom dia  ", null, publicUrl)).toEqual({
       text: "Bom dia",
       media: null,
+      linkPreview: false,
     });
   });
 
@@ -82,16 +83,30 @@ describe("buildSendPayload", () => {
         mimetype: "image/png",
         fileName: "convite.png",
       },
+      linkPreview: false,
     });
+  });
+
+  it("aceita ligar a prévia de link", () => {
+    expect(buildSendPayload("veja o link", null, publicUrl, true).linkPreview).toBe(true);
   });
 });
 
 describe("buildEvolutionPayload", () => {
-  it("texto puro vira um sendText com o JID no campo number", () => {
+  it("texto puro vira um sendText com o JID no campo number, sem prévia por padrão", () => {
     const payload: SendPayload = { text: "Bom dia", media: null };
     expect(buildEvolutionPayload(payload, JID)).toEqual([
-      { endpoint: "sendText", body: { number: JID, text: "Bom dia", linkPreview: true } },
+      { endpoint: "sendText", body: { number: JID, text: "Bom dia", linkPreview: false } },
     ]);
+  });
+
+  it("respeita a prévia de link ligada no payload", () => {
+    const payload: SendPayload = { text: "veja o link", media: null, linkPreview: true };
+    const calls = buildEvolutionPayload(payload, JID);
+    expect(calls[0]).toEqual({
+      endpoint: "sendText",
+      body: { number: JID, text: "veja o link", linkPreview: true },
+    });
   });
 
   it("imagem com copy vira um sendMedia com caption", () => {

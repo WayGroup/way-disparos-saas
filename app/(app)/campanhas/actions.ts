@@ -172,7 +172,12 @@ async function buildGroupPieces(campaignId: string) {
     post_id: post.id,
     label: `${post.role} (${post.offset_label})`,
     send_at: post.send_at,
-    payload: buildSendPayload(post.copy, post.asset_id ? (assetById.get(post.asset_id) ?? null) : null, publicAssetUrl),
+    payload: buildSendPayload(
+      post.copy,
+      post.asset_id ? (assetById.get(post.asset_id) ?? null) : null,
+      publicAssetUrl,
+      post.link_preview,
+    ),
     targets: post.community_ids.flatMap((id) => {
       const g = groupById.get(id);
       // Grupo desativado ou sem JID some da lista de alvos; validate reclama depois.
@@ -526,6 +531,22 @@ export async function setPostAssetAction(campaignId: string, sortOrder: number, 
   revalidatePath(`/campanhas/${campaignId}`);
 }
 
+/** Liga/desliga a prévia de link desta peça. Reprograma a fila: o payload leva o snapshot. */
+export async function setPostLinkPreviewAction(
+  campaignId: string,
+  postId: string,
+  value: boolean,
+): Promise<void> {
+  const supabase = await createServerSupabase();
+  const { error } = await supabase
+    .from("campaign_group_posts")
+    .update({ link_preview: value })
+    .eq("id", postId);
+  if (error) throw new Error(`Falha ao alterar a prévia de link: ${error.message}`);
+  await rescheduleCampaign(campaignId);
+  revalidatePath(`/campanhas/${campaignId}`);
+}
+
 export async function duplicateCampaignAction(campaignId: string, newAnchor: string, newName: string): Promise<string> {
   const src = await getCampaign(campaignId);
   if (!src) throw new Error("Campanha não encontrada.");
@@ -561,7 +582,7 @@ export async function duplicateCampaignAction(campaignId: string, newAnchor: str
       const { data: newPosts, error: e2 } = await supabase.from("campaign_group_posts").insert(src.group_posts.map((p, idx) => ({
         campaign_id: newId, sort_order: p.sort_order,
         offset_label: p.offset_label, role: p.role, communities: p.communities,
-        copy: p.copy, media: p.media, asset_id: p.asset_id,
+        copy: p.copy, media: p.media, asset_id: p.asset_id, link_preview: p.link_preview,
         message_code: recipe ? buildCode(recipe.recipe_type, gruposSlots[idx]?.code ?? "", anchorValue) : p.message_code,
         send_at: recipe ? computeSendAt(anchorValue, gruposSlots[idx]?.offset_days ?? 0, gruposSlots[idx]?.offset_time ?? "") : p.send_at,
       }))).select("id, sort_order");

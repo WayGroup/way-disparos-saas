@@ -182,6 +182,8 @@ export type QuickSendInput = {
   communityIds: string[];
   /** "" = enviar agora. Senão "YYYY-MM-DD HH:mm" no horário de São Paulo. */
   sendAt: string;
+  /** Gerar o card de prévia do link. Desligado por padrão. */
+  linkPreview: boolean;
 };
 
 export type QuickSendResult =
@@ -205,7 +207,7 @@ export async function quickSendAction(input: QuickSendInput): Promise<QuickSendR
     post_id: null,
     label: "Disparo rápido",
     send_at: input.sendAt.trim(),
-    payload: buildSendPayload(input.text, asset, publicAssetUrl),
+    payload: buildSendPayload(input.text, asset, publicAssetUrl, input.linkPreview),
     targets: input.communityIds.flatMap((id) => {
       const g = groupById.get(id);
       return g?.wa_group_id

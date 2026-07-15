@@ -9,7 +9,7 @@ const campaign: CampaignWithContent = {
     { id: "t1", campaign_id: "c", sort_order: 0, offset_label: "-3 dias", role: "Convite", template_name: "", meta_category: "UTILITY", template_body: "Oi {{1}}", buttons: [{ type: "quick_reply", text: "Quero o link", url: "" }], window_steps: [{ media: "Vídeo", caption: "boas-vindas" }], fallback_copy: "Tranquilo", crm_action: "tag inscrito", risk_flag: false, send_at: "" },
   ],
   group_posts: [
-    { id: "p1", campaign_id: "c", sort_order: 0, offset_label: "-3 dias", role: "Convite", message_code: "", communities: "1, 2, 3", copy: "Galera", media: "Vídeo convite", send_at: "", asset_id: null, community_ids: [] },
+    { id: "p1", campaign_id: "c", sort_order: 0, offset_label: "-3 dias", role: "Convite", message_code: "", communities: "1, 2, 3", copy: "Galera", media: "Vídeo convite", send_at: "", asset_id: null, community_ids: [], link_preview: false },
   ],
 };
 

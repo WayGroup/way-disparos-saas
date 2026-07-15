@@ -14,6 +14,7 @@ export function buildSendPayload(
   copy: string,
   asset: Asset | null,
   publicUrl: (storagePath: string) => string,
+  linkPreview = false,
 ): SendPayload {
   return {
     text: copy.trim(),
@@ -25,6 +26,7 @@ export function buildSendPayload(
           fileName: asset.filename,
         }
       : null,
+    linkPreview,
   };
 }
 
@@ -54,10 +56,13 @@ export function buildEvolutionPayload(payload: SendPayload, waGroupId: string): 
   }
 
   const { text, media } = payload;
+  // Default false: prévia de link só quando alguém liga de propósito. Envios antigos,
+  // que não gravaram o campo, também caem no false — nunca geram card por acidente.
+  const linkPreview = payload.linkPreview ?? false;
 
   if (!media) {
     if (!text) return [];
-    return [{ endpoint: "sendText", body: { number: waGroupId, text, linkPreview: true } }];
+    return [{ endpoint: "sendText", body: { number: waGroupId, text, linkPreview } }];
   }
 
   if (media.mediatype === "audio") {
@@ -65,7 +70,7 @@ export function buildEvolutionPayload(payload: SendPayload, waGroupId: string): 
       { endpoint: "sendWhatsAppAudio", body: { number: waGroupId, audio: media.url } },
     ];
     if (text) {
-      calls.push({ endpoint: "sendText", body: { number: waGroupId, text, linkPreview: true } });
+      calls.push({ endpoint: "sendText", body: { number: waGroupId, text, linkPreview } });
     }
     return calls;
   }

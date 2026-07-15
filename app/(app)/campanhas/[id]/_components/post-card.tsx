@@ -2,7 +2,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { CampaignGroupPost, Asset, Community } from "@/lib/db/types";
-import { updateGroupPostAction, setPostAssetAction, type PostFields } from "../../actions";
+import { updateGroupPostAction, setPostAssetAction, setPostLinkPreviewAction, type PostFields } from "../../actions";
 import { CopyButton } from "./copy-button";
 import { formatSendAt } from "@/lib/schedule";
 import { MediaPicker } from "./media-picker";
@@ -69,6 +69,29 @@ export function PostCard({ campaignId, post, assets, groups, highlight = false }
           <p className="text-sm leading-relaxed whitespace-pre-wrap">{post.copy}</p>
           <div className="mt-3">
             <MediaPicker assets={assets} currentId={post.asset_id} suggestion={post.media} onPick={(id) => setPostAssetAction(campaignId, post.sort_order, id)} />
+          </div>
+          <div className="mt-3 flex items-center justify-between gap-3">
+            <span className="text-[11px] text-muted">
+              Prévia do link {post.link_preview ? "— mostra o card com imagem" : "— só o texto, sem card"}
+            </span>
+            <button
+              onClick={() =>
+                startTransition(async () => {
+                  await setPostLinkPreviewAction(campaignId, post.id, !post.link_preview);
+                  router.refresh();
+                })
+              }
+              disabled={pending}
+              role="switch"
+              aria-checked={post.link_preview}
+              className={`shrink-0 rounded-full border px-2.5 py-1 text-xs font-semibold transition disabled:opacity-50 ${
+                post.link_preview
+                  ? "border-emerald bg-emerald/10 text-emeraldd"
+                  : "border-line text-muted hover:border-emerald/40"
+              }`}
+            >
+              {post.link_preview ? "✓ prévia ligada" : "prévia desligada"}
+            </button>
           </div>
           <div className="mt-4 pt-3 border-t border-line">
             <GroupMultiSelect

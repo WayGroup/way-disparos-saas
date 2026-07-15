@@ -53,6 +53,8 @@ export type SendMedia = {
 export type SendPayload = {
   text: string;
   media: SendMedia | null;
+  /** Gerar o card de prévia do link ao enviar. Opcional: envios antigos não têm o campo. */
+  linkPreview?: boolean;
 };
 
 export type ScheduledSend = {
@@ -166,6 +168,8 @@ export type CampaignGroupPost = {
   asset_id: string | null;
   /** Grupos reais escolhidos para o disparo. `communities` acima é só a sugestão da IA. */
   community_ids: string[];
+  /** Gerar o card de prévia do link ao enviar esta peça. Desligado por padrão. */
+  link_preview: boolean;
 };
 
 export type CampaignWithContent = Campaign & {

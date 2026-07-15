@@ -33,6 +33,7 @@ export function QuickSendPanel({
   const [ids, setIds] = useState<string[]>([]);
   const [mode, setMode] = useState<"agora" | "agendar">("agora");
   const [when, setWhen] = useState("");
+  const [linkPreview, setLinkPreview] = useState(false);
 
   const [issues, setIssues] = useState<ScheduleIssue[]>([]);
   const [result, setResult] = useState<QuickSendResult | null>(null);
@@ -67,6 +68,7 @@ export function QuickSendPanel({
           assetId,
           communityIds: ids,
           sendAt: mode === "agora" ? "" : toSendAt(when),
+          linkPreview,
         });
         if (res.ok) {
           setResult(res);
@@ -74,6 +76,7 @@ export function QuickSendPanel({
           setAssetId(null);
           setIds([]);
           setWhen("");
+          setLinkPreview(false);
           router.refresh();
         } else {
           setIssues(res.issues);
@@ -138,6 +141,25 @@ export function QuickSendPanel({
                   currentId={assetId}
                   onPick={async (id) => setAssetId(id || null)}
                 />
+              </div>
+
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-xs text-muted">
+                  Prévia do link {linkPreview ? "— mostra o card com imagem" : "— só o texto, sem card"}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setLinkPreview((v) => !v)}
+                  role="switch"
+                  aria-checked={linkPreview}
+                  className={`shrink-0 rounded-full border px-2.5 py-1 text-xs font-semibold transition ${
+                    linkPreview
+                      ? "border-emerald bg-emerald/10 text-emeraldd"
+                      : "border-line text-muted hover:border-emerald/40"
+                  }`}
+                >
+                  {linkPreview ? "✓ prévia ligada" : "prévia desligada"}
+                </button>
               </div>
 
               <div>
