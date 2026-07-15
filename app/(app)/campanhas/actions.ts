@@ -284,6 +284,14 @@ export async function refineCampaignAction(
 
   const result = await refineCampaign(campaign, trimmed, brandText, anchorLabel, anchorValue);
 
+  // Peças novas precisam da âncora para datar. Validamos ANTES de qualquer escrita:
+  // assim um pedido "adicionar peça" sem âncora não deixa edições parciais aplicadas
+  // nem a fila desatualizada — falha limpo, sem tocar no banco.
+  const hasNew = result.new_touches.length > 0 || result.new_group_posts.length > 0;
+  if (hasNew && !anchorValue) {
+    throw new Error("Não consigo datar peças novas sem a âncora da campanha. Confira a receita.");
+  }
+
   const supabase = await createServerSupabase();
 
   // Persiste mensagem do usuário
@@ -319,12 +327,6 @@ export async function refineCampaignAction(
       .eq("campaign_id", campaignId)
       .eq("sort_order", sort_order);
     if (error) throw new Error(`Falha ao atualizar post ${sort_order}: ${error.message}`);
-  }
-
-  // Peças novas precisam da âncora para datar; sem ela, não inserimos peça quebrada.
-  const hasNew = result.new_touches.length > 0 || result.new_group_posts.length > 0;
-  if (hasNew && !anchorValue) {
-    throw new Error("Não consigo datar peças novas sem a âncora da campanha. Confira a receita.");
   }
 
   let addedTouches = 0;
