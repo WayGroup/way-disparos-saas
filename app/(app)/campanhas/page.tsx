@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { listCampaigns } from "@/lib/db/campaigns";
 import { formatDateTimeBR } from "@/lib/format";
+import { CampaignRowMenu } from "./_components/campaign-row-menu";
 
 export default async function CampanhasPage() {
   const campaigns = await listCampaigns();
@@ -25,6 +26,7 @@ export default async function CampanhasPage() {
                 <th className="text-left font-medium px-4 py-3">Receita</th>
                 <th className="text-left font-medium px-4 py-3">Status</th>
                 <th className="text-left font-medium px-4 py-3">Criada</th>
+                <th className="px-4 py-3 w-12"><span className="sr-only">Ações</span></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-line">
@@ -36,6 +38,7 @@ export default async function CampanhasPage() {
                     <span className={`rounded-full text-xs font-medium px-2.5 py-1 ${c.status === "aprovada" ? "bg-emerald/15 text-emeraldd" : "bg-risk/15 text-risk"}`}>{c.status}</span>
                   </td>
                   <td className="px-4 py-3 text-muted font-mono text-xs">{formatDateTimeBR(new Date(c.created_at))}</td>
+                  <td className="px-4 py-3 text-right"><CampaignRowMenu campaignId={c.id} name={c.name} /></td>
                 </tr>
               ))}
             </tbody>
