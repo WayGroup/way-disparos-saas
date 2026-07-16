@@ -14,6 +14,10 @@ export function CampaignRowMenu({ campaignId, name }: { campaignId: string; name
   const [deleteConfirm, setDeleteConfirm] = useState("");
   const [pending, startTransition] = useTransition();
   const menuRef = useRef<HTMLDivElement>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  // O dropdown é `position: fixed` (posicionado no botão) para escapar do
+  // overflow-hidden do container da tabela — senão ele é cortado na última linha.
+  const [coords, setCoords] = useState<{ top: number; right: number }>({ top: 0, right: 0 });
 
   useEffect(() => {
     if (!open) return;
@@ -47,7 +51,17 @@ export function CampaignRowMenu({ campaignId, name }: { campaignId: string; name
   return (
     <div className="relative inline-block text-left" ref={menuRef}>
       <button
-        onClick={() => setOpen((v) => !v)}
+        ref={btnRef}
+        onClick={() =>
+          setOpen((v) => {
+            const next = !v;
+            if (next && btnRef.current) {
+              const r = btnRef.current.getBoundingClientRect();
+              setCoords({ top: r.bottom + 4, right: window.innerWidth - r.right });
+            }
+            return next;
+          })
+        }
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label="Ações da campanha"
@@ -57,7 +71,7 @@ export function CampaignRowMenu({ campaignId, name }: { campaignId: string; name
       </button>
 
       {open && (
-        <div role="menu" className="absolute right-0 z-10 mt-1 w-40 rounded-lg border border-line bg-white py-1 shadow-lg">
+        <div role="menu" style={{ position: "fixed", top: coords.top, right: coords.right }} className="z-20 w-40 rounded-lg border border-line bg-white py-1 shadow-lg">
           <button role="menuitem" onClick={() => openMode("rename")} className="block w-full px-3 py-2 text-left text-sm hover:bg-paper">Renomear</button>
           <button role="menuitem" onClick={() => openMode("duplicate")} className="block w-full px-3 py-2 text-left text-sm hover:bg-paper">Duplicar</button>
           <button role="menuitem" onClick={() => openMode("delete")} className="block w-full px-3 py-2 text-left text-sm text-risk hover:bg-paper">Excluir</button>
