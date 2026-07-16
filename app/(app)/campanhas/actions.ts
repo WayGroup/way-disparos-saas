@@ -682,3 +682,26 @@ export async function duplicateCampaignAction(campaignId: string, newAnchor: str
   revalidatePath("/campanhas");
   return newId;
 }
+
+export async function renameCampaignAction(campaignId: string, name: string): Promise<void> {
+  const trimmed = name.trim();
+  if (!trimmed) throw new Error("O nome não pode ficar vazio.");
+  const supabase = await createServerSupabase();
+  const { error } = await supabase
+    .from("campaigns")
+    .update({ name: trimmed, updated_at: new Date().toISOString() })
+    .eq("id", campaignId);
+  if (error) throw new Error(`Falha ao renomear campanha: ${error.message}`);
+  revalidatePath("/campanhas");
+  revalidatePath(`/campanhas/${campaignId}`);
+}
+
+// Exclusão física: o on delete cascade apaga toques, posts, chat e a fila
+// (scheduled_sends) desta campanha. A barreira contra acidente é o type-to-confirm
+// na UI (a pessoa digita "Delete"); aqui não há checagem de status.
+export async function deleteCampaignAction(campaignId: string): Promise<void> {
+  const supabase = await createServerSupabase();
+  const { error } = await supabase.from("campaigns").delete().eq("id", campaignId);
+  if (error) throw new Error(`Falha ao excluir campanha: ${error.message}`);
+  revalidatePath("/campanhas");
+}
