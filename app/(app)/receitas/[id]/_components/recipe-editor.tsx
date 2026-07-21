@@ -48,6 +48,22 @@ export function RecipeEditor({ recipe }: { recipe: RecipeWithChildren }) {
       // Papel vazio geraria código vazio — e dois deles colidiriam no mesmo template_name.
       code: s.code.trim() || codeFromRole(s.role) || `slot-${i + 1}`,
     }));
+    // O Salvar é global, mas o hint "era: …" só aparece na aba aberta. Sem este aviso,
+    // salvar de uma aba apagaria em silêncio os rótulos legados da outra.
+    const achatados = slots.filter(
+      (s) => s.offset_label && s.offset_label !== formatOffsetLabel(s.offset_days, s.offset_time),
+    ).length;
+    if (
+      achatados > 0 &&
+      !confirm(
+        `${achatados} slot(s) ainda têm um rótulo antigo, escrito à mão, que não bate com Dias/Hora ` +
+          `(inclusive em outras trilhas). Quem agenda são Dias/Hora — salvar substitui esses rótulos ` +
+          `pelo derivado e a redação original se perde. Continuar?`,
+      )
+    ) {
+      return;
+    }
+
     startTransition(async () => {
       await saveRecipeAction(recipe.id, { name, description, active, inputs, slots: normalized });
       // O estado precisa espelhar o que foi gravado: sem isto, um segundo save
