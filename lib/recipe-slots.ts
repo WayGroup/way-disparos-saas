@@ -12,17 +12,31 @@ export function padTime(time: string): string {
   return `${m[1].padStart(2, "0")}:${m[2]}`;
 }
 
+/** Lê o deslocamento em português: "na hora", "13min depois", "1h antes", "1h30 antes". */
+function relativeReading(total: number): string {
+  if (total === 0) return "na hora";
+  const abs = Math.abs(total);
+  const dir = total < 0 ? "antes" : "depois";
+  const h = Math.floor(abs / 60);
+  const mm = abs % 60;
+  if (h === 0) return `${mm}min ${dir}`;
+  if (mm === 0) return `${h}h ${dir}`;
+  return `${h}h${String(mm).padStart(2, "0")} ${dir}`;
+}
+
 /**
- * Rótulo humano do offset, DERIVADO dos campos que de fato agendam
- * (offset_days + offset_time). Antes era texto livre e divergia do agendamento real.
+ * Rótulo humano do offset, DERIVADO dos campos que de fato agendam.
+ * Com hora fixa lê o relógio; sem ela, lê o deslocamento a partir da hora do evento.
  */
-export function formatOffsetLabel(days: number, time: string): string {
+export function formatOffsetLabel(days: number, time: string, offsetMinutes = 0): string {
   const dia = days === 0 ? "D0" : days < 0 ? `D${days}` : `D+${days}`;
   const m = time.match(TIME_RE);
-  if (!m) return dia;
-  const hh = m[1].padStart(2, "0");
-  const mm = m[2];
-  return mm === "00" ? `${dia} · ${hh}h` : `${dia} · ${hh}h${mm}`;
+  if (m) {
+    const hh = m[1].padStart(2, "0");
+    const mm = m[2];
+    return mm === "00" ? `${dia} · ${hh}h` : `${dia} · ${hh}h${mm}`;
+  }
+  return `${dia} · ${relativeReading(offsetMinutes)}`;
 }
 
 /** Código do slot derivado do papel, para quando a pessoa não escreve um próprio. */
@@ -30,10 +44,36 @@ export function codeFromRole(role: string): string {
   return slugifyIdentifier(role);
 }
 
-/** Tempo sugerido para um slot novo: herda do último slot da mesma trilha. */
+/**
+ * "Quando" sugerido para um slot novo: herda o do último slot da mesma trilha —
+ * inclusive o MODO (hora fixa vs relativo). O primeiro slot da trilha nasce às 10:00 fixas.
+ */
 export function nextSlotDefaults(
-  last: { offset_days: number; offset_time: string } | undefined,
-): { offset_days: number; offset_time: string } {
-  if (!last) return { offset_days: 0, offset_time: "10:00" };
-  return { offset_days: last.offset_days, offset_time: last.offset_time || "10:00" };
+  last: { offset_days: number; offset_time: string; offset_minutes: number } | undefined,
+): { offset_days: number; offset_time: string; offset_minutes: number } {
+  if (!last) return { offset_days: 0, offset_time: "10:00", offset_minutes: 0 };
+  return {
+    offset_days: last.offset_days,
+    offset_time: last.offset_time,
+    offset_minutes: last.offset_minutes,
+  };
+}
+
+/** Quebra o deslocamento em sinal + horas + minutos, para os campos da UI. */
+export function splitOffsetMinutes(
+  total: number,
+): { sign: "antes" | "depois"; hours: number; minutes: number } {
+  const abs = Math.abs(total);
+  return { sign: total > 0 ? "depois" : "antes", hours: Math.floor(abs / 60), minutes: abs % 60 };
+}
+
+/** Junta sinal + horas + minutos no deslocamento em minutos (negativo = antes). */
+export function joinOffsetMinutes(
+  sign: "antes" | "depois",
+  hours: number,
+  minutes: number,
+): number {
+  const abs = Math.abs(hours) * 60 + Math.abs(minutes);
+  const result = sign === "antes" ? -abs : abs;
+  return result === -0 ? 0 : result;
 }
