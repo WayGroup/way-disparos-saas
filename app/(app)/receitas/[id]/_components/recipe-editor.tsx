@@ -185,17 +185,14 @@ export function RecipeEditor({ recipe }: { recipe: RecipeWithChildren }) {
               </div>
 
               <div className="grid grid-cols-12 gap-3 items-end mt-3">
-                <label className="col-span-6"><span className="text-[10px] font-mono uppercase text-muted">Mídia sugerida</span>
+                <label className={track === "api" ? "col-span-6" : "col-span-9"}><span className="text-[10px] font-mono uppercase text-muted">Mídia sugerida</span>
                   <input value={s.suggested_media} onChange={(e) => patchSlot(idx, { suggested_media: e.target.value })} className="mt-1 w-full rounded-lg border border-line p-2 text-sm" /></label>
-                {track === "api" ? (
+                {track === "api" && (
                   <label className="col-span-3"><span className="text-[10px] font-mono uppercase text-muted">Categoria Meta</span>
                     <select value={s.meta_category ?? "UTILITY"} onChange={(e) => patchSlot(idx, { meta_category: e.target.value as "UTILITY" | "MARKETING" })} className="mt-1 w-full rounded-lg border border-line p-2 text-sm">
                       <option value="UTILITY">UTILITY</option>
                       <option value="MARKETING">MARKETING</option>
                     </select></label>
-                ) : (
-                  <label className="col-span-3"><span className="text-[10px] font-mono uppercase text-muted">Comunidades</span>
-                    <input value={s.target_communities ?? ""} onChange={(e) => patchSlot(idx, { target_communities: e.target.value })} className="mt-1 w-full rounded-lg border border-line p-2 text-sm" /></label>
                 )}
                 <label className="col-span-3"><span className="text-[10px] font-mono uppercase text-muted">Código</span>
                   <input value={s.code} onChange={(e) => patchSlot(idx, { code: e.target.value })} placeholder={codeFromRole(s.role) || "auto"} className="mt-1 w-full rounded-lg border border-line p-2 text-sm font-mono" /></label>
@@ -211,7 +208,7 @@ export function RecipeEditor({ recipe }: { recipe: RecipeWithChildren }) {
                   ...p,
                   track === "api"
                     ? { track: "api" as const, offset_label: formatOffsetLabel(when.offset_days, when.offset_time), code: "", role: "Novo toque", meta_category: "UTILITY" as const, target_communities: null, suggested_media: "", ...when }
-                    : { track: "grupos" as const, offset_label: formatOffsetLabel(when.offset_days, when.offset_time), code: "", role: "Novo post", meta_category: null, target_communities: "1, 2, 3", suggested_media: "", ...when },
+                    : { track: "grupos" as const, offset_label: formatOffsetLabel(when.offset_days, when.offset_time), code: "", role: "Novo post", meta_category: null, target_communities: null, suggested_media: "", ...when },
                 ];
               })
             }
