@@ -4,7 +4,7 @@ import type { RecipeSlot } from "@/lib/db/types";
 
 function slot(partial: Partial<RecipeSlot>): RecipeSlot {
   return {
-    id: "s", recipe_id: "r", track: "api", code: "", offset_days: 0, offset_time: "", offset_label: "0", role: "x",
+    id: "s", recipe_id: "r", track: "api", code: "", offset_days: 0, offset_time: "", offset_minutes: 0, offset_label: "0", role: "x",
     meta_category: null, target_communities: null, suggested_media: "", sort_order: 0,
     ...partial,
   };

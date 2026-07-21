@@ -104,7 +104,7 @@ export async function generateCampaignAction(
           sort_order: idx,
           ...t,
           template_name: buildCode(recipe.recipe_type, apiSlots[idx]?.code ?? "", anchorValue),
-          send_at: computeSendAt(anchorValue, apiSlots[idx]?.offset_days ?? 0, apiSlots[idx]?.offset_time ?? ""),
+          send_at: computeSendAt(anchorValue, apiSlots[idx]?.offset_days ?? 0, apiSlots[idx]?.offset_time ?? "", apiSlots[idx]?.offset_minutes ?? 0),
         })),
       );
       if (e1) throw new Error(`Falha ao salvar toques: ${e1.message}`);
@@ -116,7 +116,7 @@ export async function generateCampaignAction(
           sort_order: idx,
           ...p,
           message_code: buildCode(recipe.recipe_type, gruposSlots[idx]?.code ?? "", anchorValue),
-          send_at: computeSendAt(anchorValue, gruposSlots[idx]?.offset_days ?? 0, gruposSlots[idx]?.offset_time ?? ""),
+          send_at: computeSendAt(anchorValue, gruposSlots[idx]?.offset_days ?? 0, gruposSlots[idx]?.offset_time ?? "", gruposSlots[idx]?.offset_minutes ?? 0),
         })),
       ).select("id");
       if (e2) throw new Error(`Falha ao salvar posts: ${e2.message}`);
@@ -648,7 +648,7 @@ export async function duplicateCampaignAction(campaignId: string, newAnchor: str
         fallback_copy: t.fallback_copy, crm_action: t.crm_action, risk_flag: t.risk_flag,
         utility_alt: t.utility_alt,
         template_name: recipe ? buildCode(recipe.recipe_type, apiSlots[idx]?.code ?? "", anchorValue) : t.template_name,
-        send_at: recipe ? computeSendAt(anchorValue, apiSlots[idx]?.offset_days ?? 0, apiSlots[idx]?.offset_time ?? "") : t.send_at,
+        send_at: recipe ? computeSendAt(anchorValue, apiSlots[idx]?.offset_days ?? 0, apiSlots[idx]?.offset_time ?? "", apiSlots[idx]?.offset_minutes ?? 0) : t.send_at,
       })));
       if (e1) throw new Error(`Falha ao duplicar toques: ${e1.message}`);
     }
@@ -658,7 +658,7 @@ export async function duplicateCampaignAction(campaignId: string, newAnchor: str
         offset_label: p.offset_label, role: p.role, communities: p.communities,
         copy: p.copy, media: p.media, asset_id: p.asset_id, link_preview: p.link_preview,
         message_code: recipe ? buildCode(recipe.recipe_type, gruposSlots[idx]?.code ?? "", anchorValue) : p.message_code,
-        send_at: recipe ? computeSendAt(anchorValue, gruposSlots[idx]?.offset_days ?? 0, gruposSlots[idx]?.offset_time ?? "") : p.send_at,
+        send_at: recipe ? computeSendAt(anchorValue, gruposSlots[idx]?.offset_days ?? 0, gruposSlots[idx]?.offset_time ?? "", gruposSlots[idx]?.offset_minutes ?? 0) : p.send_at,
       }))).select("id, sort_order");
       if (e2) throw new Error(`Falha ao duplicar posts: ${e2.message}`);
 

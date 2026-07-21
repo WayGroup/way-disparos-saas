@@ -19,6 +19,7 @@ export type SaveSlot = {
   suggested_media: string;
   offset_days: number;
   offset_time: string;
+  offset_minutes: number;
 };
 
 export type SaveRecipePayload = {

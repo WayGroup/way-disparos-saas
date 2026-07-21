@@ -114,6 +114,7 @@ export type RecipeSlot = {
   code: string;
   offset_days: number;
   offset_time: string;
+  offset_minutes: number;
   offset_label: string;
   role: string;
   meta_category: "UTILITY" | "MARKETING" | null;
