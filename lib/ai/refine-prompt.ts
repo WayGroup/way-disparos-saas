@@ -16,7 +16,7 @@ export function buildRefinePrompt(
   const posts = campaign.group_posts
     .map(
       (p) =>
-        `- [GRUPOS] sort_order ${p.sort_order} · ${p.offset_label} · envia ${p.send_at || "—"} · ${p.role} · comunidades ${p.communities}\n  copy: ${p.copy}\n  mídia: ${p.media}`,
+        `- [GRUPOS] sort_order ${p.sort_order} · ${p.offset_label} · envia ${p.send_at || "—"} · ${p.role}\n  copy: ${p.copy}\n  mídia: ${p.media}`,
     )
     .join("\n");
 
