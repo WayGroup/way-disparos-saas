@@ -61,7 +61,7 @@ export function RecipeEditor({ recipe }: { recipe: RecipeWithChildren }) {
     // em toda receita legada — o que treinaria a pessoa a ignorar o aviso que importa.
     const achatados = slots.filter((s) => {
       const derived = formatOffsetLabel(s.offset_days, s.offset_time, s.offset_minutes);
-      return s.offset_label && s.offset_label !== derived && !isLegacyAutoLabel(s.offset_label, derived);
+      return s.offset_label && s.offset_label !== derived && !isLegacyAutoLabel(s.offset_label);
     }).length;
     if (
       achatados > 0 &&
@@ -174,7 +174,7 @@ export function RecipeEditor({ recipe }: { recipe: RecipeWithChildren }) {
             const mode: SlotMode = modeOverride[idx] ?? derivedMode;
             const rel = splitOffsetMinutes(s.offset_minutes);
             const sign: "antes" | "depois" = mode === "depois" ? "depois" : "antes";
-            const staleLabel = !!s.offset_label && s.offset_label !== derived && !isLegacyAutoLabel(s.offset_label, derived);
+            const staleLabel = !!s.offset_label && s.offset_label !== derived && !isLegacyAutoLabel(s.offset_label);
             return (
             <div key={idx} className="rounded-xl border border-line bg-white p-4">
               <div className="flex items-center justify-between gap-3 mb-3">
@@ -192,9 +192,15 @@ export function RecipeEditor({ recipe }: { recipe: RecipeWithChildren }) {
                 </div>
                 <button
                   onClick={() => {
-                    // Os índices deslocam ao remover; a escolha de modo é por índice,
-                    // então zeramos o override para não aplicá-lo ao slot errado.
-                    setModeOverride({});
+                    // Os índices deslocam ao remover. Remapeamos as escolhas em vez de
+                    // zerá-las: limpar reabriria a inversão de sinal nos outros slots.
+                    setModeOverride((m) =>
+                      Object.fromEntries(
+                        Object.entries(m)
+                          .filter(([k]) => Number(k) !== idx)
+                          .map(([k, v]) => [Number(k) > idx ? Number(k) - 1 : Number(k), v]),
+                      ),
+                    );
                     setSlots((p) => p.filter((_, j) => j !== idx));
                   }}
                   className="text-xs text-muted hover:text-risk"

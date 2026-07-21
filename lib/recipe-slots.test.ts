@@ -58,11 +58,16 @@ describe("joinOffsetMinutes", () => {
 });
 
 describe("isLegacyAutoLabel", () => {
-  it("rótulo antigo derivado pelo sistema (só o dia) não é 'à mão'", () =>
-    expect(isLegacyAutoLabel("D0", "D0 · na hora")).toBe(true));
+  it("rótulo antigo derivado pelo sistema (só o dia) não é 'à mão'", () => {
+    expect(isLegacyAutoLabel("D0")).toBe(true);
+    expect(isLegacyAutoLabel("D-1")).toBe(true);
+    expect(isLegacyAutoLabel("D+2")).toBe(true);
+  });
   it("rótulo escrito à mão é detectado", () =>
-    expect(isLegacyAutoLabel("D0 · 19h07 (ao vivo)", "D0 · 19h07")).toBe(false));
-  it("rótulo divergente de verdade é detectado", () =>
-    expect(isLegacyAutoLabel("+1 dia", "D0 · na hora")).toBe(false));
-  it("vazio não conta", () => expect(isLegacyAutoLabel("", "D0 · na hora")).toBe(false));
+    expect(isLegacyAutoLabel("D0 · 19h07 (ao vivo)")).toBe(false));
+  it("rótulo de seed com a intenção da cadência é detectado", () => {
+    expect(isLegacyAutoLabel("+1 dia")).toBe(false);
+    expect(isLegacyAutoLabel("0")).toBe(false);
+  });
+  it("vazio não conta", () => expect(isLegacyAutoLabel("")).toBe(false));
 });

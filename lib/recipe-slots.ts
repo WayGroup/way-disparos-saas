@@ -60,12 +60,13 @@ export function nextSlotDefaults(
 }
 
 /**
- * O rótulo guardado é só a parte do dia do derivado (ex.: "D0" para "D0 · na hora")?
- * Antes da hora relativa, hora vazia gerava apenas a parte do dia — esses rótulos foram
- * escritos pelo próprio sistema, não à mão, e não devem disparar o aviso de perda.
+ * O rótulo guardado tem a forma que o próprio sistema gerava antes da hora relativa
+ * (só a parte do dia: "D0", "D-1", "D+2")? Esses não foram escritos à mão e não devem
+ * disparar o aviso de perda. Repare que a checagem é só da FORMA — não comparamos com o
+ * derivado atual, senão editar os Dias faria um rótulo automático virar "escrito à mão".
  */
-export function isLegacyAutoLabel(stored: string, derived: string): boolean {
-  return stored !== "" && stored === derived.split(" · ")[0];
+export function isLegacyAutoLabel(stored: string): boolean {
+  return /^D(0|[+-]\d+)$/.test(stored);
 }
 
 /** Quebra o deslocamento em sinal + horas + minutos, para os campos da UI. */
