@@ -11,6 +11,10 @@ export function computeSendAt(
   if (offsetTime && /^\d{1,2}:\d{2}$/.test(offsetTime)) {
     // Hora fixa de relógio: manda, e o deslocamento é ignorado.
     const [h, m] = offsetTime.split(":").map(Number);
+    // A regex aceita dígitos fora de faixa ("24:00", "9:99"). Isso é entrada quebrada:
+    // setHours ROLARIA o dia e produziria um horário plausível — agendando em silêncio
+    // no dia errado. Devolvemos vazio para falhar alto na validação, como antes.
+    if (h > 23 || m > 59) return "";
     d.setHours(h, m, 0, 0);
   } else if (offsetMinutes) {
     // Relativo: desloca a partir da hora do EVENTO. setMinutes rola dia/mês sozinho.

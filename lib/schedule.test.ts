@@ -59,6 +59,10 @@ describe("computeSendAt", () => {
   it("hora fixa ignora o deslocamento", () => {
     expect(computeSendAt("2026-06-27T19:07", 0, "14:00", -60)).toBe("2026-06-27 14:00");
   });
+  it("hora fora de faixa falha alto em vez de rolar o dia", () => {
+    expect(computeSendAt("2026-06-27T19:07", 0, "24:00")).toBe("");
+    expect(computeSendAt("2026-06-27T19:07", 0, "9:99")).toBe("");
+  });
 });
 
 describe("formatSendAt", () => {
