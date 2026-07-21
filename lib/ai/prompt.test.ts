@@ -22,6 +22,7 @@ describe("buildGenerationUserPrompt", () => {
     expect(out).toContain("Convite ao webinário");
     expect(out).toContain("Convite"); // slot de grupo
     expect(out).toContain("UTILITY");
-    expect(out).toContain("1, 2, 3"); // comunidades do slot de grupo
+    expect(out).not.toContain("1, 2, 3"); // a dica de comunidades saiu do prompt
+    expect(out).toContain("Vídeo convite"); // o slot de grupo segue descrito (mídia sugerida)
   });
 });
