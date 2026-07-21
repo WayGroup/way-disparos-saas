@@ -1,6 +1,16 @@
 import { slugifyIdentifier } from "@/lib/text";
 
-const TIME_RE = /^(\d{2}):(\d{2})$/;
+// Mesma tolerância do agendador (lib/schedule.ts aceita 1 ou 2 dígitos na hora):
+// uma hora legada "9:00" agenda às 09:00, então ela precisa ser reconhecida aqui
+// também — senão o rótulo diria "sem hora" enquanto o worker dispara às 09:00.
+const TIME_RE = /^(\d{1,2}):(\d{2})$/;
+
+/** Hora normalizada em HH:mm ("" quando inválida). O <input type="time"> exige o zero à esquerda. */
+export function padTime(time: string): string {
+  const m = time.match(TIME_RE);
+  if (!m) return "";
+  return `${m[1].padStart(2, "0")}:${m[2]}`;
+}
 
 /**
  * Rótulo humano do offset, DERIVADO dos campos que de fato agendam
@@ -10,7 +20,8 @@ export function formatOffsetLabel(days: number, time: string): string {
   const dia = days === 0 ? "D0" : days < 0 ? `D${days}` : `D+${days}`;
   const m = time.match(TIME_RE);
   if (!m) return dia;
-  const [, hh, mm] = m;
+  const hh = m[1].padStart(2, "0");
+  const mm = m[2];
   return mm === "00" ? `${dia} · ${hh}h` : `${dia} · ${hh}h${mm}`;
 }
 

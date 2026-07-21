@@ -3,7 +3,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { RecipeWithChildren } from "@/lib/db/types";
 import { saveRecipeAction, deleteRecipeAction, type SaveInput, type SaveSlot } from "../../actions";
-import { formatOffsetLabel, codeFromRole, nextSlotDefaults } from "@/lib/recipe-slots";
+import { formatOffsetLabel, codeFromRole, nextSlotDefaults, padTime } from "@/lib/recipe-slots";
 
 type Track = "api" | "grupos";
 
@@ -22,7 +22,9 @@ export function RecipeEditor({ recipe }: { recipe: RecipeWithChildren }) {
     recipe.slots.map((s) => ({
       track: s.track, offset_label: s.offset_label, code: s.code, role: s.role,
       meta_category: s.meta_category, target_communities: s.target_communities, suggested_media: s.suggested_media,
-      offset_days: s.offset_days, offset_time: s.offset_time,
+      // padTime: o <input type="time"> renderiza vazio se a hora vier "9:00" (sem zero
+      // à esquerda), enquanto o agendador dispara às 09:00 — normalizar evita essa mentira.
+      offset_days: s.offset_days, offset_time: padTime(s.offset_time),
     })),
   );
 
@@ -40,13 +42,17 @@ export function RecipeEditor({ recipe }: { recipe: RecipeWithChildren }) {
   function save() {
     // O rótulo é sempre derivado (nunca digitado) e o código cai no slug do papel
     // quando a pessoa não escreve um próprio.
-    const normalized = slots.map((s) => ({
+    const normalized = slots.map((s, i) => ({
       ...s,
       offset_label: formatOffsetLabel(s.offset_days, s.offset_time),
-      code: s.code.trim() || codeFromRole(s.role),
+      // Papel vazio geraria código vazio — e dois deles colidiriam no mesmo template_name.
+      code: s.code.trim() || codeFromRole(s.role) || `slot-${i + 1}`,
     }));
     startTransition(async () => {
       await saveRecipeAction(recipe.id, { name, description, active, inputs, slots: normalized });
+      // O estado precisa espelhar o que foi gravado: sem isto, um segundo save
+      // rederivaria o código a partir de um papel já editado e o renomearia em silêncio.
+      setSlots(normalized);
       router.refresh();
     });
   }
@@ -141,6 +147,14 @@ export function RecipeEditor({ recipe }: { recipe: RecipeWithChildren }) {
                 <div className="flex items-center gap-2.5">
                   <span className="font-mono text-xs text-muted">#{i + 1}</span>
                   <span className="rounded-full bg-emerald/10 text-emeraldd font-mono text-xs px-2.5 py-1">{formatOffsetLabel(s.offset_days, s.offset_time)}</span>
+                  {s.offset_label && s.offset_label !== formatOffsetLabel(s.offset_days, s.offset_time) && (
+                    <span
+                      className="font-mono text-xs text-risk"
+                      title="Rótulo antigo, escrito à mão, que não bate com Dias/Hora — quem agenda são Dias/Hora. Ajuste-os para refletir a intenção; ao salvar, este rótulo é substituído."
+                    >
+                      era: {s.offset_label}
+                    </span>
+                  )}
                 </div>
                 <button onClick={() => setSlots((p) => p.filter((_, j) => j !== idx))} className="text-xs text-muted hover:text-risk">remover</button>
               </div>

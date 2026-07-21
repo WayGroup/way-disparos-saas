@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { formatOffsetLabel, codeFromRole, nextSlotDefaults } from "@/lib/recipe-slots";
+import { formatOffsetLabel, codeFromRole, nextSlotDefaults, padTime } from "@/lib/recipe-slots";
 
 describe("formatOffsetLabel", () => {
   it("dia negativo com hora cheia", () => expect(formatOffsetLabel(-1, "14:00")).toBe("D-1 · 14h"));
@@ -8,6 +8,16 @@ describe("formatOffsetLabel", () => {
   it("dia positivo sem hora", () => expect(formatOffsetLabel(2, "")).toBe("D+2"));
   it("dia zero sem hora", () => expect(formatOffsetLabel(0, "")).toBe("D0"));
   it("hora inválida é ignorada", () => expect(formatOffsetLabel(-3, "14h")).toBe("D-3"));
+  // O agendador aceita "9:00" e dispara às 09:00 — o rótulo tem que concordar.
+  it("hora legada de 1 dígito é reconhecida e zero-padded", () =>
+    expect(formatOffsetLabel(0, "9:00")).toBe("D0 · 09h"));
+});
+
+describe("padTime", () => {
+  it("zero à esquerda quando falta", () => expect(padTime("9:00")).toBe("09:00"));
+  it("mantém a hora já normalizada", () => expect(padTime("14:30")).toBe("14:30"));
+  it("vazio continua vazio", () => expect(padTime("")).toBe(""));
+  it("inválida vira vazio", () => expect(padTime("14h")).toBe(""));
 });
 
 describe("codeFromRole", () => {
