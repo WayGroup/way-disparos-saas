@@ -37,8 +37,22 @@ export async function createRecipeAction(): Promise<string> {
     .select("id")
     .single();
   if (error) throw new Error(`Falha ao criar receita: ${error.message}`);
+  const id = data.id as string;
+
+  // Toda receita nasce com os dois campos que o agendamento exige: um nome interno
+  // e a data-âncora (sem âncora, computeSendAt não tem de onde partir).
+  const { error: eInputs } = await supabase.from("recipe_inputs").insert([
+    { recipe_id: id, label: "Nome interno", field_type: "texto", required: true, is_anchor: false, sort_order: 0 },
+    { recipe_id: id, label: "Data e hora do evento", field_type: "data_hora", required: true, is_anchor: true, sort_order: 1 },
+  ]);
+  if (eInputs) {
+    // rollback compensatório: não deixar receita órfã sem âncora
+    await supabase.from("recipes").delete().eq("id", id);
+    throw new Error(`Falha ao criar os campos padrão da receita: ${eInputs.message}`);
+  }
+
   revalidatePath("/receitas");
-  return data.id as string;
+  return id;
 }
 
 export async function deleteRecipeAction(id: string): Promise<void> {
