@@ -59,6 +59,15 @@ export function nextSlotDefaults(
   };
 }
 
+/**
+ * O rótulo guardado é só a parte do dia do derivado (ex.: "D0" para "D0 · na hora")?
+ * Antes da hora relativa, hora vazia gerava apenas a parte do dia — esses rótulos foram
+ * escritos pelo próprio sistema, não à mão, e não devem disparar o aviso de perda.
+ */
+export function isLegacyAutoLabel(stored: string, derived: string): boolean {
+  return stored !== "" && stored === derived.split(" · ")[0];
+}
+
 /** Quebra o deslocamento em sinal + horas + minutos, para os campos da UI. */
 export function splitOffsetMinutes(
   total: number,

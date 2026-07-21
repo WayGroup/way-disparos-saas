@@ -3,9 +3,10 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { RecipeWithChildren } from "@/lib/db/types";
 import { saveRecipeAction, deleteRecipeAction, type SaveInput, type SaveSlot } from "../../actions";
-import { formatOffsetLabel, codeFromRole, nextSlotDefaults, padTime, splitOffsetMinutes, joinOffsetMinutes } from "@/lib/recipe-slots";
+import { formatOffsetLabel, codeFromRole, nextSlotDefaults, padTime, splitOffsetMinutes, joinOffsetMinutes, isLegacyAutoLabel } from "@/lib/recipe-slots";
 
 type Track = "api" | "grupos";
+type SlotMode = "fixa" | "antes" | "depois";
 
 export function RecipeEditor({ recipe }: { recipe: RecipeWithChildren }) {
   const router = useRouter();
@@ -24,9 +25,14 @@ export function RecipeEditor({ recipe }: { recipe: RecipeWithChildren }) {
       meta_category: s.meta_category, target_communities: s.target_communities, suggested_media: s.suggested_media,
       // padTime: o <input type="time"> renderiza vazio se a hora vier "9:00" (sem zero
       // à esquerda), enquanto o agendador dispara às 09:00 — normalizar evita essa mentira.
-      offset_days: s.offset_days, offset_time: padTime(s.offset_time), offset_minutes: s.offset_minutes,
+      offset_days: s.offset_days, offset_time: padTime(s.offset_time), offset_minutes: s.offset_minutes ?? 0,
     })),
   );
+
+  // O modo escolhido NÃO pode ser derivado só do dado: com deslocamento zero, "depois"
+  // e "antes" colapsam (+0 === -0), o select voltaria sozinho para "antes" e o próximo
+  // número digitado sairia com o sinal invertido. Guardamos a escolha da pessoa.
+  const [modeOverride, setModeOverride] = useState<Record<number, SlotMode>>({});
 
   function patchInput(idx: number, patch: Partial<SaveInput>) {
     setInputs((prev) => prev.map((it, i) => (i === idx ? { ...it, ...patch } : it)));
@@ -50,14 +56,18 @@ export function RecipeEditor({ recipe }: { recipe: RecipeWithChildren }) {
     }));
     // O Salvar é global, mas o hint "era: …" só aparece na aba aberta. Sem este aviso,
     // salvar de uma aba apagaria em silêncio os rótulos legados da outra.
-    const achatados = slots.filter(
-      (s) => s.offset_label && s.offset_label !== formatOffsetLabel(s.offset_days, s.offset_time, s.offset_minutes),
-    ).length;
+    // Rótulos que o próprio sistema derivou antes (só a parte do dia, ex. "D0") não
+    // contam: não há redação humana a perder ali, e avisar sobre eles seria falso alarme
+    // em toda receita legada — o que treinaria a pessoa a ignorar o aviso que importa.
+    const achatados = slots.filter((s) => {
+      const derived = formatOffsetLabel(s.offset_days, s.offset_time, s.offset_minutes);
+      return s.offset_label && s.offset_label !== derived && !isLegacyAutoLabel(s.offset_label, derived);
+    }).length;
     if (
       achatados > 0 &&
       !confirm(
-        `${achatados} slot(s) ainda têm um rótulo antigo, escrito à mão, que não bate com Dias/Hora ` +
-          `(inclusive em outras trilhas). Quem agenda são Dias/Hora — salvar substitui esses rótulos ` +
+        `${achatados} slot(s) ainda têm um rótulo antigo, escrito à mão, que não bate com o Quando ` +
+          `(inclusive em outras trilhas). Quem agenda é o Quando — salvar substitui esses rótulos ` +
           `pelo derivado e a redação original se perde. Continuar?`,
       )
     ) {
@@ -159,20 +169,19 @@ export function RecipeEditor({ recipe }: { recipe: RecipeWithChildren }) {
         <div className="space-y-3">
           {trackSlots.map(({ s, idx }, i) => {
             const derived = formatOffsetLabel(s.offset_days, s.offset_time, s.offset_minutes);
-            const mode: "fixa" | "antes" | "depois" = s.offset_time
-              ? "fixa"
-              : s.offset_minutes > 0
-                ? "depois"
-                : "antes";
+            const derivedMode: SlotMode = s.offset_time ? "fixa" : s.offset_minutes > 0 ? "depois" : "antes";
+            // A escolha explícita manda; a derivação é só o ponto de partida.
+            const mode: SlotMode = modeOverride[idx] ?? derivedMode;
             const rel = splitOffsetMinutes(s.offset_minutes);
             const sign: "antes" | "depois" = mode === "depois" ? "depois" : "antes";
+            const staleLabel = !!s.offset_label && s.offset_label !== derived && !isLegacyAutoLabel(s.offset_label, derived);
             return (
             <div key={idx} className="rounded-xl border border-line bg-white p-4">
               <div className="flex items-center justify-between gap-3 mb-3">
                 <div className="flex items-center gap-2.5">
                   <span className="font-mono text-xs text-muted">#{i + 1}</span>
                   <span className="rounded-full bg-emerald/10 text-emeraldd font-mono text-xs px-2.5 py-1">{derived}</span>
-                  {s.offset_label && s.offset_label !== derived && (
+                  {staleLabel && (
                     <span
                       className="font-mono text-xs text-risk"
                       title="Rótulo antigo, escrito à mão, que não bate com o Quando — quem agenda são estes campos. Ajuste-os; ao salvar, este rótulo é substituído."
@@ -181,7 +190,15 @@ export function RecipeEditor({ recipe }: { recipe: RecipeWithChildren }) {
                     </span>
                   )}
                 </div>
-                <button onClick={() => setSlots((p) => p.filter((_, j) => j !== idx))} className="text-xs text-muted hover:text-risk">remover</button>
+                <button
+                  onClick={() => {
+                    // Os índices deslocam ao remover; a escolha de modo é por índice,
+                    // então zeramos o override para não aplicá-lo ao slot errado.
+                    setModeOverride({});
+                    setSlots((p) => p.filter((_, j) => j !== idx));
+                  }}
+                  className="text-xs text-muted hover:text-risk"
+                >remover</button>
               </div>
 
               <div className="grid grid-cols-12 gap-3 items-end">
@@ -196,7 +213,8 @@ export function RecipeEditor({ recipe }: { recipe: RecipeWithChildren }) {
                   <select
                     value={mode}
                     onChange={(e) => {
-                      const v = e.target.value as "fixa" | "antes" | "depois";
+                      const v = e.target.value as SlotMode;
+                      setModeOverride((m) => ({ ...m, [idx]: v }));
                       if (v === "fixa") patchSlot(idx, { offset_time: s.offset_time || "10:00" });
                       else patchSlot(idx, { offset_time: "", offset_minutes: joinOffsetMinutes(v, rel.hours, rel.minutes) });
                     }}

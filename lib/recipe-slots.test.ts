@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { formatOffsetLabel, codeFromRole, nextSlotDefaults, padTime, splitOffsetMinutes, joinOffsetMinutes } from "@/lib/recipe-slots";
+import { formatOffsetLabel, codeFromRole, nextSlotDefaults, padTime, splitOffsetMinutes, joinOffsetMinutes, isLegacyAutoLabel } from "@/lib/recipe-slots";
 
 describe("formatOffsetLabel", () => {
   it("dia negativo com hora cheia", () => expect(formatOffsetLabel(-1, "14:00")).toBe("D-1 · 14h"));
@@ -55,4 +55,14 @@ describe("joinOffsetMinutes", () => {
     const s = splitOffsetMinutes(-90);
     expect(joinOffsetMinutes(s.sign, s.hours, s.minutes)).toBe(-90);
   });
+});
+
+describe("isLegacyAutoLabel", () => {
+  it("rótulo antigo derivado pelo sistema (só o dia) não é 'à mão'", () =>
+    expect(isLegacyAutoLabel("D0", "D0 · na hora")).toBe(true));
+  it("rótulo escrito à mão é detectado", () =>
+    expect(isLegacyAutoLabel("D0 · 19h07 (ao vivo)", "D0 · 19h07")).toBe(false));
+  it("rótulo divergente de verdade é detectado", () =>
+    expect(isLegacyAutoLabel("+1 dia", "D0 · na hora")).toBe(false));
+  it("vazio não conta", () => expect(isLegacyAutoLabel("", "D0 · na hora")).toBe(false));
 });
