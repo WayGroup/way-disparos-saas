@@ -3,7 +3,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { RecipeWithChildren } from "@/lib/db/types";
 import { saveRecipeAction, deleteRecipeAction, type SaveInput, type SaveSlot } from "../../actions";
-import { formatOffsetLabel, codeFromRole, nextSlotDefaults, padTime } from "@/lib/recipe-slots";
+import { formatOffsetLabel, codeFromRole, nextSlotDefaults, padTime, splitOffsetMinutes, joinOffsetMinutes } from "@/lib/recipe-slots";
 
 type Track = "api" | "grupos";
 
@@ -24,7 +24,7 @@ export function RecipeEditor({ recipe }: { recipe: RecipeWithChildren }) {
       meta_category: s.meta_category, target_communities: s.target_communities, suggested_media: s.suggested_media,
       // padTime: o <input type="time"> renderiza vazio se a hora vier "9:00" (sem zero
       // à esquerda), enquanto o agendador dispara às 09:00 — normalizar evita essa mentira.
-      offset_days: s.offset_days, offset_time: padTime(s.offset_time),
+      offset_days: s.offset_days, offset_time: padTime(s.offset_time), offset_minutes: s.offset_minutes,
     })),
   );
 
@@ -44,14 +44,14 @@ export function RecipeEditor({ recipe }: { recipe: RecipeWithChildren }) {
     // quando a pessoa não escreve um próprio.
     const normalized = slots.map((s, i) => ({
       ...s,
-      offset_label: formatOffsetLabel(s.offset_days, s.offset_time),
+      offset_label: formatOffsetLabel(s.offset_days, s.offset_time, s.offset_minutes),
       // Papel vazio geraria código vazio — e dois deles colidiriam no mesmo template_name.
       code: s.code.trim() || codeFromRole(s.role) || `slot-${i + 1}`,
     }));
     // O Salvar é global, mas o hint "era: …" só aparece na aba aberta. Sem este aviso,
     // salvar de uma aba apagaria em silêncio os rótulos legados da outra.
     const achatados = slots.filter(
-      (s) => s.offset_label && s.offset_label !== formatOffsetLabel(s.offset_days, s.offset_time),
+      (s) => s.offset_label && s.offset_label !== formatOffsetLabel(s.offset_days, s.offset_time, s.offset_minutes),
     ).length;
     if (
       achatados > 0 &&
@@ -157,16 +157,25 @@ export function RecipeEditor({ recipe }: { recipe: RecipeWithChildren }) {
         </div>
 
         <div className="space-y-3">
-          {trackSlots.map(({ s, idx }, i) => (
+          {trackSlots.map(({ s, idx }, i) => {
+            const derived = formatOffsetLabel(s.offset_days, s.offset_time, s.offset_minutes);
+            const mode: "fixa" | "antes" | "depois" = s.offset_time
+              ? "fixa"
+              : s.offset_minutes > 0
+                ? "depois"
+                : "antes";
+            const rel = splitOffsetMinutes(s.offset_minutes);
+            const sign: "antes" | "depois" = mode === "depois" ? "depois" : "antes";
+            return (
             <div key={idx} className="rounded-xl border border-line bg-white p-4">
               <div className="flex items-center justify-between gap-3 mb-3">
                 <div className="flex items-center gap-2.5">
                   <span className="font-mono text-xs text-muted">#{i + 1}</span>
-                  <span className="rounded-full bg-emerald/10 text-emeraldd font-mono text-xs px-2.5 py-1">{formatOffsetLabel(s.offset_days, s.offset_time)}</span>
-                  {s.offset_label && s.offset_label !== formatOffsetLabel(s.offset_days, s.offset_time) && (
+                  <span className="rounded-full bg-emerald/10 text-emeraldd font-mono text-xs px-2.5 py-1">{derived}</span>
+                  {s.offset_label && s.offset_label !== derived && (
                     <span
                       className="font-mono text-xs text-risk"
-                      title="Rótulo antigo, escrito à mão, que não bate com Dias/Hora — quem agenda são Dias/Hora. Ajuste-os para refletir a intenção; ao salvar, este rótulo é substituído."
+                      title="Rótulo antigo, escrito à mão, que não bate com o Quando — quem agenda são estes campos. Ajuste-os; ao salvar, este rótulo é substituído."
                     >
                       era: {s.offset_label}
                     </span>
@@ -176,12 +185,40 @@ export function RecipeEditor({ recipe }: { recipe: RecipeWithChildren }) {
               </div>
 
               <div className="grid grid-cols-12 gap-3 items-end">
-                <label className="col-span-7"><span className="text-[10px] font-mono uppercase text-muted">Papel / objetivo</span>
+                <label className="col-span-12"><span className="text-[10px] font-mono uppercase text-muted">Papel / objetivo</span>
                   <input value={s.role} onChange={(e) => patchSlot(idx, { role: e.target.value })} placeholder="ex.: Convite — reserve sua vaga" className="mt-1 w-full rounded-lg border border-line p-2 text-sm" /></label>
-                <label className="col-span-2"><span className="text-[10px] font-mono uppercase text-muted">Dias</span>
+              </div>
+
+              <div className="grid grid-cols-12 gap-3 items-end mt-3">
+                <label className="col-span-3"><span className="text-[10px] font-mono uppercase text-muted">Dias</span>
                   <input type="number" value={s.offset_days} onChange={(e) => patchSlot(idx, { offset_days: Number(e.target.value) })} className="mt-1 w-full rounded-lg border border-line p-2 text-sm" /></label>
-                <label className="col-span-3"><span className="text-[10px] font-mono uppercase text-muted">Hora</span>
-                  <input type="time" value={s.offset_time} onChange={(e) => patchSlot(idx, { offset_time: e.target.value })} className="mt-1 w-full rounded-lg border border-line p-2 text-sm font-mono" /></label>
+                <label className="col-span-4"><span className="text-[10px] font-mono uppercase text-muted">Quando</span>
+                  <select
+                    value={mode}
+                    onChange={(e) => {
+                      const v = e.target.value as "fixa" | "antes" | "depois";
+                      if (v === "fixa") patchSlot(idx, { offset_time: s.offset_time || "10:00" });
+                      else patchSlot(idx, { offset_time: "", offset_minutes: joinOffsetMinutes(v, rel.hours, rel.minutes) });
+                    }}
+                    className="mt-1 w-full rounded-lg border border-line p-2 text-sm"
+                  >
+                    <option value="fixa">hora fixa</option>
+                    <option value="antes">antes do evento</option>
+                    <option value="depois">depois do evento</option>
+                  </select></label>
+                <div className="col-span-5 flex gap-3 items-end">
+                  {mode === "fixa" ? (
+                    <label className="flex-1"><span className="text-[10px] font-mono uppercase text-muted">Hora</span>
+                      <input type="time" value={s.offset_time} onChange={(e) => patchSlot(idx, { offset_time: e.target.value })} className="mt-1 w-full rounded-lg border border-line p-2 text-sm font-mono" /></label>
+                  ) : (
+                    <>
+                      <label className="flex-1"><span className="text-[10px] font-mono uppercase text-muted">Horas</span>
+                        <input type="number" min={0} value={rel.hours} onChange={(e) => patchSlot(idx, { offset_minutes: joinOffsetMinutes(sign, Number(e.target.value), rel.minutes) })} className="mt-1 w-full rounded-lg border border-line p-2 text-sm" /></label>
+                      <label className="flex-1"><span className="text-[10px] font-mono uppercase text-muted">Minutos</span>
+                        <input type="number" min={0} value={rel.minutes} onChange={(e) => patchSlot(idx, { offset_minutes: joinOffsetMinutes(sign, rel.hours, Number(e.target.value)) })} className="mt-1 w-full rounded-lg border border-line p-2 text-sm" /></label>
+                    </>
+                  )}
+                </div>
               </div>
 
               <div className="grid grid-cols-12 gap-3 items-end mt-3">
@@ -198,7 +235,8 @@ export function RecipeEditor({ recipe }: { recipe: RecipeWithChildren }) {
                   <input value={s.code} onChange={(e) => patchSlot(idx, { code: e.target.value })} placeholder={codeFromRole(s.role) || "auto"} className="mt-1 w-full rounded-lg border border-line p-2 text-sm font-mono" /></label>
               </div>
             </div>
-          ))}
+            );
+          })}
           <button
             onClick={() =>
               setSlots((p) => {
@@ -207,8 +245,8 @@ export function RecipeEditor({ recipe }: { recipe: RecipeWithChildren }) {
                 return [
                   ...p,
                   track === "api"
-                    ? { track: "api" as const, offset_label: formatOffsetLabel(when.offset_days, when.offset_time), code: "", role: "Novo toque", meta_category: "UTILITY" as const, target_communities: null, suggested_media: "", ...when }
-                    : { track: "grupos" as const, offset_label: formatOffsetLabel(when.offset_days, when.offset_time), code: "", role: "Novo post", meta_category: null, target_communities: null, suggested_media: "", ...when },
+                    ? { track: "api" as const, offset_label: formatOffsetLabel(when.offset_days, when.offset_time, when.offset_minutes), code: "", role: "Novo toque", meta_category: "UTILITY" as const, target_communities: null, suggested_media: "", ...when }
+                    : { track: "grupos" as const, offset_label: formatOffsetLabel(when.offset_days, when.offset_time, when.offset_minutes), code: "", role: "Novo post", meta_category: null, target_communities: null, suggested_media: "", ...when },
                 ];
               })
             }
