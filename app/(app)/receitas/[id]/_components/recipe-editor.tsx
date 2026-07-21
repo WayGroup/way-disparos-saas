@@ -3,6 +3,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { RecipeWithChildren } from "@/lib/db/types";
 import { saveRecipeAction, deleteRecipeAction, type SaveInput, type SaveSlot } from "../../actions";
+import { formatOffsetLabel, codeFromRole, nextSlotDefaults } from "@/lib/recipe-slots";
 
 type Track = "api" | "grupos";
 
@@ -37,8 +38,15 @@ export function RecipeEditor({ recipe }: { recipe: RecipeWithChildren }) {
     .filter((x) => x.s.track === track);
 
   function save() {
+    // O rótulo é sempre derivado (nunca digitado) e o código cai no slug do papel
+    // quando a pessoa não escreve um próprio.
+    const normalized = slots.map((s) => ({
+      ...s,
+      offset_label: formatOffsetLabel(s.offset_days, s.offset_time),
+      code: s.code.trim() || codeFromRole(s.role),
+    }));
     startTransition(async () => {
-      await saveRecipeAction(recipe.id, { name, description, active, inputs, slots });
+      await saveRecipeAction(recipe.id, { name, description, active, inputs, slots: normalized });
       router.refresh();
     });
   }
@@ -127,39 +135,56 @@ export function RecipeEditor({ recipe }: { recipe: RecipeWithChildren }) {
         </div>
 
         <div className="space-y-3">
-          {trackSlots.map(({ s, idx }) => (
-            <div key={idx} className="rounded-xl border border-line bg-white p-4 flex items-start gap-4">
-              <div className="grid grid-cols-12 gap-3 flex-1 items-end">
-                <label className="col-span-1"><span className="text-[10px] font-mono uppercase text-muted">Offset</span>
-                  <input value={s.offset_label} onChange={(e) => patchSlot(idx, { offset_label: e.target.value })} className="mt-1 w-full rounded-lg border border-line p-2 text-sm" /></label>
-                <label className="col-span-1"><span className="text-[10px] font-mono uppercase text-muted">Código</span>
-                  <input value={s.code} onChange={(e) => patchSlot(idx, { code: e.target.value })} placeholder="ex.: convite" className="mt-1 w-full rounded-lg border border-line p-2 text-sm font-mono" /></label>
-                <label className="col-span-4"><span className="text-[10px] font-mono uppercase text-muted">Papel / objetivo</span>
-                  <input value={s.role} onChange={(e) => patchSlot(idx, { role: e.target.value })} className="mt-1 w-full rounded-lg border border-line p-2 text-sm" /></label>
+          {trackSlots.map(({ s, idx }, i) => (
+            <div key={idx} className="rounded-xl border border-line bg-white p-4">
+              <div className="flex items-center justify-between gap-3 mb-3">
+                <div className="flex items-center gap-2.5">
+                  <span className="font-mono text-xs text-muted">#{i + 1}</span>
+                  <span className="rounded-full bg-emerald/10 text-emeraldd font-mono text-xs px-2.5 py-1">{formatOffsetLabel(s.offset_days, s.offset_time)}</span>
+                </div>
+                <button onClick={() => setSlots((p) => p.filter((_, j) => j !== idx))} className="text-xs text-muted hover:text-risk">remover</button>
+              </div>
+
+              <div className="grid grid-cols-12 gap-3 items-end">
+                <label className="col-span-7"><span className="text-[10px] font-mono uppercase text-muted">Papel / objetivo</span>
+                  <input value={s.role} onChange={(e) => patchSlot(idx, { role: e.target.value })} placeholder="ex.: Convite — reserve sua vaga" className="mt-1 w-full rounded-lg border border-line p-2 text-sm" /></label>
+                <label className="col-span-2"><span className="text-[10px] font-mono uppercase text-muted">Dias</span>
+                  <input type="number" value={s.offset_days} onChange={(e) => patchSlot(idx, { offset_days: Number(e.target.value) })} className="mt-1 w-full rounded-lg border border-line p-2 text-sm" /></label>
+                <label className="col-span-3"><span className="text-[10px] font-mono uppercase text-muted">Hora</span>
+                  <input type="time" value={s.offset_time} onChange={(e) => patchSlot(idx, { offset_time: e.target.value })} className="mt-1 w-full rounded-lg border border-line p-2 text-sm font-mono" /></label>
+              </div>
+
+              <div className="grid grid-cols-12 gap-3 items-end mt-3">
+                <label className="col-span-6"><span className="text-[10px] font-mono uppercase text-muted">Mídia sugerida</span>
+                  <input value={s.suggested_media} onChange={(e) => patchSlot(idx, { suggested_media: e.target.value })} className="mt-1 w-full rounded-lg border border-line p-2 text-sm" /></label>
                 {track === "api" ? (
-                  <label className="col-span-2"><span className="text-[10px] font-mono uppercase text-muted">Categoria Meta</span>
+                  <label className="col-span-3"><span className="text-[10px] font-mono uppercase text-muted">Categoria Meta</span>
                     <select value={s.meta_category ?? "UTILITY"} onChange={(e) => patchSlot(idx, { meta_category: e.target.value as "UTILITY" | "MARKETING" })} className="mt-1 w-full rounded-lg border border-line p-2 text-sm">
                       <option value="UTILITY">UTILITY</option>
                       <option value="MARKETING">MARKETING</option>
                     </select></label>
                 ) : (
-                  <label className="col-span-2"><span className="text-[10px] font-mono uppercase text-muted">Comunidades</span>
+                  <label className="col-span-3"><span className="text-[10px] font-mono uppercase text-muted">Comunidades</span>
                     <input value={s.target_communities ?? ""} onChange={(e) => patchSlot(idx, { target_communities: e.target.value })} className="mt-1 w-full rounded-lg border border-line p-2 text-sm" /></label>
                 )}
-                <label className="col-span-2"><span className="text-[10px] font-mono uppercase text-muted">Mídia sugerida</span>
-                  <input value={s.suggested_media} onChange={(e) => patchSlot(idx, { suggested_media: e.target.value })} className="mt-1 w-full rounded-lg border border-line p-2 text-sm" /></label>
-                <label className="col-span-1"><span className="text-[10px] font-mono uppercase text-muted">Dias</span>
-                  <input type="number" value={s.offset_days} onChange={(e) => patchSlot(idx, { offset_days: Number(e.target.value) })} className="mt-1 w-full rounded-lg border border-line p-2 text-sm" /></label>
-                <label className="col-span-1"><span className="text-[10px] font-mono uppercase text-muted">Hora</span>
-                  <input value={s.offset_time} onChange={(e) => patchSlot(idx, { offset_time: e.target.value })} placeholder="14:00" className="mt-1 w-full rounded-lg border border-line p-2 text-sm font-mono" /></label>
+                <label className="col-span-3"><span className="text-[10px] font-mono uppercase text-muted">Código</span>
+                  <input value={s.code} onChange={(e) => patchSlot(idx, { code: e.target.value })} placeholder={codeFromRole(s.role) || "auto"} className="mt-1 w-full rounded-lg border border-line p-2 text-sm font-mono" /></label>
               </div>
-              <button onClick={() => setSlots((p) => p.filter((_, i) => i !== idx))} className="text-xs text-muted hover:text-risk pt-5">remover</button>
             </div>
           ))}
           <button
-            onClick={() => setSlots((p) => [...p, track === "api"
-              ? { track: "api", offset_label: "0", code: "", role: "Novo toque", meta_category: "UTILITY", target_communities: null, suggested_media: "", offset_days: 0, offset_time: "" }
-              : { track: "grupos", offset_label: "0", code: "", role: "Novo post", meta_category: null, target_communities: "1, 2, 3", suggested_media: "", offset_days: 0, offset_time: "" }])}
+            onClick={() =>
+              setSlots((p) => {
+                const lastOfTrack = [...p].reverse().find((x) => x.track === track);
+                const when = nextSlotDefaults(lastOfTrack);
+                return [
+                  ...p,
+                  track === "api"
+                    ? { track: "api" as const, offset_label: formatOffsetLabel(when.offset_days, when.offset_time), code: "", role: "Novo toque", meta_category: "UTILITY" as const, target_communities: null, suggested_media: "", ...when }
+                    : { track: "grupos" as const, offset_label: formatOffsetLabel(when.offset_days, when.offset_time), code: "", role: "Novo post", meta_category: null, target_communities: "1, 2, 3", suggested_media: "", ...when },
+                ];
+              })
+            }
             className="rounded-lg border border-dashed border-line w-full py-3 text-sm text-muted hover:text-ink2 transition">
             + Adicionar slot {track === "api" ? "de API" : "de grupo"}
           </button>
