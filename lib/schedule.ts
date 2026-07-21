@@ -1,17 +1,23 @@
-export function computeSendAt(anchor: string, offsetDays: number, offsetTime: string): string {
+export function computeSendAt(
+  anchor: string,
+  offsetDays: number,
+  offsetTime: string,
+  offsetMinutes = 0,
+): string {
   if (!anchor) return "";
   const d = new Date(anchor);
   if (Number.isNaN(d.getTime())) return "";
   d.setDate(d.getDate() + offsetDays);
-  let hh = d.getHours();
-  let mm = d.getMinutes();
   if (offsetTime && /^\d{1,2}:\d{2}$/.test(offsetTime)) {
+    // Hora fixa de relógio: manda, e o deslocamento é ignorado.
     const [h, m] = offsetTime.split(":").map(Number);
-    hh = h;
-    mm = m;
+    d.setHours(h, m, 0, 0);
+  } else if (offsetMinutes) {
+    // Relativo: desloca a partir da hora do EVENTO. setMinutes rola dia/mês sozinho.
+    d.setMinutes(d.getMinutes() + offsetMinutes);
   }
   const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(hh)}:${pad(mm)}`;
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
 /**

@@ -41,6 +41,24 @@ describe("computeSendAt", () => {
     expect(computeSendAt("", -1, "14:00")).toBe("");
     expect(computeSendAt("xx", 0, "")).toBe("");
   });
+  it("desloca a partir da hora do evento (antes)", () => {
+    expect(computeSendAt("2026-06-27T19:07", 0, "", -60)).toBe("2026-06-27 18:07");
+  });
+  it("desloca a partir da hora do evento (depois)", () => {
+    expect(computeSendAt("2026-06-27T19:07", 0, "", 13)).toBe("2026-06-27 19:20");
+  });
+  it("deslocamento rola o dia para trás", () => {
+    expect(computeSendAt("2026-06-27T00:30", 0, "", -60)).toBe("2026-06-26 23:30");
+  });
+  it("deslocamento rola o dia para frente", () => {
+    expect(computeSendAt("2026-06-27T23:30", 0, "", 60)).toBe("2026-06-28 00:30");
+  });
+  it("dias e deslocamento se somam", () => {
+    expect(computeSendAt("2026-06-27T19:07", -1, "", -60)).toBe("2026-06-26 18:07");
+  });
+  it("hora fixa ignora o deslocamento", () => {
+    expect(computeSendAt("2026-06-27T19:07", 0, "14:00", -60)).toBe("2026-06-27 14:00");
+  });
 });
 
 describe("formatSendAt", () => {
