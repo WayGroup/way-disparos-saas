@@ -5,7 +5,7 @@ import { listActiveGroups } from "@/lib/db/communities";
 import { listAssets } from "@/lib/db/assets";
 import { publicAssetUrl } from "@/lib/campaign-pieces";
 import { getEvolutionConfig } from "@/lib/evolution/config";
-import { evoConnect, evoConnectionState, evoListGroups, evoLogout } from "@/lib/evolution/client";
+import { evoConnect, evoConnectionState, evoListGroups, evoLogout, evoDeleteInstance, evoCreateInstance } from "@/lib/evolution/client";
 import { assessSyncRisk, planCommunitySync, type SyncableCommunity } from "@/lib/evolution/sync";
 import type { EvoConnectionState, EvoQrCode } from "@/lib/evolution/types";
 import { buildSendPayload } from "@/lib/sends/payload";
@@ -29,31 +29,24 @@ export async function refreshStateAction(): Promise<{ state: EvoConnectionState 
   return { state: await evoConnectionState(getEvolutionConfig(process.env)) };
 }
 
-/**
- * Solta o número e deixa a fila parada.
- *
- * A pausa vem ANTES do logout de propósito. Se o logout falhar, o sistema fica pausado
- * e conectado — chato, e um clique conserta. Na ordem inversa, uma falha ao pausar
- * deixaria a fila tentando entregar com o número fora do ar, queimando as 3 tentativas
- * de cada linha (1, 3 e 9 min) até virar falha definitiva.
- *
- * Retomar é sempre manual: a fila não volta a andar antes de alguém conferir que os
- * grupos sincronizaram certo com o número novo.
- *
- * Não devolve o estado pós-logout: ninguém usava — o `router.refresh()` do chamador já
- * faz o servidor recalcular o estado real em `page.tsx`. Uma segunda chamada à Evolution
- * aqui só somava até 20s de timeout ao desconectar, e um soluço dela bem depois de um
- * logout bem-sucedido viraria erro cru na tela por causa de uma leitura que ninguém pediu.
- */
 export async function disconnectNumberAction(): Promise<void> {
   const cfg = getEvolutionConfig(process.env);
 
   await setPauseAction(true, "Troca de número");
-  await evoLogout(cfg);
 
-  // Aposenta os grupos do número que saiu: eles pertencem a ESTE número (só há uma
-  // instância por vez). Desativa (não apaga, não mexe no enabled) — somem da lista, o
-  // histórico fica, e reconectar o MESMO número + sincronizar os traz de volta.
+  // Reset da instância: solta a sessão (best-effort), APAGA a instância com o histórico de
+  // chats que a Evolution guarda, e recria limpa. Sem o delete, /chat/findChats devolveria
+  // os grupos do número anterior — e a troca de número não segregaria.
+  try {
+    await evoLogout(cfg);
+  } catch {
+    /* best-effort: pode já estar deslogado; o delete a seguir é o que importa */
+  }
+  await evoDeleteInstance(cfg);
+  await evoCreateInstance(cfg);
+
+  // A instância nova nasce vazia. Desativa os grupos do número que saiu (somem da lista,
+  // registro fica para o histórico de envios). Um sync do número novo repovoa só com os dele.
   const supabase = await createServerSupabase();
   const { error } = await supabase
     .from("communities")

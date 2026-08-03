@@ -142,10 +142,11 @@ export function ConnectionStrip({
 
   function disconnect() {
     const go = confirm(
-      "Desconectar o número?\n\n" +
-        "• Os envios ficam pausados na hora — nada sai até você retomar.\n" +
-        "• A lista de grupos é preservada; nada é apagado.\n" +
-        "• Para trocar de número: leia o novo QR com o celular novo, sincronize os grupos e retome os envios.",
+      "Desconectar e trocar de número?\n\n" +
+        "• Os envios ficam pausados na hora.\n" +
+        "• Isso RESETA a conexão e ZERA a lista de grupos — a instância é recriada limpa.\n" +
+        "• Os grupos habilitados do número anterior são perdidos (você reescolhe no novo).\n" +
+        "• Depois: leia o novo QR com o número novo, sincronize os grupos e retome os envios.",
     );
     if (!go) return;
     run(disconnectNumberAction, () => {
