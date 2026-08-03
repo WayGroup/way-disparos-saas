@@ -14,7 +14,7 @@ const TIMEOUT_MS = 20_000;
 async function evoFetch<T>(
   cfg: EvolutionConfig,
   path: string,
-  init?: { method?: "GET" | "POST" | "DELETE"; body?: unknown; timeoutMs?: number },
+  init?: { method?: "GET" | "POST" | "DELETE"; body?: unknown; timeoutMs?: number; tolerateStatuses?: number[] },
 ): Promise<T> {
   const timeoutMs = init?.timeoutMs ?? TIMEOUT_MS;
 
@@ -43,6 +43,8 @@ async function evoFetch<T>(
   }
 
   if (!res.ok) {
+    // Alguns fluxos toleram certos status (ex.: delete de instância inexistente = 404).
+    if (init?.tolerateStatuses?.includes(res.status)) return undefined as T;
     const text = await res.text().catch(() => "");
     throw new Error(`Evolution ${res.status}: ${text.slice(0, 500)}`);
   }
@@ -87,6 +89,32 @@ export async function evoConnectionState(cfg: EvolutionConfig): Promise<EvoConne
  */
 export async function evoLogout(cfg: EvolutionConfig): Promise<void> {
   await evoFetch<unknown>(cfg, `/instance/logout/${cfg.instance}`, { method: "DELETE" });
+}
+
+/**
+ * Deleta a instância na Evolution — apaga a sessão E o histórico de chats persistido
+ * (DATABASE_SAVE_DATA_INSTANCE). É o que permite trocar de número sem herdar os grupos do
+ * número anterior via /chat/findChats. Tolera 404: instância já inexistente não é erro,
+ * então um retry (delete → create) é seguro.
+ */
+export async function evoDeleteInstance(cfg: EvolutionConfig): Promise<void> {
+  await evoFetch<unknown>(cfg, `/instance/delete/${cfg.instance}`, {
+    method: "DELETE",
+    tolerateStatuses: [404],
+  });
+}
+
+/**
+ * Recria a instância com o MESMO nome e o payload mínimo (sem webhook — o app não usa).
+ * Tolera 403/409: instância já existente não é erro (cobre um retry em que o delete
+ * anterior não tenha pego). Depois disso, /instance/connect volta a devolver QR.
+ */
+export async function evoCreateInstance(cfg: EvolutionConfig): Promise<void> {
+  await evoFetch<unknown>(cfg, `/instance/create`, {
+    method: "POST",
+    body: { instanceName: cfg.instance, integration: "WHATSAPP-BAILEYS", qrcode: true },
+    tolerateStatuses: [403, 409],
+  });
 }
 
 /**
