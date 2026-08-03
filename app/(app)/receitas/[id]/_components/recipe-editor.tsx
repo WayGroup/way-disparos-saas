@@ -142,6 +142,8 @@ export function RecipeEditor({ recipe }: { recipe: RecipeWithChildren }) {
                       <option value="texto">texto</option>
                       <option value="data_hora">data/hora</option>
                       <option value="url">url</option>
+                      <option value="link">link</option>
+                      <option value="links_multi">links (vários)</option>
                     </select>
                   </td>
                   <td className="px-4 py-2.5"><input type="checkbox" checked={it.required} onChange={(e) => patchInput(idx, { required: e.target.checked })} className="accent-emerald" /></td>
