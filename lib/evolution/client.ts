@@ -14,7 +14,7 @@ const TIMEOUT_MS = 20_000;
 async function evoFetch<T>(
   cfg: EvolutionConfig,
   path: string,
-  init?: { method?: "GET" | "POST"; body?: unknown; timeoutMs?: number },
+  init?: { method?: "GET" | "POST" | "DELETE"; body?: unknown; timeoutMs?: number },
 ): Promise<T> {
   const timeoutMs = init?.timeoutMs ?? TIMEOUT_MS;
 
@@ -68,6 +68,19 @@ export async function evoConnectionState(cfg: EvolutionConfig): Promise<EvoConne
     `/instance/connectionState/${cfg.instance}`,
   );
   return data.instance?.state ?? "close";
+}
+
+/**
+ * Solta o número da instância sem destruí-la: mesmo nome, mesmas configurações,
+ * mesmo webhook. É o "sair do aparelho conectado" do WhatsApp, disparado por aqui.
+ *
+ * Depois disso, /instance/connect volta a devolver QR — que é o que permite parear
+ * um número diferente. Enquanto a sessão está `open`, ele responde só o estado.
+ *
+ * A resposta é descartada: o que importa é não ter lançado.
+ */
+export async function evoLogout(cfg: EvolutionConfig): Promise<void> {
+  await evoFetch<unknown>(cfg, `/instance/logout/${cfg.instance}`, { method: "DELETE" });
 }
 
 /**
