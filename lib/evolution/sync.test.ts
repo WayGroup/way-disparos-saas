@@ -204,4 +204,18 @@ describe("assessSyncRisk", () => {
       total: 1,
     });
   });
+
+  it("ignora comunidade ativa que nunca foi sincronizada", () => {
+    const existing = [
+      community({ id: "c1", wa_group_id: "120363000000000001@g.us" }),
+      community({ id: "c2", wa_group_id: null }),
+    ];
+    // Só c1 entra no total: c2 nunca teve grupo, não há o que perder.
+    // Desativar c1 é 1 de 1 — mais da metade.
+    expect(assessSyncRisk(planWith(["c1"]), existing, 5)).toEqual({
+      kind: "mass",
+      deactivating: 1,
+      total: 1,
+    });
+  });
 });
