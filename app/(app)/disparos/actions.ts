@@ -5,8 +5,8 @@ import { listActiveGroups } from "@/lib/db/communities";
 import { listAssets } from "@/lib/db/assets";
 import { publicAssetUrl } from "@/lib/campaign-pieces";
 import { getEvolutionConfig } from "@/lib/evolution/config";
-import { evoConnect, evoConnectionState, evoListGroups } from "@/lib/evolution/client";
-import { planCommunitySync, type SyncableCommunity } from "@/lib/evolution/sync";
+import { evoConnect, evoConnectionState, evoListGroups, evoLogout } from "@/lib/evolution/client";
+import { assessSyncRisk, planCommunitySync, type SyncableCommunity } from "@/lib/evolution/sync";
 import type { EvoConnectionState, EvoQrCode } from "@/lib/evolution/types";
 import { buildSendPayload } from "@/lib/sends/payload";
 import { isPast, planSends, validateSchedulable, type ScheduleIssue } from "@/lib/sends/plan";
@@ -29,9 +29,32 @@ export async function refreshStateAction(): Promise<{ state: EvoConnectionState 
   return { state: await evoConnectionState(getEvolutionConfig(process.env)) };
 }
 
-export type SyncResult = { inserted: number; linked: number; deactivated: number };
+/**
+ * Solta o número e deixa a fila parada.
+ *
+ * A pausa vem ANTES do logout de propósito. Se o logout falhar, o sistema fica pausado
+ * e conectado — chato, e um clique conserta. Na ordem inversa, uma falha ao pausar
+ * deixaria a fila tentando entregar com o número fora do ar, queimando as 3 tentativas
+ * de cada linha (1, 3 e 9 min) até virar falha definitiva.
+ *
+ * Retomar é sempre manual: a fila não volta a andar antes de alguém conferir que os
+ * grupos sincronizaram certo com o número novo.
+ */
+export async function disconnectNumberAction(): Promise<{ state: EvoConnectionState }> {
+  const cfg = getEvolutionConfig(process.env);
 
-export async function syncGroupsAction(): Promise<SyncResult> {
+  await setPauseAction(true, "Troca de número");
+  await evoLogout(cfg);
+
+  revalidateAll();
+  return { state: await evoConnectionState(cfg) };
+}
+
+export type SyncResult =
+  | { ok: true; inserted: number; linked: number; deactivated: number }
+  | { ok: false; needsConfirm: true; deactivating: number; total: number };
+
+export async function syncGroupsAction(confirmed: boolean = false): Promise<SyncResult> {
   const groups = await evoListGroups(getEvolutionConfig(process.env));
 
   const supabase = await createServerSupabase();
@@ -40,7 +63,29 @@ export async function syncGroupsAction(): Promise<SyncResult> {
     .select("id, name, identifier, wa_group_id, wa_subject, active");
   if (error) throw new Error(`Falha ao carregar comunidades: ${error.message}`);
 
-  const plan = planCommunitySync((data ?? []) as SyncableCommunity[], groups);
+  const existing = (data ?? []) as SyncableCommunity[];
+  const plan = planCommunitySync(existing, groups);
+
+  // Nenhuma escrita acontece antes desta avaliação.
+  const risk = assessSyncRisk(plan, existing, groups.length);
+
+  if (risk.kind === "empty") {
+    throw new Error(
+      `A Evolution devolveu zero grupos, mas há ${risk.total} grupo(s) cadastrado(s). ` +
+        "Ela provavelmente ainda está carregando as conversas depois do pareamento — " +
+        "espere um minuto e sincronize de novo.",
+    );
+  }
+
+  if (risk.kind === "mass" && !confirmed) {
+    return {
+      ok: false,
+      needsConfirm: true,
+      deactivating: risk.deactivating,
+      total: risk.total,
+    };
+  }
+
   const syncedAt = new Date().toISOString();
 
   if (plan.insert.length) {
@@ -68,6 +113,7 @@ export async function syncGroupsAction(): Promise<SyncResult> {
 
   revalidateAll();
   return {
+    ok: true,
     inserted: plan.insert.length,
     linked: plan.update.length,
     deactivated: plan.deactivate.length,

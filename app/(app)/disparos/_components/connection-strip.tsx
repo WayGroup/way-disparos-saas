@@ -8,6 +8,7 @@ import {
   refreshStateAction,
   syncGroupsAction,
   setPauseAction,
+  disconnectNumberAction,
   type SyncResult,
 } from "../actions";
 import { GroupPicker } from "./group-picker";
@@ -34,7 +35,8 @@ export function ConnectionStrip({
   const router = useRouter();
   const [open, setOpen] = useState(configError !== null || state !== "open");
   const [qr, setQr] = useState<EvoQrCode | null>(null);
-  const [sync, setSync] = useState<SyncResult | null>(null);
+  // Só a variante de sucesso vira estado: a de confirmação é tratada na hora, não exibida.
+  const [sync, setSync] = useState<Extract<SyncResult, { ok: true }> | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const [pauseDraft, setPauseDraft] = useState("");
@@ -83,6 +85,47 @@ export function ConnectionStrip({
       () => setPauseAction(!paused, paused ? "" : pauseDraft),
       () => setPauseDraft(""),
     );
+  }
+
+  /**
+   * Sincroniza, e se a resposta pedir confirmação (desativaria mais da metade dos
+   * grupos), pergunta e repete com `confirmed = true`. Transição própria em vez de
+   * reusar `run`, para não aninhar startTransition.
+   */
+  function runSync(confirmed: boolean) {
+    setError(null);
+    startTransition(async () => {
+      try {
+        const result = await syncGroupsAction(confirmed);
+        if (result.ok) {
+          setSync(result);
+          router.refresh();
+          return;
+        }
+        const go = confirm(
+          `Isso vai desativar ${result.deactivating} dos ${result.total} grupos sincronizados.\n\n` +
+            "Se você não saiu desses grupos de propósito, a Evolution pode ainda estar " +
+            "carregando as conversas do número recém-pareado.\n\nContinuar mesmo assim?",
+        );
+        if (go) runSync(true);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Algo deu errado.");
+      }
+    });
+  }
+
+  function disconnect() {
+    const go = confirm(
+      "Desconectar o número?\n\n" +
+        "• Os envios ficam pausados na hora — nada sai até você retomar.\n" +
+        "• A lista de grupos é preservada; nada é apagado.\n" +
+        "• Para trocar de número: leia o novo QR com o celular novo, sincronize os grupos e retome os envios.",
+    );
+    if (!go) return;
+    run(disconnectNumberAction, () => {
+      setQr(null);
+      setSync(null);
+    });
   }
 
   return (
@@ -179,8 +222,19 @@ export function ConnectionStrip({
                   {state === "open" ? "Gerar novo QR" : "Conectar número"}
                 </button>
 
+                {(state === "open" || state === "connecting") && (
+                  <button
+                    onClick={disconnect}
+                    disabled={pending}
+                    title="Solta a sessão da Evolution e pausa os envios"
+                    className="rounded-lg border border-risk px-3 py-1.5 text-xs font-semibold text-risk transition hover:bg-risk/10 disabled:opacity-50"
+                  >
+                    Desconectar número
+                  </button>
+                )}
+
                 <button
-                  onClick={() => run(syncGroupsAction, setSync)}
+                  onClick={() => runSync(false)}
                   disabled={pending || state !== "open"}
                   title={state !== "open" ? "Conecte o número primeiro" : undefined}
                   className="rounded-lg bg-emerald px-3 py-1.5 text-xs font-semibold text-white hover:bg-emeraldd disabled:opacity-50"
