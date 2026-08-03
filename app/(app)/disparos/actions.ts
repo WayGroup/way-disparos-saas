@@ -5,8 +5,8 @@ import { listActiveGroups } from "@/lib/db/communities";
 import { listAssets } from "@/lib/db/assets";
 import { publicAssetUrl } from "@/lib/campaign-pieces";
 import { getEvolutionConfig } from "@/lib/evolution/config";
-import { evoConnect, evoConnectionState, evoListGroups } from "@/lib/evolution/client";
-import { planCommunitySync, type SyncableCommunity } from "@/lib/evolution/sync";
+import { evoConnect, evoConnectionState, evoListGroups, evoLogout } from "@/lib/evolution/client";
+import { assessSyncRisk, planCommunitySync, type SyncableCommunity } from "@/lib/evolution/sync";
 import type { EvoConnectionState, EvoQrCode } from "@/lib/evolution/types";
 import { buildSendPayload } from "@/lib/sends/payload";
 import { isPast, planSends, validateSchedulable, type ScheduleIssue } from "@/lib/sends/plan";
@@ -29,9 +29,42 @@ export async function refreshStateAction(): Promise<{ state: EvoConnectionState 
   return { state: await evoConnectionState(getEvolutionConfig(process.env)) };
 }
 
-export type SyncResult = { inserted: number; linked: number; deactivated: number };
+/**
+ * Solta o número e deixa a fila parada.
+ *
+ * A pausa vem ANTES do logout de propósito. Se o logout falhar, o sistema fica pausado
+ * e conectado — chato, e um clique conserta. Na ordem inversa, uma falha ao pausar
+ * deixaria a fila tentando entregar com o número fora do ar, queimando as 3 tentativas
+ * de cada linha (1, 3 e 9 min) até virar falha definitiva.
+ *
+ * Retomar é sempre manual: a fila não volta a andar antes de alguém conferir que os
+ * grupos sincronizaram certo com o número novo.
+ *
+ * Não devolve o estado pós-logout: ninguém usava — o `router.refresh()` do chamador já
+ * faz o servidor recalcular o estado real em `page.tsx`. Uma segunda chamada à Evolution
+ * aqui só somava até 20s de timeout ao desconectar, e um soluço dela bem depois de um
+ * logout bem-sucedido viraria erro cru na tela por causa de uma leitura que ninguém pediu.
+ */
+export async function disconnectNumberAction(): Promise<void> {
+  const cfg = getEvolutionConfig(process.env);
 
-export async function syncGroupsAction(): Promise<SyncResult> {
+  await setPauseAction(true, "Troca de número");
+  await evoLogout(cfg);
+
+  revalidateAll();
+}
+
+export type SyncResult =
+  | { ok: true; inserted: number; linked: number; deactivated: number }
+  | {
+      ok: false;
+      needsConfirm: true;
+      reason: "empty" | "mass";
+      deactivating: number;
+      total: number;
+    };
+
+export async function syncGroupsAction(confirmed: boolean = false): Promise<SyncResult> {
   const groups = await evoListGroups(getEvolutionConfig(process.env));
 
   const supabase = await createServerSupabase();
@@ -40,7 +73,27 @@ export async function syncGroupsAction(): Promise<SyncResult> {
     .select("id, name, identifier, wa_group_id, wa_subject, active");
   if (error) throw new Error(`Falha ao carregar comunidades: ${error.message}`);
 
-  const plan = planCommunitySync((data ?? []) as SyncableCommunity[], groups);
+  const existing = (data ?? []) as SyncableCommunity[];
+  const plan = planCommunitySync(existing, groups);
+
+  // Nenhuma escrita acontece antes desta avaliação.
+  const risk = assessSyncRisk(plan, existing, groups.length);
+
+  // `empty` e `mass` são a mesma trava (desativação em massa) com o mesmo caminho de
+  // saída: confirmar. Duas variantes de erro para o mesmo tipo de desfecho obrigariam
+  // duas coisas ruins — um `throw` sem bypass (o `empty` original) e mensagens de Server
+  // Action que o Next ofusca em produção. Unificado na própria união de `SyncResult`,
+  // que já existe para o `mass`.
+  if (risk.kind !== "ok" && !confirmed) {
+    return {
+      ok: false,
+      needsConfirm: true,
+      reason: risk.kind,
+      deactivating: risk.kind === "empty" ? plan.deactivate.length : risk.deactivating,
+      total: risk.total,
+    };
+  }
+
   const syncedAt = new Date().toISOString();
 
   if (plan.insert.length) {
@@ -68,6 +121,7 @@ export async function syncGroupsAction(): Promise<SyncResult> {
 
   revalidateAll();
   return {
+    ok: true,
     inserted: plan.insert.length,
     linked: plan.update.length,
     deactivated: plan.deactivate.length,
@@ -95,15 +149,23 @@ export async function setGroupsEnabledAction(ids: string[], enabled: boolean): P
 /** O botão de pânico. A flag é checada dentro do claim — nada é entregue com ela ligada. */
 export async function setPauseAction(paused: boolean, reason: string): Promise<void> {
   const supabase = await createServerSupabase();
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("app_settings")
     .update({
       sends_paused: paused,
       paused_reason: reason.trim(),
       updated_at: new Date().toISOString(),
     })
-    .eq("id", true);
+    .eq("id", true)
+    .select("id");
   if (error) throw new Error(`Falha ao alterar a pausa: ${error.message}`);
+  // Um UPDATE que não casa nenhuma linha volta sem erro — e aqui isso significaria a
+  // pausa "aplicada" só na tela, nunca no banco. Como o desconectar solta o número logo
+  // em seguida assumindo que a pausa já pegou, esse é o único ponto que prova isso antes
+  // do passo que não tem volta.
+  if (!data || data.length === 0) {
+    throw new Error("Falha ao alterar a pausa: nenhuma linha de configuração foi encontrada.");
+  }
   revalidatePath("/disparos");
 }
 

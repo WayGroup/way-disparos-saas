@@ -31,8 +31,10 @@ sincronizar de novo), mas no intervalo não há destino disponível para montar 
   as 3 tentativas (`complete_scheduled_send`: 1, 3 e 9 min, depois `falhou` definitivo).
 - **Sem tela nova para o retorno.** A faixa de pausa que já existe mostra o motivo, e o
   botão verde *Retomar envios* já vive no topo dela.
-- **Trava do sincronizar entra junto**, com duas regras: recusa lista vazia; pede
-  confirmação em desativação de mais da metade.
+- **Trava do sincronizar entra junto**, com duas regras, ambas pedindo confirmação em
+  vez de bloquear: lista vazia com grupos cadastrados, e desativação de mais da metade.
+  Nenhuma das duas é um beco sem saída — se o número realmente saiu dos grupos,
+  confirmar desativa de propósito.
 - O número novo **já está nos mesmos grupos**. Como o JID de um grupo é global (o mesmo
   para todos os membros), `planCommunitySync` reencontra tudo por JID e `enabled` não é
   tocado — a configuração de quais grupos estão em uso sobrevive à troca.
@@ -88,12 +90,15 @@ há o que proteger.
 
 ### ③ Server actions — `app/(app)/disparos/actions.ts`
 
-**`disconnectNumberAction(): Promise<{ state: EvoConnectionState }>`**
+**`disconnectNumberAction(): Promise<void>`**
 
 1. `setPauseAction(true, "Troca de número")` — mesma função já usada pelo botão de pausa.
 2. `evoLogout(getEvolutionConfig(process.env))`.
 3. `revalidateAll()`.
-4. Devolve `{ state: await evoConnectionState(...) }` — o estado real, não um presumido.
+
+Não devolve o estado pós-logout: o `router.refresh()` do chamador já faz o servidor
+recalcular o estado real em `page.tsx`, e uma segunda chamada à Evolution só para isso
+custaria até 20s de timeout sem comprar nada.
 
 Se o passo 2 lançar, o erro sobe para a UI com a pausa já aplicada (estado seguro).
 
@@ -102,18 +107,20 @@ Se o passo 2 lançar, o erro sobe para a UI com a pausa já aplicada (estado seg
 ```ts
 export type SyncResult =
   | { ok: true; inserted: number; linked: number; deactivated: number }
-  | { ok: false; needsConfirm: true; deactivating: number; total: number };
+  | { ok: false; needsConfirm: true; reason: "empty" | "mass"; deactivating: number; total: number };
 ```
 
 Ordem dentro da action:
 
 1. `evoListGroups` e `select` das comunidades — como hoje.
 2. `planCommunitySync` → `assessSyncRisk(plan, existing, groups.length)`.
-3. `empty` → `throw new Error("A Evolution devolveu zero grupos, mas há N grupos
-   cadastrados. Ela provavelmente ainda está carregando as conversas depois do
-   pareamento — espere um minuto e sincronize de novo.")`
-4. `mass && !confirmed` → `return { ok: false, needsConfirm: true, … }`.
-5. Só então as escritas (insert / update / deactivate), exatamente como hoje.
+3. `risk.kind !== "ok" && !confirmed` → `return { ok: false, needsConfirm: true, reason: risk.kind, … }`.
+   `empty` e `mass` são a mesma trava (desativação em massa) e por isso usam o mesmo
+   caminho de saída — confirmar e, no sim, repetir com `confirmed = true`. Não há
+   `throw` sem bypass: se o número realmente saiu de todos os grupos, confirmar
+   desativa a lista de propósito, em vez de travar a sincronização até alguém editar o
+   banco à mão.
+4. Só então as escritas (insert / update / deactivate), exatamente como hoje.
 
 Nenhuma escrita acontece antes da avaliação de risco.
 
@@ -127,9 +134,13 @@ Nenhuma escrita acontece antes da avaliação de risco.
   pausados, a lista de grupos é preservada, e nada sai até reconectar e retomar.
 - Ao concluir: `setQr(null)`, `setSync(null)` e `router.refresh()` (o `run` já refaz).
 - **Sincronizar** passa por um `runSync(confirmed: boolean)` com transição própria — se a
-  resposta vier `needsConfirm`, mostra `confirm()` com "Isso vai desativar X dos Y grupos
-  sincronizados. Continuar?" e, no sim, chama `runSync(true)`. Sem `startTransition`
-  aninhado.
+  resposta vier `needsConfirm`, mostra um `confirm()` cujo texto depende do `reason`
+  (`mass`: "Isso vai desativar X dos Y grupos sincronizados"; `empty`: a Evolution
+  devolveu ZERO grupos, quase sempre por ainda estar carregando as conversas, e o certo
+  é cancelar, esperar um minuto e sincronizar de novo) e, no sim, chama `runSync(true)`.
+  Não reusa o `run`, cuja semântica de `onOk` não serve ao fluxo confirmar-e-repetir; a
+  repetição confirmada abre uma segunda transição, disparada de dentro do callback da
+  primeira, de modo que `pending` não tem lacuna entre as duas.
 - O estado local `sync` guarda só a variante `ok: true`.
 
 ### ⑤ Testes — `lib/evolution/sync.test.ts`
@@ -162,21 +173,29 @@ diretamente (só `config`, `sync` e `url`).
   `0 atualizado(s)`, `0 sumiram` (os JIDs são os mesmos) e a contagem de grupos em uso
   continua idêntica à de antes → *Retomar envios*.
 - **Manual, a trava:** sincronizar imediatamente após o pareamento, antes de a Evolution
-  carregar os chats, deve **recusar** com a mensagem de "ainda carregando" em vez de
-  zerar a lista.
+  carregar os chats, deve abrir uma **confirmação** dizendo que vieram ZERO grupos e
+  recomendando cancelar e esperar um minuto — e **cancelar não pode mudar nada** na
+  contagem de grupos em uso. Confirmar desativaria a lista de propósito; só faça isso se
+  a intenção for essa.
 
 ## Riscos
 
 - **Logout numa instância já desconectada** pode voltar erro da Evolution. Mitigado por o
   botão só aparecer com `state !== "close"`; numa corrida, a mensagem crua aparece na
-  faixa e o `refresh` mostra o estado verdadeiro. Nada fica inconsistente.
+  faixa e o `refresh` no `finally` de `run`/`runSync` mostra o estado verdadeiro mesmo
+  quando a action lança — é ele quem entrega essa garantia, rodando tanto no sucesso
+  quanto no erro. Nada fica inconsistente.
 - **Esquecer de retomar** deixa a fila parada indefinidamente. Mitigado pela faixa
   vermelha permanente no topo de `/disparos` com o motivo.
 - **A trava da metade gera ruído legítimo**: se você sair de verdade de muitos grupos, ela
   vai pedir confirmação. É uma confirmação, não um bloqueio — custo aceitável.
-- **Envios que vencerem entre o clique em desconectar e a gravação da pausa** ainda podem
-  ser reivindicados pelo worker (janela de milissegundos, cron de 1 minuto). Não vale
-  transação distribuída; o retry de 3 tentativas cobre.
+- **Envios já reivindicados por um lote de `dispatchDue` em andamento no momento do
+  clique** ainda podem seguir até o fim mesmo depois da pausa ser gravada — um lote
+  reivindica até 10 linhas de uma vez, cada uma com até 20s de timeout para a Evolution
+  responder. Não é uma janela de milissegundos: é da ordem de segundos a poucos minutos
+  no pior caso. É limitado e se autocorrige — `claim_scheduled_sends` checa a pausa antes
+  de cada nova reivindicação, então as tentativas não se acumulam de lote em lote — e não
+  vale transação distribuída para fechar essa janela por completo.
 - **Se o número novo não estiver em algum grupo**, aquele grupo é desativado na
   sincronização — comportamento correto e reversível, mas vale conferir a contagem de
   "grupos em uso" depois da troca.

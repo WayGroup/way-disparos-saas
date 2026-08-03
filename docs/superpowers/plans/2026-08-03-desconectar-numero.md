@@ -229,16 +229,19 @@ git commit -m "feat: assessSyncRisk protege a lista de grupos de sync prematuro"
 
 ---
 
-### Task 3: Server actions — desconectar e travar o sincronizar
+### Task 3: Server actions e o botão na faixa de conexão
 
-Sem teste de unidade: são server actions batendo em Supabase e na Evolution. A regra de risco já está coberta pela Task 2; aqui só se liga o fio.
+Actions e tela na mesma tarefa **de propósito**: transformar `SyncResult` numa união quebra o typecheck de quem a consome, e só a tela fecha. Separar deixaria a árvore sem compilar entre duas tarefas. Um único commit ao final, com os dois arquivos, para nenhum commit da história ficar sem compilar.
+
+Sem teste de unidade: são server actions batendo em Supabase e na Evolution, mais um client component. A regra de risco já está coberta pela Task 2; aqui só se liga o fio. Verificação por typecheck + suíte + o roteiro manual no fim deste plano.
 
 **Files:**
 - Modify: `app/(app)/disparos/actions.ts`
+- Modify: `app/(app)/disparos/_components/connection-strip.tsx`
 
 **Interfaces:**
-- Consumes: `evoLogout` (Task 1), `assessSyncRisk` e `SyncRisk` (Task 2), mais `getEvolutionConfig`, `evoConnectionState`, `evoListGroups`, `planCommunitySync`, `createServerSupabase`, `setPauseAction` — todos já no arquivo.
-- Produces:
+- Consumes: `evoLogout` (Task 1), `assessSyncRisk` e `SyncRisk` (Task 2), mais `getEvolutionConfig`, `evoConnectionState`, `evoListGroups`, `planCommunitySync`, `createServerSupabase`, `setPauseAction` — todos já importados em `actions.ts`.
+- Produces (ponta da cadeia — nada depende disto):
   - `disconnectNumberAction(): Promise<{ state: EvoConnectionState }>`
   - `SyncResult` passa a ser união: `{ ok: true; inserted: number; linked: number; deactivated: number } | { ok: false; needsConfirm: true; deactivating: number; total: number }`
   - `syncGroupsAction(confirmed?: boolean): Promise<SyncResult>`
@@ -367,32 +370,9 @@ export async function syncGroupsAction(confirmed: boolean = false): Promise<Sync
 }
 ```
 
-- [ ] **Step 5: Confirmar que o typecheck cobra a UI**
+Neste ponto o `tsc` está vermelho de propósito: `setSync` ainda recebe a união e `sync.inserted` não existe na variante `ok: false`. Os passos seguintes fecham. **Não commite ainda.**
 
-Run: `npx tsc --noEmit`
-Expected: **erro esperado** em `app/(app)/disparos/_components/connection-strip.tsx`, porque `setSync` ainda recebe a união e `sync.inserted` não existe na variante `ok: false`. É exatamente o que a Task 4 conserta. Não mexer na UI ainda.
-
-- [ ] **Step 6: Commit**
-
-```bash
-git add "app/(app)/disparos/actions.ts"
-git commit -m "feat: disconnectNumberAction e trava de risco no sincronizar"
-```
-
----
-
-### Task 4: O botão na faixa de conexão
-
-Fecha o typecheck que a Task 3 deixou vermelho de propósito.
-
-**Files:**
-- Modify: `app/(app)/disparos/_components/connection-strip.tsx`
-
-**Interfaces:**
-- Consumes: `disconnectNumberAction`, `syncGroupsAction(confirmed?: boolean)` e o tipo `SyncResult` (Task 3).
-- Produces: nada para tarefas seguintes — é a ponta da cadeia.
-
-- [ ] **Step 1: Importar a nova action**
+- [ ] **Step 5: Importar a nova action na faixa de conexão**
 
 Trocar o bloco de import de `../actions` por:
 
@@ -407,7 +387,7 @@ import {
 } from "../actions";
 ```
 
-- [ ] **Step 2: Estreitar o estado `sync` para a variante de sucesso**
+- [ ] **Step 6: Estreitar o estado `sync` para a variante de sucesso**
 
 Trocar a linha:
 
@@ -422,7 +402,7 @@ por:
   const [sync, setSync] = useState<Extract<SyncResult, { ok: true }> | null>(null);
 ```
 
-- [ ] **Step 3: Adicionar `runSync` e `disconnect` logo depois de `togglePause`**
+- [ ] **Step 7: Adicionar `runSync` e `disconnect` logo depois de `togglePause`**
 
 ```tsx
   /**
@@ -467,7 +447,7 @@ por:
   }
 ```
 
-- [ ] **Step 4: Ligar o botão de sincronizar no `runSync`**
+- [ ] **Step 8: Ligar o botão de sincronizar no `runSync`**
 
 Trocar o `onClick` do botão *Sincronizar grupos*:
 
@@ -477,7 +457,7 @@ Trocar o `onClick` do botão *Sincronizar grupos*:
 
 (era `onClick={() => run(syncGroupsAction, setSync)}`)
 
-- [ ] **Step 5: Adicionar o botão de desconectar**
+- [ ] **Step 9: Adicionar o botão de desconectar**
 
 Logo depois do botão *Conectar número* / *Gerar novo QR* e antes do *Sincronizar grupos*:
 
@@ -496,24 +476,24 @@ Logo depois do botão *Conectar número* / *Gerar novo QR* e antes do *Sincroniz
 
 Aparece também em `"connecting"` de propósito: soltar a sessão é o conserto de uma instância travada nesse estado.
 
-- [ ] **Step 6: Verificar typecheck e suíte**
+- [ ] **Step 10: Verificar typecheck e suíte**
 
 Run: `npx tsc --noEmit`
-Expected: sem erros — inclusive o de `connection-strip.tsx` que a Task 3 provocou.
+Expected: sem erros — o vermelho do Step 5 desapareceu.
 
 Run: `npm test`
-Expected: toda a suíte verde.
+Expected: toda a suíte verde (224 testes de baseline + os 6 da Task 2).
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 11: Commit único, com os dois arquivos**
 
 ```bash
-git add "app/(app)/disparos/_components/connection-strip.tsx"
-git commit -m "feat: botao de desconectar numero na faixa de conexao"
+git add "app/(app)/disparos/actions.ts" "app/(app)/disparos/_components/connection-strip.tsx"
+git commit -m "feat: botao de desconectar numero e trava de risco no sincronizar"
 ```
 
 ---
 
-## Verificação manual (depois da Task 4)
+## Verificação manual (depois da Task 3)
 
 Rodar `npm run dev` e abrir `/disparos`, gaveta *gerenciar* aberta.
 

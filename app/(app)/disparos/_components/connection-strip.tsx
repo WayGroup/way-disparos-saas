@@ -8,6 +8,7 @@ import {
   refreshStateAction,
   syncGroupsAction,
   setPauseAction,
+  disconnectNumberAction,
   type SyncResult,
 } from "../actions";
 import { GroupPicker } from "./group-picker";
@@ -34,9 +35,14 @@ export function ConnectionStrip({
   const router = useRouter();
   const [open, setOpen] = useState(configError !== null || state !== "open");
   const [qr, setQr] = useState<EvoQrCode | null>(null);
-  const [sync, setSync] = useState<SyncResult | null>(null);
+  // Só a variante de sucesso vira estado: a de confirmação é tratada na hora, não exibida.
+  const [sync, setSync] = useState<Extract<SyncResult, { ok: true }> | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  // Só existe para o rótulo do botão de sincronizar: `pending` sozinho não diz QUAL
+  // operação está em voo, e as três dividem o mesmo useTransition (os botões já ficam
+  // todos desabilitados via `pending`, então não há necessidade de mais estado que isso).
+  const [syncing, setSyncing] = useState(false);
   const [pauseDraft, setPauseDraft] = useState("");
   const polling = useRef(false);
 
@@ -70,9 +76,14 @@ export function ConnectionStrip({
     startTransition(async () => {
       try {
         onOk(await fn());
-        router.refresh();
       } catch (e) {
         setError(e instanceof Error ? e.message : "Algo deu errado.");
+      } finally {
+        // Sempre atualiza, mesmo no erro: `disconnectNumberAction` grava a pausa ANTES
+        // de tentar o logout, então uma falha no logout ainda deixa a pausa valendo no
+        // servidor. Sem o refresh aqui, a faixa continuaria mostrando "Conectado" sem a
+        // tarja vermelha até alguém recarregar a página — uma pausa invisível.
+        router.refresh();
       }
     });
   }
@@ -83,6 +94,64 @@ export function ConnectionStrip({
       () => setPauseAction(!paused, paused ? "" : pauseDraft),
       () => setPauseDraft(""),
     );
+  }
+
+  /**
+   * Sincroniza, e se a resposta pedir confirmação (lista vazia ou desativação de mais da
+   * metade dos grupos), pergunta e repete com `confirmed = true`. Transição própria em
+   * vez de reusar `run`: o `onOk` de `run` não serve a um fluxo de confirmar-e-repetir,
+   * que precisa decidir, a partir do resultado, se pergunta e chama a si mesma de novo.
+   */
+  function runSync(confirmed: boolean) {
+    setError(null);
+    setSyncing(true);
+    startTransition(async () => {
+      // Decide fora do try/finally se vai repetir: chamar `runSync(true)` ainda dentro
+      // do finally (ou antes dele) abriria uma segunda transição enquanto esta ainda
+      // está se encerrando, e o `finally` desta aqui apagaria o `syncing` da repetição
+      // assim que ela começasse.
+      let retry = false;
+      try {
+        const result = await syncGroupsAction(confirmed);
+        if (result.ok) {
+          setSync(result);
+          return;
+        }
+        const message =
+          result.reason === "empty"
+            ? `A Evolution devolveu ZERO grupos, mas você tem ${result.total} sincronizado(s).\n\n` +
+              "Isso quase sempre significa que ela ainda está carregando as conversas depois " +
+              "do pareamento — não que os grupos sumiram de verdade.\n\n" +
+              "O certo é cancelar, esperar um minuto e sincronizar de novo. " +
+              `Continuar agora desativaria os ${result.total} grupo(s).\n\nContinuar mesmo assim?`
+            : `Isso vai desativar ${result.deactivating} dos ${result.total} grupos sincronizados.\n\n` +
+              "Se você não saiu desses grupos de propósito, a Evolution pode ainda estar " +
+              "carregando as conversas do número recém-pareado.\n\nContinuar mesmo assim?";
+        retry = confirm(message);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Algo deu errado.");
+      } finally {
+        // Sempre atualiza, mesmo quando a action lançou: mesma razão do `run` — o
+        // servidor pode ter mudado de estado mesmo numa chamada que terminou em erro.
+        router.refresh();
+        setSyncing(false);
+      }
+      if (retry) runSync(true);
+    });
+  }
+
+  function disconnect() {
+    const go = confirm(
+      "Desconectar o número?\n\n" +
+        "• Os envios ficam pausados na hora — nada sai até você retomar.\n" +
+        "• A lista de grupos é preservada; nada é apagado.\n" +
+        "• Para trocar de número: leia o novo QR com o celular novo, sincronize os grupos e retome os envios.",
+    );
+    if (!go) return;
+    run(disconnectNumberAction, () => {
+      setQr(null);
+      setSync(null);
+    });
   }
 
   return (
@@ -179,13 +248,24 @@ export function ConnectionStrip({
                   {state === "open" ? "Gerar novo QR" : "Conectar número"}
                 </button>
 
+                {(state === "open" || state === "connecting") && (
+                  <button
+                    onClick={disconnect}
+                    disabled={pending}
+                    title="Solta a sessão da Evolution e pausa os envios"
+                    className="rounded-lg border border-risk px-3 py-1.5 text-xs font-semibold text-risk transition hover:bg-risk/10 disabled:opacity-50"
+                  >
+                    Desconectar número
+                  </button>
+                )}
+
                 <button
-                  onClick={() => run(syncGroupsAction, setSync)}
+                  onClick={() => runSync(false)}
                   disabled={pending || state !== "open"}
                   title={state !== "open" ? "Conecte o número primeiro" : undefined}
                   className="rounded-lg bg-emerald px-3 py-1.5 text-xs font-semibold text-white hover:bg-emeraldd disabled:opacity-50"
                 >
-                  {pending ? "Sincronizando…" : "Sincronizar grupos"}
+                  {pending && syncing ? "Sincronizando…" : "Sincronizar grupos"}
                 </button>
 
                 {sync && (
