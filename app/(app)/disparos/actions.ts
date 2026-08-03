@@ -51,6 +51,17 @@ export async function disconnectNumberAction(): Promise<void> {
   await setPauseAction(true, "Troca de número");
   await evoLogout(cfg);
 
+  // Aposenta os grupos do número que saiu: eles pertencem a ESTE número (só há uma
+  // instância por vez). Desativa (não apaga, não mexe no enabled) — somem da lista, o
+  // histórico fica, e reconectar o MESMO número + sincronizar os traz de volta.
+  const supabase = await createServerSupabase();
+  const { error } = await supabase
+    .from("communities")
+    .update({ active: false })
+    .not("wa_group_id", "is", null)
+    .eq("active", true);
+  if (error) throw new Error(`Falha ao aposentar os grupos do número: ${error.message}`);
+
   revalidateAll();
 }
 

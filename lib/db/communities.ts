@@ -28,13 +28,18 @@ export async function listActiveGroups(): Promise<Community[]> {
   return (data ?? []) as Community[];
 }
 
-/** Todos os grupos sincronizados, habilitados ou não. É a lista da tela de Conexão. */
+/**
+ * Os grupos ATIVOS sincronizados, habilitados ou não. É a lista da tela de Conexão.
+ * Só `active`: um grupo desativado (ex.: do número anterior, aposentado ao desconectar)
+ * some da lista. O registro fica no banco para o histórico e volta ao reativar/sincronizar.
+ */
 export async function listSyncedGroups(): Promise<Community[]> {
   const supabase = await createServerSupabase();
   const { data, error } = await supabase
     .from("communities")
     .select("*")
     .not("wa_group_id", "is", null)
+    .eq("active", true)
     .order("wa_subject");
   if (error) throw new Error(`Falha ao carregar grupos: ${error.message}`);
   return (data ?? []) as Community[];
