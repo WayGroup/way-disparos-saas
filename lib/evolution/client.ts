@@ -47,7 +47,13 @@ async function evoFetch<T>(
     throw new Error(`Evolution ${res.status}: ${text.slice(0, 500)}`);
   }
 
-  return (await res.json()) as T;
+  // Lido como texto primeiro, não como JSON direto: um 204 ou corpo vazio (a Evolution
+  // não promete corpo em toda rota — ex. um /instance/logout futuro) faria `res.json()`
+  // lançar um SyntaxError espúrio, transformando uma chamada bem-sucedida em erro na
+  // tela. Corpo com conteúdo continua parseado como sempre; só o vazio vira `undefined`.
+  const text = await res.text();
+  if (text.trim() === "") return undefined as T;
+  return JSON.parse(text) as T;
 }
 
 /** Devolve o QR code para parear o número. Se a instância já estiver conectada, vem só o estado. */
