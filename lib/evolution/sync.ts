@@ -88,3 +88,38 @@ export function planCommunitySync(existing: SyncableCommunity[], groups: EvoGrou
 
   return plan;
 }
+
+export type SyncRisk =
+  | { kind: "ok" }
+  | { kind: "empty"; total: number }
+  | { kind: "mass"; deactivating: number; total: number };
+
+/**
+ * Aplicar este plano é seguro?
+ *
+ * Existe porque `planCommunitySync` trata "grupo ausente da lista" como "grupo sumiu".
+ * Logo depois de parear um número, a Evolution ainda está carregando os chats e
+ * /chat/findChats responde vazio ou pela metade — sincronizar nessa janela desativaria
+ * a lista inteira. Recuperável sincronizando de novo, mas no intervalo não há destino
+ * para montar campanha.
+ *
+ * `total` conta só o que está vinculado E ativo: é o universo que pode ser perdido.
+ * Comunidade sem JID nunca foi sincronizada, e comunidade já inativa não tem o que
+ * perder.
+ */
+export function assessSyncRisk(
+  plan: SyncPlan,
+  existing: SyncableCommunity[],
+  groupCount: number,
+): SyncRisk {
+  const total = existing.filter((c) => c.wa_group_id && c.active).length;
+
+  if (groupCount === 0 && total > 0) return { kind: "empty", total };
+
+  // Estritamente mais da metade: 6 de 10 pergunta, 5 de 10 não.
+  if (plan.deactivate.length * 2 > total) {
+    return { kind: "mass", deactivating: plan.deactivate.length, total };
+  }
+
+  return { kind: "ok" };
+}
