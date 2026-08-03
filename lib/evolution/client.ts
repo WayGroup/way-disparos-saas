@@ -71,11 +71,15 @@ export async function evoConnect(cfg: EvolutionConfig): Promise<EvoQrCode> {
 }
 
 export async function evoConnectionState(cfg: EvolutionConfig): Promise<EvoConnectionState> {
-  const data = await evoFetch<{ instance?: { state?: EvoConnectionState } }>(
+  // Tolera 404: logo após um reset, se o create falhou, a instância não existe. Em vez de
+  // estourar (e a tela cair no branch "Evolution não configurada", que esconde tudo),
+  // devolvemos "close" — a UI mostra "Conectar número", que recria a instância.
+  const data = await evoFetch<{ instance?: { state?: EvoConnectionState } } | undefined>(
     cfg,
     `/instance/connectionState/${cfg.instance}`,
+    { tolerateStatuses: [404] },
   );
-  return data.instance?.state ?? "close";
+  return data?.instance?.state ?? "close";
 }
 
 /**

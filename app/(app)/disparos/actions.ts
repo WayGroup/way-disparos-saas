@@ -22,7 +22,12 @@ function revalidateAll() {
 // ---------------------------------------------------------------------------
 
 export async function fetchQrCodeAction(): Promise<EvoQrCode> {
-  return evoConnect(getEvolutionConfig(process.env));
+  const cfg = getEvolutionConfig(process.env);
+  // Garante que a instância existe antes de conectar. Se um reset anterior deletou mas o
+  // create falhou (blip da Evolution), a instância pode não existir e /connect daria 404.
+  // create é idempotente (tolera "já existe"), então é um no-op quando ela já está lá.
+  await evoCreateInstance(cfg);
+  return evoConnect(cfg);
 }
 
 export async function refreshStateAction(): Promise<{ state: EvoConnectionState }> {

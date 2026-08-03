@@ -253,7 +253,7 @@ export function ConnectionStrip({
                   <button
                     onClick={disconnect}
                     disabled={pending}
-                    title="Solta a sessão da Evolution e pausa os envios"
+                    title="Reseta a conexão, zera a lista de grupos e pausa os envios"
                     className="rounded-lg border border-risk px-3 py-1.5 text-xs font-semibold text-risk transition hover:bg-risk/10 disabled:opacity-50"
                   >
                     Desconectar número
