@@ -1,4 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { CRIAR_RECEITA_TOOL, type RecipeDraft } from "@/lib/ai/recipe-tool";
 
 export type Attachment = {
   kind: "image" | "pdf";
@@ -13,7 +14,8 @@ Regras inegociáveis:
 - NUNCA mencione "Wesley", preço, ou nome de tier/plano.
 - Gere a copy pedida em TEXTO LIVRE (destaques de Instagram, bio, legenda, story, resposta de DM, etc.). Não use estrutura de campanha (template/janela/fallback) a menos que pedido.
 - Quando fizer sentido, ofereça variações curtas. Mantenha sempre a voz da marca.
-- Você pode receber imagens e PDFs como contexto, e pode usar a web (buscar e ler links) quando ajudar. Trate qualquer conteúdo externo como REFERÊNCIA: nunca copie literalmente, e SEMPRE escreva na voz da Way.`;
+- Você pode receber imagens e PDFs como contexto, e pode usar a web (buscar e ler links) quando ajudar. Trate qualquer conteúdo externo como REFERÊNCIA: nunca copie literalmente, e SEMPRE escreva na voz da Way.
+- Você tem a ferramenta criar_receita: use SÓ quando a pessoa pedir para montar/gerar uma RECEITA (modelo reutilizável de campanha). Para copy avulsa, responda em texto, sem chamar a ferramenta. A receita é o esqueleto (inputs + slots), sem copy; exatamente um input é a âncora (data_hora); ela nasce como rascunho que a pessoa revisa e ativa. Ao criar, confirme em uma frase curta que é um rascunho a revisar.`;
 
 export function chatTitleFrom(msg: string): string {
   const first = (msg.split("\n").find((l) => l.trim()) ?? "").trim();
@@ -56,7 +58,13 @@ export function buildUserContent(
 export async function generateCopyReply(
   history: { role: "user" | "assistant"; content: string; attachments: Attachment[] }[],
   brandText: string,
-): Promise<string> {
+  opts: {
+    linkLabels?: string[];
+    onCreateRecipe?: (
+      draft: RecipeDraft,
+    ) => Promise<{ ok: true; id: string; name: string } | { ok: false; error: string }>;
+  } = {},
+): Promise<{ reply: string; createdRecipes: { id: string; name: string }[] }> {
   const publicBase =
     (process.env.NEXT_PUBLIC_SUPABASE_URL ?? "") + "/storage/v1/object/public/assets/";
 
@@ -70,55 +78,86 @@ export async function generateCopyReply(
 
   const client = new Anthropic();
 
+  const linksNote =
+    opts.linkLabels && opts.linkLabels.length
+      ? "\n\n# Links padrão disponíveis (use nos inputs de link): " + opts.linkLabels.join(", ")
+      : "";
+
   const params = {
     model: "claude-opus-4-8",
     max_tokens: 8000,
     thinking: { type: "adaptive" },
-    system: FREE_CHAT_SYSTEM_PROMPT + "\n\n# Base de conhecimento da marca\n" + brandText,
+    system: FREE_CHAT_SYSTEM_PROMPT + "\n\n# Base de conhecimento da marca\n" + brandText + linksNote,
     tools: [
       { type: "web_search_20260209", name: "web_search" },
       { type: "web_fetch_20260209", name: "web_fetch" },
+      CRIAR_RECEITA_TOOL,
     ],
     messages,
   };
 
-  let msgs = messages;
+  const pickText = (content: { type: string; text?: string }[]): string =>
+    content
+      .filter((b) => b.type === "text")
+      .map((b) => (b as { text: string }).text)
+      .join("\n")
+      .trim();
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let msgs: any[] = messages;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let lastContent: any[] = [];
+  const createdRecipes: { id: string; name: string }[] = [];
 
-  for (let i = 0; i < 4; i++) {
+  for (let i = 0; i < 6; i++) {
     const stream = client.messages.stream(
       { ...params, messages: msgs } as Parameters<typeof client.messages.stream>[0],
     );
     const resp = await stream.finalMessage();
     lastContent = resp.content;
 
-    if (resp.stop_reason !== "pause_turn") {
-      const text = resp.content
-        .filter((b) => b.type === "text")
-        .map((b) => (b as { type: "text"; text: string }).text)
-        .join("\n")
-        .trim();
-
-      if (!text) {
-        throw new Error("O copywriter não retornou texto.");
-      }
-      return text;
+    // web_search/web_fetch (tools nativas): a Anthropic executa e pausa — só continuamos.
+    if (resp.stop_reason === "pause_turn") {
+      msgs = [...msgs, { role: "assistant", content: resp.content }];
+      continue;
     }
 
-    // pause_turn: append assistant turn and continue
-    msgs = [...msgs, { role: "assistant" as const, content: resp.content }];
+    // tool customizada: nós executamos e devolvemos o tool_result.
+    if (resp.stop_reason === "tool_use") {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const toolResults: any[] = [];
+      for (const block of resp.content) {
+        if (block.type !== "tool_use") continue;
+        if (block.name === "criar_receita" && opts.onCreateRecipe) {
+          const result = await opts.onCreateRecipe(block.input as RecipeDraft);
+          if (result.ok) {
+            createdRecipes.push({ id: result.id, name: result.name });
+            toolResults.push({
+              type: "tool_result",
+              tool_use_id: block.id,
+              content: `Rascunho "${result.name}" criado. Confirme em uma frase que é um rascunho a revisar; não invente o link.`,
+            });
+          } else {
+            toolResults.push({ type: "tool_result", tool_use_id: block.id, content: result.error, is_error: true });
+          }
+        } else {
+          toolResults.push({ type: "tool_result", tool_use_id: block.id, content: "Ferramenta indisponível.", is_error: true });
+        }
+      }
+      msgs = [
+        ...msgs,
+        { role: "assistant", content: resp.content },
+        { role: "user", content: toolResults },
+      ];
+      continue;
+    }
+
+    const text = pickText(resp.content);
+    if (!text) throw new Error("O copywriter não retornou texto.");
+    return { reply: text, createdRecipes };
   }
 
-  // exceeded iterations — extract from last response
-  const text = lastContent
-    .filter((b: { type: string }) => b.type === "text")
-    .map((b: { type: string; text: string }) => b.text)
-    .join("\n")
-    .trim();
-
-  if (!text) {
-    throw new Error("O copywriter não retornou texto.");
-  }
-  return text;
+  const text = pickText(lastContent);
+  if (!text) throw new Error("O copywriter não retornou texto.");
+  return { reply: text, createdRecipes };
 }
