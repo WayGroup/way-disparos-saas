@@ -31,8 +31,10 @@ sincronizar de novo), mas no intervalo não há destino disponível para montar 
   as 3 tentativas (`complete_scheduled_send`: 1, 3 e 9 min, depois `falhou` definitivo).
 - **Sem tela nova para o retorno.** A faixa de pausa que já existe mostra o motivo, e o
   botão verde *Retomar envios* já vive no topo dela.
-- **Trava do sincronizar entra junto**, com duas regras: recusa lista vazia; pede
-  confirmação em desativação de mais da metade.
+- **Trava do sincronizar entra junto**, com duas regras, ambas pedindo confirmação em
+  vez de bloquear: lista vazia com grupos cadastrados, e desativação de mais da metade.
+  Nenhuma das duas é um beco sem saída — se o número realmente saiu dos grupos,
+  confirmar desativa de propósito.
 - O número novo **já está nos mesmos grupos**. Como o JID de um grupo é global (o mesmo
   para todos os membros), `planCommunitySync` reencontra tudo por JID e `enabled` não é
   tocado — a configuração de quais grupos estão em uso sobrevive à troca.
@@ -132,9 +134,13 @@ Nenhuma escrita acontece antes da avaliação de risco.
   pausados, a lista de grupos é preservada, e nada sai até reconectar e retomar.
 - Ao concluir: `setQr(null)`, `setSync(null)` e `router.refresh()` (o `run` já refaz).
 - **Sincronizar** passa por um `runSync(confirmed: boolean)` com transição própria — se a
-  resposta vier `needsConfirm`, mostra `confirm()` com "Isso vai desativar X dos Y grupos
-  sincronizados. Continuar?" e, no sim, chama `runSync(true)`. Sem `startTransition`
-  aninhado.
+  resposta vier `needsConfirm`, mostra um `confirm()` cujo texto depende do `reason`
+  (`mass`: "Isso vai desativar X dos Y grupos sincronizados"; `empty`: a Evolution
+  devolveu ZERO grupos, quase sempre por ainda estar carregando as conversas, e o certo
+  é cancelar, esperar um minuto e sincronizar de novo) e, no sim, chama `runSync(true)`.
+  Não reusa o `run`, cuja semântica de `onOk` não serve ao fluxo confirmar-e-repetir; a
+  repetição confirmada abre uma segunda transição, disparada de dentro do callback da
+  primeira, de modo que `pending` não tem lacuna entre as duas.
 - O estado local `sync` guarda só a variante `ok: true`.
 
 ### ⑤ Testes — `lib/evolution/sync.test.ts`
@@ -167,8 +173,10 @@ diretamente (só `config`, `sync` e `url`).
   `0 atualizado(s)`, `0 sumiram` (os JIDs são os mesmos) e a contagem de grupos em uso
   continua idêntica à de antes → *Retomar envios*.
 - **Manual, a trava:** sincronizar imediatamente após o pareamento, antes de a Evolution
-  carregar os chats, deve **recusar** com a mensagem de "ainda carregando" em vez de
-  zerar a lista.
+  carregar os chats, deve abrir uma **confirmação** dizendo que vieram ZERO grupos e
+  recomendando cancelar e esperar um minuto — e **cancelar não pode mudar nada** na
+  contagem de grupos em uso. Confirmar desativaria a lista de propósito; só faça isso se
+  a intenção for essa.
 
 ## Riscos
 
