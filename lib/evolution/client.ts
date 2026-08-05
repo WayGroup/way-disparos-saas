@@ -1,5 +1,6 @@
 import "server-only";
 import { evoUrl } from "@/lib/evolution/url";
+import { parseGroupList } from "@/lib/evolution/groups";
 import type {
   EvoConnectionState,
   EvoGroup,
@@ -124,31 +125,32 @@ export async function evoCreateInstance(cfg: EvolutionConfig): Promise<void> {
 /**
  * Lista os grupos do número conectado.
  *
- * NÃO usamos /group/fetchAllGroups: ele busca a metadata de cada grupo, um por um, e
- * numa conta com muitos grupos simplesmente não responde (medido: >90s sem retorno com
- * 218 grupos, mesmo com getParticipants=false).
+ * USA /group/fetchAllGroups, que pergunta ao WhatsApp de quais grupos o número faz parte.
  *
- * /chat/findChats lê do Postgres da própria Evolution e devolve tudo de uma vez
- * (medido: 0,5s para os mesmos 218 grupos), com `remoteJid` e `pushName` — que é tudo
- * o que precisamos: o JID e o nome do grupo.
+ * NÃO usamos mais /chat/findChats. Ele lê a tabela de CONVERSAS do Postgres da própria
+ * Evolution, e conversa não é grupo: um grupo só aparece ali depois que alguém fala nele.
+ * Enquanto a instância era antiga, o histórico acumulado escondia a diferença — quase
+ * todo grupo já tinha alguma mensagem. Quando "Desconectar" passou a recriar a instância
+ * (que é o que segrega os grupos entre números), a tabela nasceu vazia e o defeito
+ * apareceu: grupos parados sumiam do sincronizar, e grupos dos quais o número já saiu
+ * continuavam aparecendo, porque a conversa ficou registrada.
+ *
+ * Medido na instância de produção em 2026-08-05, mesmo número: findChats devolveu 54
+ * grupos em 0,5s — faltando 2 reais e sobrando 1 fantasma; fetchAllGroups devolveu os 55
+ * corretos em 13,5s. Os nomes batem entre as duas fontes.
+ *
+ * O comentário anterior aqui dizia que fetchAllGroups não respondia (>90s com 218 grupos).
+ * Isso foi medido noutra conta, muito maior. O custo cresce com o número de grupos, então
+ * o timeout de 60s continua: é a válvula se um número entrar em grupos demais.
  */
 export async function evoListGroups(cfg: EvolutionConfig): Promise<EvoGroup[]> {
-  const data = await evoFetch<unknown>(cfg, `/chat/findChats/${cfg.instance}`, {
-    method: "POST",
-    body: {},
-    timeoutMs: 60_000,
-  });
+  const data = await evoFetch<unknown>(
+    cfg,
+    `/group/fetchAllGroups/${cfg.instance}?getParticipants=false`,
+    { timeoutMs: 60_000 },
+  );
 
-  const list = Array.isArray(data) ? data : [];
-
-  return list
-    .filter((c): c is Record<string, unknown> => !!c && typeof c === "object")
-    .filter((c) => typeof c.remoteJid === "string" && (c.remoteJid as string).endsWith("@g.us"))
-    .map((c) => ({
-      id: c.remoteJid as string,
-      subject: typeof c.pushName === "string" ? c.pushName : "",
-      pictureUrl: typeof c.profilePicUrl === "string" ? c.profilePicUrl : null,
-    }));
+  return parseGroupList(data);
 }
 
 export async function evoSend(cfg: EvolutionConfig, call: EvolutionCall): Promise<EvoSendResult> {
