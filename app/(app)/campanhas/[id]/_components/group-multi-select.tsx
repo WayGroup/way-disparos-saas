@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import type { Community } from "@/lib/db/types";
 import { matchCommunities } from "@/lib/sends/match";
 import { GroupChips } from "../../_components/group-chips";
+import { GroupSummary } from "../../_components/group-summary";
 import { setPostCommunitiesAction } from "../../actions";
 
 export function GroupMultiSelect({
@@ -39,6 +40,18 @@ export function GroupMultiSelect({
 
   // Sem seleção salva, parte da sugestão da IA — mas nada é gravado até confirmar.
   const [ids, setIds] = useState<string[]>(selected.length > 0 ? selected : suggested);
+
+  // Peça sem grupo nenhum nasce ABERTA e não oferece botão de fechar: é um erro que
+  // impede a peça de sair, e escondê-lo atrás de um clique trocaria um problema visual
+  // por um de disparo. O valor inicial é calculado uma vez, então escolher grupos depois
+  // não fecha o seletor no meio da interação.
+  const [aberto, setAberto] = useState(ids.length === 0);
+
+  const nomeDe = (id: string) => {
+    const g = groups.find((x) => x.id === id);
+    return g ? g.wa_subject || g.name : "grupo removido";
+  };
+
   const dirty = ids.length !== selected.length || ids.some((id) => !selected.includes(id));
 
   function save() {
@@ -67,8 +80,22 @@ export function GroupMultiSelect({
       </div>
 
       <div className="mt-1.5">
-        <GroupChips groups={groups} value={ids} onChange={setIds} disabled={pending} />
+        {aberto ? (
+          <GroupChips groups={groups} value={ids} onChange={setIds} disabled={pending} />
+        ) : (
+          <GroupSummary names={ids.map(nomeDe)} />
+        )}
       </div>
+
+      {ids.length > 0 && (
+        <button
+          onClick={() => setAberto((a) => !a)}
+          aria-expanded={aberto}
+          className="mt-1.5 font-mono text-xs text-muted hover:text-ink"
+        >
+          {aberto ? "▴ fechar" : `▾ alterar os ${ids.length} grupos`}
+        </button>
+      )}
 
       {ids.length === 0 && (
         <p className="mt-1.5 text-xs text-risk">Sem grupo selecionado — esta peça não será enviada.</p>
