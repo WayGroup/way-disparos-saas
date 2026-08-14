@@ -113,7 +113,11 @@ Aberto renderiza o `<GroupChips>` de hoje, sem nenhuma mudança nele, mais um bo
 peça não será enviada" continua visível e o seletor fica acessível sem clique extra.
 
 O botão Salvar e o cálculo de `dirty` não mudam. Depois de salvar, o `router.refresh()`
-remonta o componente e ele volta ao estado fechado — que é o desejado.
+recarrega os dados do servidor e reconcilia — o estado de client (`aberto`) é preservado,
+e inicializadores de `useState` não rodam de novo. O seletor continua aberto, o que é
+desejável: você acabou de editar a peça e pode querer mexer em outra coisa dela. (Este
+comportamento é resultado da forma como o App Router do Next trabalha com client
+components: `router.refresh()` não remonta, só refaz a busca no servidor.)
 
 ## Componentes tocados
 
@@ -147,6 +151,12 @@ remonta o componente e ele volta ao estado fechado — que é o desejado.
   larguras; se ficar ruim na prática, é uma constante num arquivo só.
 - **Risco de regressão é baixo por construção**: nenhuma escrita, nenhuma server action,
   nenhum dado novo. O pior caso de um erro aqui é visual.
+- **Campanha com TODAS as peças vazias reconstrói o muro de chips.** Pode acontecer em
+  campanha recém-gerada onde a sugestão da IA não casou com nenhum grupo, ou se alguém
+  aplica seleção vazia a todas as peças pela barra. Cada peça vazia abre por padrão
+  renderizando todos os 166 grupos — não os selecionados, não há. A barra em modo Editar
+  fica visível acima dessa tela e permite corrigir todas as peças de uma vez. Não é
+  preso, só feio. Aceito como risco conhecido.
 - **Fora deste escopo, mas registrado:** com 166 grupos cada peça leva ~110 minutos para
   percorrer a lista (espaçamento anti-ban de 20-60s por grupo). Medido na fila real: a
   peça "estamos ao vivo" das 19:07 termina 21:01. A ferramenta aceita "19:07" sem avisar

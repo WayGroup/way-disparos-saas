@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import type { CampaignGroupPost, Community } from "@/lib/db/types";
 import { groupConsensus } from "@/lib/sends/group-consensus";
 import { GroupChips } from "../../_components/group-chips";
+import { GroupSummary, RESUMO_LIMITE } from "../../_components/group-summary";
 import { setCampaignCommunitiesAction } from "../../actions";
 
 export function CampaignGroupsBar({
@@ -18,6 +19,7 @@ export function CampaignGroupsBar({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [editing, setEditing] = useState(false);
+  const [aberto, setAberto] = useState(false);
 
   const consensus = groupConsensus(posts);
   const [draft, setDraft] = useState<string[]>(consensus.uniform ? consensus.ids : []);
@@ -80,15 +82,26 @@ export function CampaignGroupsBar({
 
         {consensus.uniform ? (
           consensus.ids.length > 0 ? (
-            <div className="mt-1.5 flex flex-wrap gap-1.5">
-              {consensus.ids.map((id) => (
-                <span
-                  key={id}
-                  className="rounded-full border border-emerald bg-emerald/10 text-emeraldd font-semibold px-2.5 py-1 text-xs"
+            <div className="mt-1.5">
+              {/* Um caminho de renderização só: aberto é o mesmo resumo sem limite, dentro
+                  de uma caixa com rolagem. Repetir a marcação do chip aqui faria os dois
+                  estilos divergirem no primeiro ajuste visual. */}
+              <div className={aberto ? "max-h-44 overflow-y-auto" : undefined}>
+                <GroupSummary
+                  names={consensus.ids.map(nameOf)}
+                  limite={aberto ? consensus.ids.length : undefined}
+                />
+              </div>
+
+              {consensus.ids.length > RESUMO_LIMITE && (
+                <button
+                  onClick={() => setAberto((a) => !a)}
+                  aria-expanded={aberto}
+                  className="mt-1.5 font-mono text-xs text-muted hover:text-ink"
                 >
-                  {nameOf(id)}
-                </span>
-              ))}
+                  {aberto ? "▴ fechar" : `▾ ver todos os ${consensus.ids.length}`}
+                </button>
+              )}
             </div>
           ) : (
             <p className="mt-1 text-sm text-risk">
