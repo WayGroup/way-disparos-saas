@@ -124,20 +124,15 @@ por:
 
 ```tsx
             <div className="mt-1.5">
-              {aberto ? (
-                <div className="flex flex-wrap gap-1.5 max-h-44 overflow-y-auto">
-                  {consensus.ids.map((id) => (
-                    <span
-                      key={id}
-                      className="rounded-full border border-emerald bg-emerald/10 text-emeraldd font-semibold px-2.5 py-1 text-xs"
-                    >
-                      {nameOf(id)}
-                    </span>
-                  ))}
-                </div>
-              ) : (
-                <GroupSummary names={consensus.ids.map(nameOf)} />
-              )}
+              {/* Um caminho de renderização só: aberto é o mesmo resumo sem limite, dentro
+                  de uma caixa com rolagem. Repetir a marcação do chip aqui faria os dois
+                  estilos divergirem no primeiro ajuste visual. */}
+              <div className={aberto ? "max-h-44 overflow-y-auto" : undefined}>
+                <GroupSummary
+                  names={consensus.ids.map(nameOf)}
+                  limite={aberto ? consensus.ids.length : undefined}
+                />
+              </div>
 
               {consensus.ids.length > RESUMO_LIMITE && (
                 <button
