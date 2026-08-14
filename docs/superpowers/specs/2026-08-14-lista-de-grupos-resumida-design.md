@@ -117,7 +117,7 @@ recarrega os dados do servidor e reconcilia — o estado de client (`aberto`) é
 e inicializadores de `useState` não rodam de novo. O seletor continua aberto, o que é
 desejável: você acabou de editar a peça e pode querer mexer em outra coisa dela. (Este
 comportamento é resultado da forma como o App Router do Next trabalha com client
-components: `router.refresh()` não remonta, só revalidada servidor.)
+components: `router.refresh()` não remonta, só refaz a busca no servidor.)
 
 ## Componentes tocados
 
