@@ -260,13 +260,14 @@ Rodar `npm run dev`.
 
 - [ ] **A campanha grande.** Abrir a campanha **"Hotseat 18/08"** (14 peças, 166 grupos). A barra do topo mostra 8 chips e "+158 outros", com "▾ ver todos os 166". As 14 peças aparecem logo abaixo, sem muro no caminho. Cada peça mostra 8 chips, "+158 outros" e "▾ alterar os 166 grupos".
 - [ ] **Abrir e fechar.** "ver todos os 166" abre a lista completa numa caixa com rolagem e o botão vira "▴ fechar"; fechar volta ao resumo.
-- [ ] **Alterar de verdade.** Numa peça, clicar em "alterar os 166 grupos" → o seletor com busca aparece → tirar um grupo → o botão "Salvar 165 grupo(s)" aparece → salvar → a página recarrega e a peça volta ao resumo, agora com "+157 outros". Conferir em `/disparos` que a fila daquela peça reflete a mudança.
+- [ ] **Alterar de verdade.** Numa peça, clicar em "alterar os 166 grupos" → o seletor com busca aparece → tirar um grupo → o botão "Salvar 165 grupo(s)" aparece → salvar → a página recarrega e a peça mantém o seletor aberto (estado de client preservado), agora mostrando "+157 outros" disponíveis. O estado aberto é esperado: você acabou de editar aquela peça e pode querer mexer mais. Conferir em `/disparos` que a fila daquela peça reflete a mudança.
 - [ ] **Editar a copy.** Numa peça, clicar em Editar, mudar a mensagem, Salvar. Este é o fluxo que estava bloqueado — tem que estar fluido.
-- [ ] **Campanha pequena não muda.** Abrir uma campanha antiga de webinário com poucos grupos: os chips aparecem todos e **não existe** botão de abrir, nem na barra nem nas peças.
+- [ ] **Campanha pequena não muda.** Abrir uma campanha antiga de webinário com poucos grupos. Na barra: os chips aparecem todos e não existe botão "ver todos" (< 8 grupos). Em cada peça: o resumo mostra os chips escolhidos e um botão "▾ alterar" aparece sempre que a peça tem pelo menos um grupo. O custo do seletor é o total de grupos disponíveis (166), não o número de escolhidos — então abrir sob demanda vale a pena mesmo com 3 grupos escolhidos.
 - [ ] **O caso de erro.** Numa peça, tirar todos os grupos e salvar. Ao recarregar, essa peça tem que aparecer com o seletor **já aberto**, o aviso vermelho "Sem grupo selecionado — esta peça não será enviada" visível, e **sem** botão de fechar.
 
 ## Riscos conhecidos (do spec, não são bugs a corrigir aqui)
 
 - Esconder o alvo do disparo é esconder informação que importa. Mitigado pelo total sempre visível ("+158 outros", "alterar os 166 grupos", e a contagem no botão Salvar), pela peça sem grupo que nunca fecha, e por nada do que é enviado mudar.
 - O limite de 8 é arbitrário, escolhido para caber em uma ou duas linhas. Se ficar ruim na prática, é uma constante num arquivo só.
+- **Campanha com todas as peças vazias:** consulte a seção Riscos do spec para entender quando pode acontecer, como se chega lá, e por que foi aceito.
 - **Fora deste escopo:** com 166 grupos, cada peça leva ~110 minutos para percorrer a lista (espaçamento anti-ban de 20-60s por grupo). Medido na fila real: a peça "estamos ao vivo" das 19:07 termina 21:01. A ferramenta aceita "19:07" sem avisar que aquilo significa "19:07 às 21:01".
