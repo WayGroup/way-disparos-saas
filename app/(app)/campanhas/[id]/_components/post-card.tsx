@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import type { CampaignGroupPost, Asset, Community } from "@/lib/db/types";
 import { updateGroupPostAction, setPostAssetAction, setPostLinkPreviewAction, deleteGroupPostAction, type PostFields } from "../../actions";
 import { CopyButton } from "./copy-button";
-import { formatSendAt } from "@/lib/schedule";
+import { avisoDeData, formatSendAt, fromDatetimeLocal, toDatetimeLocal } from "@/lib/schedule";
 import { MediaPicker } from "./media-picker";
 import { GroupMultiSelect } from "./group-multi-select";
 import { SendNowButton } from "./send-now-button";
@@ -17,8 +17,14 @@ export function PostCard({ campaignId, post, assets, groups, highlight = false }
   const [pending, startTransition] = useTransition();
   const [f, setF] = useState<PostFields>({
     offset_label: post.offset_label, role: post.role, communities: post.communities, copy: post.copy, media: post.media,
-    message_code: post.message_code,
+    message_code: post.message_code, send_at: post.send_at,
   });
+
+  // Os três casos avisam mas NÃO bloqueiam o Salvar: quem reorganiza uma campanha passa
+  // por estados intermediários. O aviso só torna visível o que o agendamento já faz em
+  // silêncio — nada é agendado para trás, peça sem data (ou com data inválida) fica fora
+  // da fila, e replanejamento cancela os envios pendentes dela.
+  const avisoData = avisoDeData(f.send_at, new Date());
 
   function save() {
     startTransition(async () => {
@@ -150,6 +156,16 @@ export function PostCard({ campaignId, post, assets, groups, highlight = false }
       <label className="block"><span className="text-[10px] font-mono uppercase text-muted">Código da mensagem</span><input value={f.message_code} onChange={(e) => setF({ ...f, message_code: e.target.value })} className="mt-1 w-full rounded-lg border border-line p-2 text-sm font-mono" /></label>
       <label className="block"><span className="text-[10px] font-mono uppercase text-muted">Mensagem do post</span><textarea value={f.copy} onChange={(e) => setF({ ...f, copy: e.target.value })} rows={3} className="mt-1 w-full rounded-lg border border-line p-2 text-sm" /></label>
       <label className="block"><span className="text-[10px] font-mono uppercase text-muted">Briefing da mídia</span><textarea value={f.media} onChange={(e) => setF({ ...f, media: e.target.value })} rows={3} placeholder="Deixe vazio para peça só-texto (sem anexo)." className="mt-1 w-full rounded-lg border border-line p-2 text-sm" /></label>
+      <label className="block">
+        <span className="text-[10px] font-mono uppercase text-muted">Data e hora do envio (horário de Brasília)</span>
+        <input
+          type="datetime-local"
+          value={toDatetimeLocal(f.send_at)}
+          onChange={(e) => setF({ ...f, send_at: fromDatetimeLocal(e.target.value) })}
+          className="mt-1 w-full rounded-lg border border-line p-2 text-sm font-mono"
+        />
+      </label>
+      {avisoData && <p className="text-xs text-risk">{avisoData}</p>}
       <div className="flex gap-2 pt-1">
         <button onClick={save} disabled={pending} className="rounded-lg bg-emerald hover:bg-emeraldd text-white text-sm font-semibold px-3 py-1.5 disabled:opacity-50">{pending ? "Salvando…" : "Salvar"}</button>
         <button onClick={() => setEditing(false)} className="rounded-lg border border-line text-sm px-3 py-1.5">Cancelar</button>

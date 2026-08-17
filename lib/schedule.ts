@@ -65,3 +65,63 @@ export function formatSendAt(value: string): string {
   const dow = new Date(Number(y), Number(mo) - 1, Number(d)).getDay();
   return `${DIAS[dow]} ${d}/${mo} · ${hh}:${mm}`;
 }
+
+/**
+ * O formato da agenda editorial ("2026-08-18 19:07") e o do seletor nativo
+ * ("2026-08-18T19:07") são a mesma informação com separador diferente. Uma regex serve às
+ * duas direções: aceita espaço ou T, e tolera os segundos que alguns navegadores mandam.
+ */
+const DATETIME_RE = /^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2})(?::\d{2})?$/;
+
+/** "2026-08-18 19:07" → "2026-08-18T19:07", que é o que `<input type="datetime-local">` lê. */
+export function toDatetimeLocal(sendAt: string): string {
+  const m = sendAt.match(DATETIME_RE);
+  return m ? `${m[1]}T${m[2]}` : "";
+}
+
+/**
+ * "2026-08-18T19:07" → "2026-08-18 19:07", o formato guardado.
+ *
+ * Valor que não casa devolve "" em vez da string original: um send_at malformado no banco
+ * só apareceria na validação da aprovação, longe da causa. Vazio é resposta honesta —
+ * peça sem data existe, apenas fica fora da fila.
+ */
+export function fromDatetimeLocal(value: string): string {
+  const m = value.match(DATETIME_RE);
+  return m ? `${m[1]} ${m[2]}` : "";
+}
+
+/**
+ * Decide o aviso a mostrar no formulário de edição de uma peça sobre a data de envio.
+ * Devolve "" quando não há nada a avisar; nos outros três casos, a frase explica o
+ * problema. Nunca bloqueia o Salvar — quem reorganiza uma campanha passa por estados
+ * intermediários, então isto só informa.
+ *
+ * O caso "data inválida" existe porque `fromDatetimeLocal` só confere o formato
+ * ("\d{4}-\d{2}-\d{2} \d{2}:\d{2}"), não se a data é real. Um ano digitado como "0026" em
+ * vez de "2026" casa a regex e é gravado — mas `toInstant` rejeita (o `Date.UTC` do JS
+ * trata ano de 2 dígitos como 19XX, então a checagem de "a data existe" falha). Sem este
+ * terceiro ramo, esse valor não disparava aviso nenhum: `isPast` devolve `false` porque não
+ * tem instante para comparar, e a peça era salva com uma data que o replanejamento não
+ * consegue agendar — cancelando os envios pendentes dela em silêncio.
+ *
+ * Não importa `isPast` de `lib/sends/plan.ts` de propósito: esse módulo importa
+ * `toInstant` daqui, e fechar o ciclo (`schedule.ts` → `plan.ts` → `schedule.ts`) não vale
+ * a pena para reaproveitar uma comparação de uma linha.
+ */
+export function avisoDeData(sendAt: string, now: Date): string {
+  if (!sendAt) {
+    return "Sem data: a peça não entra na fila até você marcar um horário. Os envios já agendados dela são cancelados.";
+  }
+
+  const iso = toInstant(sendAt);
+  if (!iso) {
+    return "Data inválida — confira o ano. A peça não entra na fila, e os envios já agendados dela são cancelados.";
+  }
+
+  if (new Date(iso).getTime() <= now.getTime()) {
+    return "Essa data já passou. A peça não entra na fila — nada é agendado para trás. Os envios já agendados dela são cancelados.";
+  }
+
+  return "";
+}

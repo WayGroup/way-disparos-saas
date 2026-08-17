@@ -59,6 +59,7 @@ export type PostFields = {
   copy: string;
   media: string;
   message_code: string;
+  send_at: string;
 };
 
 export async function generateCampaignAction(

@@ -1,5 +1,5 @@
 "use client";
-import { useState, useTransition, useMemo } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { CampaignWithContent, ChatMessage, Asset, Community } from "@/lib/db/types";
 import { approveAndScheduleAction, clearTrackAction } from "../../actions";
@@ -43,7 +43,21 @@ export function CampaignView({
   const [confirmacao, setConfirmacao] = useState("");
   const [erroTrilha, setErroTrilha] = useState<string | null>(null);
   const [criando, setCriando] = useState(false);
+  // Muda a cada clique no botão "+ nova peça" do cabeçalho — inclusive quando `criando`
+  // já é `true`. `criando` sozinho não reexecutaria o efeito de rolagem nesse caso, porque
+  // `setCriando(true)` quando o valor já é `true` não é uma transição.
+  const [criarPedido, setCriarPedido] = useState(0);
   const [pendingTrilha, startTrilha] = useTransition();
+
+  const formularioRef = useRef<HTMLDivElement>(null);
+
+  // Sem isto, clicar em "+ nova peça" no cabeçalho não produz efeito visível: o formulário
+  // abre no fim de uma lista que, numa campanha real, tem uma dúzia de cartões.
+  useEffect(() => {
+    if (criando) {
+      formularioRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [criando, criarPedido]);
 
   function approveAndSchedule() {
     setIssues([]);
@@ -190,6 +204,21 @@ export function CampaignView({
         >
           limpar trilha
         </button>
+        {track === "grupos" && (
+          <button
+            onClick={() => {
+              // O botão vive fora do ramo `view === "lista"`, mas o formulário só existe
+              // lá dentro: sem trocar de visão, `setCriando(true)` rodaria com a tela em
+              // Pipeline ou Calendário e não haveria nada para abrir nem para onde rolar.
+              setView("lista");
+              setCriando(true);
+              setCriarPedido((n) => n + 1);
+            }}
+            className="font-mono text-xs text-muted hover:text-emeraldd"
+          >
+            + nova peça
+          </button>
+        )}
       </div>
 
       {/* Alvo da trilha Grupos: editor em massa. Só faz sentido nesta trilha. */}
@@ -220,11 +249,13 @@ export function CampaignView({
                     <PostCard key={p.id} campaignId={campaign.id} post={p} assets={assets} groups={groups} />
                   ))}
                   {criando ? (
-                    <NewGroupPostForm
-                      campaignId={campaign.id}
-                      anchor={anchor}
-                      onClose={() => setCriando(false)}
-                    />
+                    <div ref={formularioRef}>
+                      <NewGroupPostForm
+                        campaignId={campaign.id}
+                        anchor={anchor}
+                        onClose={() => setCriando(false)}
+                      />
+                    </div>
                   ) : (
                     <button
                       onClick={() => setCriando(true)}
