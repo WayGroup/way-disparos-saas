@@ -2,7 +2,7 @@
 import { useState, useTransition, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import type { CampaignWithContent, ChatMessage, Asset, Community } from "@/lib/db/types";
-import { approveAndScheduleAction } from "../../actions";
+import { approveAndScheduleAction, clearTrackAction } from "../../actions";
 import type { ScheduleIssue } from "@/lib/sends/plan";
 import { toPieces, type Piece } from "@/lib/campaign-pieces";
 import { RefineChat } from "./refine-chat";
@@ -13,6 +13,7 @@ import { PipelineView } from "./pipeline-view";
 import { CalendarView } from "./calendar-view";
 import { PieceDetailModal } from "./piece-detail-modal";
 import { CampaignGroupsBar } from "./campaign-groups-bar";
+import { NewGroupPostForm } from "./new-group-post-form";
 
 type View = "lista" | "pipeline" | "calendario";
 
@@ -21,11 +22,13 @@ export function CampaignView({
   messages,
   assets,
   groups,
+  anchor,
 }: {
   campaign: CampaignWithContent;
   messages: ChatMessage[];
   assets: Asset[];
   groups: Community[];
+  anchor: string;
 }) {
   const router = useRouter();
   const [view, setView] = useState<View>("lista");
@@ -36,6 +39,10 @@ export function CampaignView({
   const [scheduled, setScheduled] = useState<number | null>(null);
   const [past, setPast] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [limpando, setLimpando] = useState(false);
+  const [confirmacao, setConfirmacao] = useState("");
+  const [criando, setCriando] = useState(false);
+  const [pendingTrilha, startTrilha] = useTransition();
 
   function approveAndSchedule() {
     setIssues([]);
@@ -58,6 +65,15 @@ export function CampaignView({
         // Erro na tela, não tela de erro.
         setError(e instanceof Error ? e.message : "Falha ao aprovar. Recarregue e tente de novo.");
       }
+    });
+  }
+
+  function limparTrilha() {
+    startTrilha(async () => {
+      await clearTrackAction(campaign.id, track);
+      setLimpando(false);
+      setConfirmacao("");
+      router.refresh();
     });
   }
 
@@ -156,6 +172,12 @@ export function CampaignView({
             Grupos <span className="font-mono text-xs text-muted">· {campaign.group_posts.length}</span>
           </button>
         </div>
+        <button
+          onClick={() => setLimpando(true)}
+          className="font-mono text-xs text-muted hover:text-risk"
+        >
+          limpar trilha
+        </button>
       </div>
 
       {/* Alvo da trilha Grupos: editor em massa. Só faz sentido nesta trilha. */}
@@ -185,6 +207,20 @@ export function CampaignView({
                   {campaign.group_posts.map((p) => (
                     <PostCard key={p.id} campaignId={campaign.id} post={p} assets={assets} groups={groups} aprovada={campaign.status === "aprovada"} />
                   ))}
+                  {criando ? (
+                    <NewGroupPostForm
+                      campaignId={campaign.id}
+                      anchor={anchor}
+                      onClose={() => setCriando(false)}
+                    />
+                  ) : (
+                    <button
+                      onClick={() => setCriando(true)}
+                      className="w-full rounded-xl border border-dashed border-line py-3 text-sm font-medium text-muted hover:border-emerald/40 hover:text-emeraldd"
+                    >
+                      + Nova peça à mão
+                    </button>
+                  )}
                 </div>
               )}
             </div>
@@ -212,6 +248,51 @@ export function CampaignView({
           aprovada={campaign.status === "aprovada"}
           onClose={() => setSelected(null)}
         />
+      )}
+
+      {limpando && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4">
+          <div className="w-full max-w-md rounded-xl border border-line bg-white p-5">
+            <h3 className="font-display font-bold text-lg">
+              Limpar a trilha {track === "api" ? "API individual" : "Grupos"}?
+            </h3>
+            <p className="mt-2 text-sm text-ink2">
+              Isso apaga as{" "}
+              {track === "api" ? campaign.touches.length : campaign.group_posts.length} peça(s)
+              desta trilha. Não tem desfazer.
+              {track === "grupos" && campaign.status === "aprovada" && (
+                <> Os envios pendentes delas são cancelados, e o histórico do que já saiu some junto.</>
+              )}
+              {track === "api" && (
+                <> Só o chat de refino recria peças desta trilha — não existe criar toque à mão.</>
+              )}
+            </p>
+            <input
+              value={confirmacao}
+              onChange={(e) => setConfirmacao(e.target.value)}
+              placeholder="Digite Limpar"
+              className="mt-3 w-full rounded-lg border border-line p-2 text-sm"
+            />
+            <div className="mt-3 flex justify-end gap-2">
+              <button
+                onClick={() => {
+                  setLimpando(false);
+                  setConfirmacao("");
+                }}
+                className="rounded-lg border border-line px-3 py-1.5 text-sm"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={limparTrilha}
+                disabled={confirmacao.trim() !== "Limpar" || pendingTrilha}
+                className="rounded-lg border border-risk bg-risk/10 px-3 py-1.5 text-sm font-semibold text-risk disabled:opacity-40"
+              >
+                {pendingTrilha ? "Limpando…" : "Limpar trilha"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
