@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { partitionSchedulable, type LabeledPiece } from "@/lib/sends/reschedule";
+import { dropAlreadyLive, partitionSchedulable, type LabeledPiece } from "@/lib/sends/reschedule";
 
 // 20/07/2026 às 10:00 em São Paulo
 const NOW = new Date("2026-07-20T13:00:00.000Z");
@@ -102,5 +102,51 @@ describe("nada é agendado para trás", () => {
     expect(schedulable).toEqual([]);
     expect(past).toEqual([]);
     expect(blocked[0].message).toMatch(/Sem data/);
+  });
+});
+
+describe("dropAlreadyLive", () => {
+  const planejado = (post_id: string | null, wa_group_id: string) => ({
+    post_id,
+    wa_group_id,
+    scheduled_at: "2026-08-17T17:00:00.000Z",
+  });
+
+  it("não reenfileira o par (peça, grupo) que já recebeu", () => {
+    // O caso real que derrubou a produção: "Enviar agora" numa peça com hora ainda no
+    // futuro deixa linhas `enviado` de pé, e o replanejamento tentava recriá-las.
+    const planned = [planejado("p1", "g1@g.us"), planejado("p1", "g2@g.us")];
+    const live = [{ post_id: "p1", wa_group_id: "g1@g.us" }];
+    expect(dropAlreadyLive(planned, live).map((s) => s.wa_group_id)).toEqual(["g2@g.us"]);
+  });
+
+  it("a mesma peça em grupo que ainda não recebeu continua sendo enfileirada", () => {
+    const planned = [planejado("p1", "g9@g.us")];
+    const live = [{ post_id: "p1", wa_group_id: "g1@g.us" }];
+    expect(dropAlreadyLive(planned, live)).toHaveLength(1);
+  });
+
+  it("peça diferente no mesmo grupo não é confundida", () => {
+    const planned = [planejado("p2", "g1@g.us")];
+    const live = [{ post_id: "p1", wa_group_id: "g1@g.us" }];
+    expect(dropAlreadyLive(planned, live)).toHaveLength(1);
+  });
+
+  it("sem nada vivo, devolve o plano inteiro", () => {
+    const planned = [planejado("p1", "g1@g.us"), planejado("p1", "g2@g.us")];
+    expect(dropAlreadyLive(planned, [])).toHaveLength(2);
+  });
+
+  it("linha viva sem peça (disparo avulso) não bloqueia nada", () => {
+    // O índice único do banco só cobre post_id não-nulo; avulso não entra na conta.
+    const planned = [planejado("p1", "g1@g.us")];
+    const live = [{ post_id: null, wa_group_id: "g1@g.us" }];
+    expect(dropAlreadyLive(planned, live)).toHaveLength(1);
+  });
+
+  it("planejado sem peça nunca é descartado", () => {
+    const planned = [planejado(null, "g1@g.us")];
+    const live = [{ post_id: null, wa_group_id: "g1@g.us" }];
+    expect(dropAlreadyLive(planned, live)).toHaveLength(1);
   });
 });

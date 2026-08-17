@@ -22,6 +22,38 @@ export type Partition = {
  * Replanejar é tolerante (peça quebrada só fica de fora). Aprovar é rigoroso (peça
  * quebrada barra tudo). Mas peça no passado é sempre excluída, sem exceção.
  */
+/** A chave do índice único do banco: uma linha viva por (peça, grupo). */
+function chaveViva(postId: string | null, waGroupId: string): string {
+  return `${postId}|${waGroupId}`;
+}
+
+/**
+ * Tira do plano os pares (peça, grupo) que já têm envio vivo no banco.
+ *
+ * Existe por causa de `scheduled_sends_post_group_live_idx`, que permite UMA linha por
+ * (peça, grupo) contando `pendente`, `enviando` e `enviado`. O replanejamento apaga só os
+ * pendentes não-forçados; um "Enviar agora" numa peça cuja hora ainda não chegou deixa
+ * linhas `enviado` de pé. Sem este filtro, o replanejamento tentava recriá-las, estourava
+ * a constraint e derrubava a ação inteira — na prática, travava QUALQUER edição daquela
+ * campanha (mudar copy, trocar grupos, mídia, excluir peça).
+ *
+ * Regra de produto: quem já recebeu não recebe de novo. O grupo que ainda não recebeu
+ * continua sendo enfileirado normalmente.
+ *
+ * `post_id` nulo é disparo avulso, que está fora do índice único e nunca colide.
+ */
+export function dropAlreadyLive<T extends { post_id: string | null; wa_group_id: string }>(
+  planned: T[],
+  live: { post_id: string | null; wa_group_id: string }[],
+): T[] {
+  const vivos = new Set(
+    live.filter((r) => r.post_id !== null).map((r) => chaveViva(r.post_id, r.wa_group_id)),
+  );
+  return planned.filter(
+    (s) => s.post_id === null || !vivos.has(chaveViva(s.post_id, s.wa_group_id)),
+  );
+}
+
 export function partitionSchedulable(pieces: LabeledPiece[], now: Date = new Date()): Partition {
   const blocked = validateSchedulable(pieces);
   const bad = new Set(blocked.map((i) => i.post_id));
