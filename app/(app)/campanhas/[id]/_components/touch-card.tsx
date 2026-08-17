@@ -2,7 +2,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { CampaignTouch, Asset } from "@/lib/db/types";
-import { updateTouchAction, setTouchStepAssetAction, type TouchFields } from "../../actions";
+import { updateTouchAction, setTouchStepAssetAction, deleteTouchAction, type TouchFields } from "../../actions";
 import { CopyButton } from "./copy-button";
 import { formatSendAt } from "@/lib/schedule";
 import { utilityAltName } from "@/lib/campaign-touch";
@@ -34,6 +34,19 @@ export function TouchCard({ campaignId, touch, assets, highlight = false }: { ca
     startTransition(async () => {
       const { refineCampaignAction } = await import("../../actions");
       await refineCampaignAction(campaignId, `Regenere o toque da trilha API com sort_order ${touch.sort_order} ("${touch.role}", ${touch.offset_label}), variando a copy mas mantendo o papel e a categoria. Não mexa nos outros.`);
+      router.refresh();
+    });
+  }
+
+  function excluir() {
+    const go = confirm(
+      "Excluir este toque?\n\n" +
+        "Ele some da campanha. A trilha API individual não gera envio, então nada agendado muda.\n\n" +
+        "Não tem desfazer.",
+    );
+    if (!go) return;
+    startTransition(async () => {
+      await deleteTouchAction(campaignId, touch.sort_order);
       router.refresh();
     });
   }
@@ -155,6 +168,7 @@ export function TouchCard({ campaignId, touch, assets, highlight = false }: { ca
           <div className="flex gap-3 shrink-0">
             <button onClick={() => setEditing(true)} className="text-xs text-ink2 font-medium hover:underline">Editar</button>
             <button onClick={regenerate} disabled={pending} className="text-xs text-emeraldd font-medium hover:underline disabled:opacity-50">Regenerar</button>
+            <button onClick={excluir} disabled={pending} className="text-xs text-risk font-medium hover:underline disabled:opacity-50">Excluir</button>
           </div>
         </div>
       </div>

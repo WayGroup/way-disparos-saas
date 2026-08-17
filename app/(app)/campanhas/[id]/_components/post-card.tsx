@@ -2,7 +2,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { CampaignGroupPost, Asset, Community } from "@/lib/db/types";
-import { updateGroupPostAction, setPostAssetAction, setPostLinkPreviewAction, type PostFields } from "../../actions";
+import { updateGroupPostAction, setPostAssetAction, setPostLinkPreviewAction, deleteGroupPostAction, type PostFields } from "../../actions";
 import { CopyButton } from "./copy-button";
 import { formatSendAt } from "@/lib/schedule";
 import { MediaPicker } from "./media-picker";
@@ -32,6 +32,24 @@ export function PostCard({ campaignId, post, assets, groups, highlight = false }
     startTransition(async () => {
       const { refineCampaignAction } = await import("../../actions");
       await refineCampaignAction(campaignId, `Regenere o post da trilha Grupos com sort_order ${post.sort_order} ("${post.role}", ${post.offset_label}), variando a copy. Não mexa nos outros.`);
+      router.refresh();
+    });
+  }
+
+  function excluir() {
+    // Aviso incondicional: mesmo campanha em rascunho pode ter mensagens que já saíram de
+    // verdade, via "Enviar agora" (grava com forced: true, furando o portão da aprovação).
+    // O status da campanha não é um proxy confiável de "esta peça tem envios" — então o
+    // texto não varia com ele. Numa peça recém-criada as duas cláusulas são vacuamente
+    // verdadeiras (não há pendente nem enviado); nunca erra para o lado perigoso.
+    const go = confirm(
+      "Excluir esta peça?\n\n" +
+        "Ela some da campanha, os envios pendentes dela são cancelados, e o histórico do que já saiu por esta peça some junto.\n\n" +
+        "Não tem desfazer.",
+    );
+    if (!go) return;
+    startTransition(async () => {
+      await deleteGroupPostAction(campaignId, post.id);
       router.refresh();
     });
   }
@@ -116,6 +134,7 @@ export function PostCard({ campaignId, post, assets, groups, highlight = false }
           <button onClick={() => setEditing(true)} className="text-xs text-ink2 font-medium hover:underline">Editar</button>
           <button onClick={regenerate} disabled={pending} className="text-xs text-emeraldd font-medium hover:underline disabled:opacity-50">Regenerar</button>
           <SendNowButton campaignId={campaignId} postId={post.id} groupCount={post.community_ids.length} />
+          <button onClick={excluir} disabled={pending} className="text-xs text-risk font-medium hover:underline disabled:opacity-50">Excluir</button>
         </div>
       </div>
     );
