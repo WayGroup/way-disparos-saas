@@ -4,8 +4,7 @@ import { useRouter } from "next/navigation";
 import type { CampaignGroupPost, Asset, Community } from "@/lib/db/types";
 import { updateGroupPostAction, setPostAssetAction, setPostLinkPreviewAction, deleteGroupPostAction, type PostFields } from "../../actions";
 import { CopyButton } from "./copy-button";
-import { formatSendAt, fromDatetimeLocal, toDatetimeLocal } from "@/lib/schedule";
-import { isPast } from "@/lib/sends/plan";
+import { avisoDeData, formatSendAt, fromDatetimeLocal, toDatetimeLocal } from "@/lib/schedule";
 import { MediaPicker } from "./media-picker";
 import { GroupMultiSelect } from "./group-multi-select";
 import { SendNowButton } from "./send-now-button";
@@ -21,14 +20,11 @@ export function PostCard({ campaignId, post, assets, groups, highlight = false }
     message_code: post.message_code, send_at: post.send_at,
   });
 
-  // Os dois casos avisam mas NÃO bloqueiam o Salvar: quem reorganiza uma campanha passa
+  // Os três casos avisam mas NÃO bloqueiam o Salvar: quem reorganiza uma campanha passa
   // por estados intermediários. O aviso só torna visível o que o agendamento já faz em
-  // silêncio — nada é agendado para trás, e peça sem data fica fora da fila.
-  const avisoData = !f.send_at
-    ? "Sem data: a peça não entra na fila até você marcar um horário."
-    : isPast(f.send_at, new Date())
-      ? "Essa data já passou. A peça não entra na fila — nada é agendado para trás."
-      : "";
+  // silêncio — nada é agendado para trás, peça sem data (ou com data inválida) fica fora
+  // da fila, e replanejamento cancela os envios pendentes dela.
+  const avisoData = avisoDeData(f.send_at, new Date());
 
   function save() {
     startTransition(async () => {
@@ -161,7 +157,7 @@ export function PostCard({ campaignId, post, assets, groups, highlight = false }
       <label className="block"><span className="text-[10px] font-mono uppercase text-muted">Mensagem do post</span><textarea value={f.copy} onChange={(e) => setF({ ...f, copy: e.target.value })} rows={3} className="mt-1 w-full rounded-lg border border-line p-2 text-sm" /></label>
       <label className="block"><span className="text-[10px] font-mono uppercase text-muted">Briefing da mídia</span><textarea value={f.media} onChange={(e) => setF({ ...f, media: e.target.value })} rows={3} placeholder="Deixe vazio para peça só-texto (sem anexo)." className="mt-1 w-full rounded-lg border border-line p-2 text-sm" /></label>
       <label className="block">
-        <span className="text-[10px] font-mono uppercase text-muted">Data e hora do envio</span>
+        <span className="text-[10px] font-mono uppercase text-muted">Data e hora do envio (horário de Brasília)</span>
         <input
           type="datetime-local"
           value={toDatetimeLocal(f.send_at)}

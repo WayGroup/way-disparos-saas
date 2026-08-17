@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
+  avisoDeData,
   computeSendAt,
   formatSendAt,
   fromDatetimeLocal,
@@ -117,5 +118,35 @@ describe("fromDatetimeLocal", () => {
   it("ida e volta preserva a data guardada", () => {
     const guardado = "2026-08-17 14:00";
     expect(fromDatetimeLocal(toDatetimeLocal(guardado))).toBe(guardado);
+  });
+});
+
+describe("avisoDeData", () => {
+  const now = new Date("2026-08-17T12:00:00-03:00");
+
+  it("sem nada a avisar, devolve vazio", () => {
+    expect(avisoDeData("2026-08-18 19:07", now)).toBe("");
+  });
+
+  it("sem data: avisa que a peça fica fora da fila e cancela o que já estava agendado", () => {
+    expect(avisoDeData("", now)).toBe(
+      "Sem data: a peça não entra na fila até você marcar um horário. Os envios já agendados dela são cancelados.",
+    );
+  });
+
+  it("data já passou: avisa e cancela o que já estava agendado", () => {
+    expect(avisoDeData("2026-08-10 08:00", now)).toBe(
+      "Essa data já passou. A peça não entra na fila — nada é agendado para trás. Os envios já agendados dela são cancelados.",
+    );
+  });
+
+  it("data inválida (casa a regex, mas toInstant rejeita) avisa sem deixar passar em silêncio", () => {
+    // Ano digitado como "0026" em vez de "2026": passa em fromDatetimeLocal (\d{4} casa
+    // com 4 dígitos), mas toInstant rejeita por causa da regra legada de ano de 2 dígitos
+    // do JS (Date.UTC(26, ...) vira 1926). É o caso que hoje não gera nenhum aviso.
+    expect(toInstant("0026-08-18 19:07")).toBeNull();
+    expect(avisoDeData("0026-08-18 19:07", now)).toBe(
+      "Data inválida — confira o ano. A peça não entra na fila, e os envios já agendados dela são cancelados.",
+    );
   });
 });

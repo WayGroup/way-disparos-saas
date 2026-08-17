@@ -43,6 +43,10 @@ export function CampaignView({
   const [confirmacao, setConfirmacao] = useState("");
   const [erroTrilha, setErroTrilha] = useState<string | null>(null);
   const [criando, setCriando] = useState(false);
+  // Muda a cada clique no botão "+ nova peça" do cabeçalho — inclusive quando `criando`
+  // já é `true`. `criando` sozinho não reexecutaria o efeito de rolagem nesse caso, porque
+  // `setCriando(true)` quando o valor já é `true` não é uma transição.
+  const [criarPedido, setCriarPedido] = useState(0);
   const [pendingTrilha, startTrilha] = useTransition();
 
   const formularioRef = useRef<HTMLDivElement>(null);
@@ -53,7 +57,7 @@ export function CampaignView({
     if (criando) {
       formularioRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
     }
-  }, [criando]);
+  }, [criando, criarPedido]);
 
   function approveAndSchedule() {
     setIssues([]);
@@ -202,7 +206,14 @@ export function CampaignView({
         </button>
         {track === "grupos" && (
           <button
-            onClick={() => setCriando(true)}
+            onClick={() => {
+              // O botão vive fora do ramo `view === "lista"`, mas o formulário só existe
+              // lá dentro: sem trocar de visão, `setCriando(true)` rodaria com a tela em
+              // Pipeline ou Calendário e não haveria nada para abrir nem para onde rolar.
+              setView("lista");
+              setCriando(true);
+              setCriarPedido((n) => n + 1);
+            }}
             className="font-mono text-xs text-muted hover:text-emeraldd"
           >
             + nova peça

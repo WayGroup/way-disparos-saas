@@ -90,3 +90,38 @@ export function fromDatetimeLocal(value: string): string {
   const m = value.match(DATETIME_RE);
   return m ? `${m[1]} ${m[2]}` : "";
 }
+
+/**
+ * Decide o aviso a mostrar no formulário de edição de uma peça sobre a data de envio.
+ * Devolve "" quando não há nada a avisar; nos outros três casos, a frase explica o
+ * problema. Nunca bloqueia o Salvar — quem reorganiza uma campanha passa por estados
+ * intermediários, então isto só informa.
+ *
+ * O caso "data inválida" existe porque `fromDatetimeLocal` só confere o formato
+ * ("\d{4}-\d{2}-\d{2} \d{2}:\d{2}"), não se a data é real. Um ano digitado como "0026" em
+ * vez de "2026" casa a regex e é gravado — mas `toInstant` rejeita (o `Date.UTC` do JS
+ * trata ano de 2 dígitos como 19XX, então a checagem de "a data existe" falha). Sem este
+ * terceiro ramo, esse valor não disparava aviso nenhum: `isPast` devolve `false` porque não
+ * tem instante para comparar, e a peça era salva com uma data que o replanejamento não
+ * consegue agendar — cancelando os envios pendentes dela em silêncio.
+ *
+ * Não importa `isPast` de `lib/sends/plan.ts` de propósito: esse módulo importa
+ * `toInstant` daqui, e fechar o ciclo (`schedule.ts` → `plan.ts` → `schedule.ts`) não vale
+ * a pena para reaproveitar uma comparação de uma linha.
+ */
+export function avisoDeData(sendAt: string, now: Date): string {
+  if (!sendAt) {
+    return "Sem data: a peça não entra na fila até você marcar um horário. Os envios já agendados dela são cancelados.";
+  }
+
+  const iso = toInstant(sendAt);
+  if (!iso) {
+    return "Data inválida — confira o ano. A peça não entra na fila, e os envios já agendados dela são cancelados.";
+  }
+
+  if (new Date(iso).getTime() <= now.getTime()) {
+    return "Essa data já passou. A peça não entra na fila — nada é agendado para trás. Os envios já agendados dela são cancelados.";
+  }
+
+  return "";
+}
