@@ -2,7 +2,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { CampaignGroupPost, Asset, Community } from "@/lib/db/types";
-import { updateGroupPostAction, setPostAssetAction, setPostLinkPreviewAction, type PostFields } from "../../actions";
+import { updateGroupPostAction, setPostAssetAction, setPostLinkPreviewAction, deleteGroupPostAction, type PostFields } from "../../actions";
 import { CopyButton } from "./copy-button";
 import { formatSendAt } from "@/lib/schedule";
 import { MediaPicker } from "./media-picker";
@@ -11,7 +11,7 @@ import { SendNowButton } from "./send-now-button";
 
 const COPY_REVEAL = "opacity-0 group-hover:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity";
 
-export function PostCard({ campaignId, post, assets, groups, highlight = false }: { campaignId: string; post: CampaignGroupPost; assets: Asset[]; groups: Community[]; highlight?: boolean }) {
+export function PostCard({ campaignId, post, assets, groups, aprovada, highlight = false }: { campaignId: string; post: CampaignGroupPost; assets: Asset[]; groups: Community[]; aprovada: boolean; highlight?: boolean }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -32,6 +32,23 @@ export function PostCard({ campaignId, post, assets, groups, highlight = false }
     startTransition(async () => {
       const { refineCampaignAction } = await import("../../actions");
       await refineCampaignAction(campaignId, `Regenere o post da trilha Grupos com sort_order ${post.sort_order} ("${post.role}", ${post.offset_label}), variando a copy. Não mexa nos outros.`);
+      router.refresh();
+    });
+  }
+
+  function excluir() {
+    // O texto muda com a consequência real: numa campanha aprovada, o cascade leva junto
+    // a fila E o histórico de envios desta peça.
+    const go = confirm(
+      aprovada
+        ? "Excluir esta peça?\n\n" +
+          "Ela some da campanha, os envios pendentes dela são cancelados, e o histórico do que já saiu por esta peça some junto.\n\n" +
+          "Não tem desfazer."
+        : "Excluir esta peça?\n\nEla some da campanha.\n\nNão tem desfazer.",
+    );
+    if (!go) return;
+    startTransition(async () => {
+      await deleteGroupPostAction(campaignId, post.id);
       router.refresh();
     });
   }
@@ -116,6 +133,7 @@ export function PostCard({ campaignId, post, assets, groups, highlight = false }
           <button onClick={() => setEditing(true)} className="text-xs text-ink2 font-medium hover:underline">Editar</button>
           <button onClick={regenerate} disabled={pending} className="text-xs text-emeraldd font-medium hover:underline disabled:opacity-50">Regenerar</button>
           <SendNowButton campaignId={campaignId} postId={post.id} groupCount={post.community_ids.length} />
+          <button onClick={excluir} disabled={pending} className="text-xs text-risk font-medium hover:underline disabled:opacity-50">Excluir</button>
         </div>
       </div>
     );

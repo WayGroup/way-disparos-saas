@@ -183,7 +183,7 @@ export function CampaignView({
               ) : (
                 <div className="space-y-5 max-w-3xl">
                   {campaign.group_posts.map((p) => (
-                    <PostCard key={p.id} campaignId={campaign.id} post={p} assets={assets} groups={groups} />
+                    <PostCard key={p.id} campaignId={campaign.id} post={p} assets={assets} groups={groups} aprovada={campaign.status === "aprovada"} />
                   ))}
                 </div>
               )}
@@ -209,6 +209,7 @@ export function CampaignView({
           campaignId={campaign.id}
           assets={assets}
           groups={groups}
+          aprovada={campaign.status === "aprovada"}
           onClose={() => setSelected(null)}
         />
       )}

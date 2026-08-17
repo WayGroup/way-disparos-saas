@@ -15,6 +15,7 @@ export function PieceDetailModal({
   campaignId,
   assets,
   groups,
+  aprovada,
   onClose,
 }: {
   piece: Piece;
@@ -23,6 +24,7 @@ export function PieceDetailModal({
   campaignId: string;
   assets: Asset[];
   groups: Community[];
+  aprovada: boolean;
   onClose: () => void;
 }) {
   useEffect(() => {
@@ -61,7 +63,7 @@ export function PieceDetailModal({
         <div className="grid gap-5 p-5 grid-cols-1 lg:grid-cols-[minmax(0,1fr)_340px]">
           <div className="min-w-0">
             {touch && <TouchCard campaignId={campaignId} touch={touch} assets={assets} />}
-            {post && <PostCard campaignId={campaignId} post={post} assets={assets} groups={groups} />}
+            {post && <PostCard campaignId={campaignId} post={post} assets={assets} groups={groups} aprovada={aprovada} />}
             {!touch && !post && <p className="text-sm text-muted">Peça não encontrada.</p>}
           </div>
           <div className="min-w-0">
