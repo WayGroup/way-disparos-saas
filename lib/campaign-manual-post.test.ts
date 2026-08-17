@@ -31,6 +31,15 @@ describe("buildManualGroupPost", () => {
     expect(buildManualGroupPost(input(), ctx()).sort_order).toBe(3);
   });
 
+  it("numera por maior + 1, nao pela contagem — peca excluida deixa buraco", () => {
+    // Depois de excluir a peca do meio, sobram 0 e 4: a proxima e 5, nao 2.
+    const comBuraco = [
+      { sort_order: 0, community_ids: ["g1"] },
+      { sort_order: 4, community_ids: ["g1", "g2"] },
+    ];
+    expect(buildManualGroupPost(input(), ctx({ existing: comBuraco })).sort_order).toBe(5);
+  });
+
   it("a primeira peça de uma trilha vazia começa em zero e sem grupos", () => {
     const draft = buildManualGroupPost(input(), ctx({ existing: [] }));
     expect(draft.sort_order).toBe(0);
