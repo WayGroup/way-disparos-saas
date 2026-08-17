@@ -15,7 +15,7 @@ import { listAssets } from "@/lib/db/assets";
 import { publicAssetUrl } from "@/lib/campaign-pieces";
 import { buildSendPayload } from "@/lib/sends/payload";
 import { planSends, validateSchedulable, type ScheduleIssue } from "@/lib/sends/plan";
-import { partitionSchedulable } from "@/lib/sends/reschedule";
+import { dropAlreadyLive, partitionSchedulable } from "@/lib/sends/reschedule";
 import { dispatchDue } from "@/lib/sends/dispatch";
 import { buildManualGroupPost, type ManualPostInput } from "@/lib/campaign-manual-post";
 
@@ -223,7 +223,28 @@ async function rescheduleCampaign(
     .eq("forced", false);
   if (eDel) throw new Error(`Falha ao limpar a fila: ${eDel.message}`);
 
-  const planned = planSends(schedulable);
+  // O que sobreviveu ao delete acima e ainda ocupa o índice único (peça, grupo): os
+  // forçados pendentes de um "Enviar agora" em voo, e tudo que já foi entregue. Uma peça
+  // cuja hora ainda não chegou mas que já saiu à força continua sendo replanejada — e
+  // recriar essas linhas estoura a constraint, derrubando a ação inteira. Paginado de
+  // propósito: o PostgREST corta em 1000 por padrão, e uma lista truncada deixaria a
+  // colisão passar justamente nas campanhas grandes.
+  const vivos: { post_id: string | null; wa_group_id: string }[] = [];
+  for (let off = 0; ; off += 1000) {
+    const { data, error: eVivos } = await supabase
+      .from("scheduled_sends")
+      .select("post_id, wa_group_id")
+      .eq("campaign_id", campaignId)
+      .not("post_id", "is", null)
+      .in("status", ["pendente", "enviando", "enviado"])
+      .range(off, off + 999);
+    if (eVivos) throw new Error(`Falha ao conferir a fila: ${eVivos.message}`);
+    const page = data ?? [];
+    vivos.push(...(page as { post_id: string | null; wa_group_id: string }[]));
+    if (page.length < 1000) break;
+  }
+
+  const planned = dropAlreadyLive(planSends(schedulable), vivos);
   if (planned.length > 0) {
     const batchId = crypto.randomUUID();
     const rows = planned.map((s) => ({ ...s, batch_id: batchId, campaign_id: campaignId }));
