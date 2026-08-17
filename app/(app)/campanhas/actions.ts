@@ -17,6 +17,7 @@ import { buildSendPayload } from "@/lib/sends/payload";
 import { planSends, validateSchedulable, type ScheduleIssue } from "@/lib/sends/plan";
 import { partitionSchedulable } from "@/lib/sends/reschedule";
 import { dispatchDue } from "@/lib/sends/dispatch";
+import { buildManualGroupPost, type ManualPostInput } from "@/lib/campaign-manual-post";
 
 type GenLog = { campaign_id?: string; recipe_id: string; kind: string; ok: boolean; error?: string; duration_ms: number };
 
@@ -704,4 +705,105 @@ export async function deleteCampaignAction(campaignId: string): Promise<void> {
   const { error } = await supabase.from("campaigns").delete().eq("id", campaignId);
   if (error) throw new Error(`Falha ao excluir campanha: ${error.message}`);
   revalidatePath("/campanhas");
+}
+
+// ---------------------------------------------------------------------------
+// Excluir e criar peças
+// ---------------------------------------------------------------------------
+
+/**
+ * Exclui um toque. SEM replanejar: a trilha API individual é manual e nunca entra na
+ * fila (buildGroupPieces só monta a trilha Grupos), então não há envio a reconstruir.
+ */
+export async function deleteTouchAction(campaignId: string, sortOrder: number): Promise<void> {
+  const supabase = await createServerSupabase();
+  const { error } = await supabase
+    .from("campaign_touches")
+    .delete()
+    .eq("campaign_id", campaignId)
+    .eq("sort_order", sortOrder);
+  if (error) throw new Error(`Falha ao excluir o toque: ${error.message}`);
+  revalidatePath(`/campanhas/${campaignId}`);
+}
+
+/**
+ * Exclui uma peça de grupo.
+ *
+ * O `on delete cascade` de scheduled_sends.post_id (migração 0015) leva junto TODAS as
+ * linhas de envio desta peça — inclusive as com status 'enviado'. O histórico dela some,
+ * e é isso que a confirmação na UI avisa. Depois, o replanejamento reconstrói a fila do
+ * resto da campanha, preservando um "Enviar agora" em voo.
+ */
+export async function deleteGroupPostAction(campaignId: string, postId: string): Promise<void> {
+  const supabase = await createServerSupabase();
+  const { error } = await supabase.from("campaign_group_posts").delete().eq("id", postId);
+  if (error) throw new Error(`Falha ao excluir a peça: ${error.message}`);
+  await rescheduleCampaign(campaignId);
+  revalidatePath(`/campanhas/${campaignId}`);
+}
+
+/** Apaga todas as peças de uma trilha. A barreira contra acidente é o type-to-confirm na UI. */
+export async function clearTrackAction(
+  campaignId: string,
+  track: "api" | "grupos",
+): Promise<void> {
+  const supabase = await createServerSupabase();
+  const table = track === "api" ? "campaign_touches" : "campaign_group_posts";
+  const { error } = await supabase.from(table).delete().eq("campaign_id", campaignId);
+  if (error) throw new Error(`Falha ao limpar a trilha: ${error.message}`);
+  if (track === "grupos") await rescheduleCampaign(campaignId);
+  revalidatePath(`/campanhas/${campaignId}`);
+}
+
+/**
+ * Cria uma peça de grupo à mão.
+ *
+ * A âncora é resolvida do mesmo jeito que o refino faz (input is_anchor da receita cruzado
+ * com os valores da campanha). Sem âncora a peça nasce sem data: ela existe, mas não entra
+ * na fila, e o validateSchedulable reclama na hora de aprovar — falha visível, não silenciosa.
+ */
+export async function createGroupPostAction(
+  campaignId: string,
+  input: ManualPostInput,
+): Promise<void> {
+  const role = input.role.trim();
+  const copy = input.copy.trim();
+  if (!role) throw new Error("A peça precisa de um papel.");
+  if (!copy) throw new Error("A peça precisa de uma mensagem.");
+
+  const campaign = await getCampaign(campaignId);
+  if (!campaign) throw new Error("Campanha não encontrada.");
+
+  const recipe = campaign.recipe_id ? await getRecipe(campaign.recipe_id) : null;
+  const anchorLabel = recipe?.inputs.find((i) => i.is_anchor)?.label ?? "";
+  const anchorValue = anchorLabel ? (campaign.inputs[anchorLabel] ?? "") : "";
+
+  const draft = buildManualGroupPost(
+    { ...input, role, copy },
+    {
+      existing: campaign.group_posts,
+      recipeType: recipe?.recipe_type ?? "",
+      anchor: anchorValue,
+    },
+  );
+
+  const { community_ids, ...row } = draft;
+
+  const supabase = await createServerSupabase();
+  const { data, error } = await supabase
+    .from("campaign_group_posts")
+    .insert({ campaign_id: campaignId, ...row })
+    .select("id")
+    .single();
+  if (error) throw new Error(`Falha ao criar a peça: ${error.message}`);
+
+  if (community_ids.length > 0) {
+    const { error: e2 } = await supabase
+      .from("campaign_group_post_communities")
+      .insert(community_ids.map((community_id) => ({ post_id: data.id as string, community_id })));
+    if (e2) throw new Error(`Peça criada, mas os grupos não foram vinculados: ${e2.message}`);
+  }
+
+  await rescheduleCampaign(campaignId);
+  revalidatePath(`/campanhas/${campaignId}`);
 }
