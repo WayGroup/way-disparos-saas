@@ -150,15 +150,15 @@ describe("avisoDeData", () => {
     );
   });
 
-  it("com geraEnvio false, nenhuma frase menciona envios cancelados", () => {
+  it("com geraEnvio false, os avisos falam do Pipeline e do Calendário, não da fila", () => {
     const agora = new Date("2026-08-18T12:00:00-03:00");
     const semData = avisoDeData("", agora, false);
     const invalida = avisoDeData("0026-08-18 19:07", agora, false);
     const passada = avisoDeData("2026-08-17 14:00", agora, false);
 
-    expect(semData).toBe("Sem data: a peça não entra na fila até você marcar um horário.");
-    expect(invalida).toBe("Data inválida — confira o ano. A peça não entra na fila.");
-    expect(passada).toBe("Essa data já passou. A peça não entra na fila — nada é agendado para trás.");
+    expect(semData).toBe("Sem data: o toque não aparece no Pipeline nem no Calendário até você marcar um horário.");
+    expect(invalida).toBe("Data inválida — confira o ano. O toque não aparece no Pipeline nem no Calendário.");
+    expect(passada).toBe("Essa data já passou. O toque continua na campanha, mas fica no passado do Calendário.");
   });
 
   it("com geraEnvio true, as frases continuam as de hoje", () => {

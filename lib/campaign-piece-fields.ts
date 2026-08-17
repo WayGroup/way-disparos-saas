@@ -10,6 +10,26 @@ import { nextSortOrder, slugCode } from "@/lib/campaign-refine";
  * dois precise importar do outro. São as mesmas derivações que o chat de refino usa ao
  * criar peça — é isso que torna uma peça feita à mão indistinguível de uma da IA.
  */
+/**
+ * Resolve o valor da âncora da campanha: acha, na receita, o input marcado como
+ * `is_anchor`, e busca o valor correspondente nos inputs da campanha.
+ *
+ * Devolve "" quando não há receita (foi apagada — `campaign.recipe_id` vira null e o
+ * fallback do resto do código segue em frente sem data), quando nenhum input é âncora,
+ * ou quando a campanha não tem valor preenchido para aquele input. Nos três casos o
+ * resultado é o mesmo "sem âncora, sem data" que o resto do fluxo já trata.
+ *
+ * Era a mesma derivação de duas linhas copiada em cinco lugares de `actions.ts` — a
+ * convenção do `is_anchor` mora só aqui agora.
+ */
+export function resolverAncora(
+  campaign: { inputs: Record<string, string> },
+  recipe: { inputs: { label: string; is_anchor: boolean }[] } | null,
+): string {
+  const anchorLabel = recipe?.inputs.find((i) => i.is_anchor)?.label ?? "";
+  return anchorLabel ? (campaign.inputs[anchorLabel] ?? "") : "";
+}
+
 export function derivarCampos(
   input: { role: string; offset_days: number; offset_time: string },
   ctx: { existing: { sort_order: number }[]; recipeType: string; anchor: string },

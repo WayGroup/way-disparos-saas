@@ -99,6 +99,15 @@ export function fromDatetimeLocal(value: string): string {
  * API individual nunca entra na fila, e prometer cancelamento ali seria mentira na tela.
  * Sem default, o compilador obriga cada chamador a decidir.
  *
+ * O ramo de "data inválida" existe por causa de um caso específico: um ano digitado como
+ * "0026" casa a regex de `fromDatetimeLocal` (\d{4} aceita qualquer 4 dígitos), mas
+ * `toInstant` rejeita, por causa da regra legada do JS que trata ano de 2 dígitos como
+ * século 19/20 (`Date.UTC(26, ...)` vira 1926). Sem este ramo, esse valor não geraria
+ * aviso nenhum — a peça sumiria da fila (ou do Pipeline/Calendário) em silêncio.
+ *
+ * Esta função não reusa `isPast` de `lib/sends/plan.ts` de propósito: aquele módulo já
+ * importa `toInstant` daqui, e reusar fecharia um ciclo `schedule ↔ plan`.
+ *
  * Nenhum destes casos bloqueia o Salvar: quem reorganiza uma campanha passa por estados
  * intermediários.
  */
@@ -106,20 +115,20 @@ export function avisoDeData(sendAt: string, now: Date, geraEnvio: boolean): stri
   if (!sendAt) {
     return geraEnvio
       ? "Sem data: a peça não entra na fila até você marcar um horário. Os envios já agendados dela são cancelados."
-      : "Sem data: a peça não entra na fila até você marcar um horário.";
+      : "Sem data: o toque não aparece no Pipeline nem no Calendário até você marcar um horário.";
   }
 
   const iso = toInstant(sendAt);
   if (!iso) {
     return geraEnvio
       ? "Data inválida — confira o ano. A peça não entra na fila, e os envios já agendados dela são cancelados."
-      : "Data inválida — confira o ano. A peça não entra na fila.";
+      : "Data inválida — confira o ano. O toque não aparece no Pipeline nem no Calendário.";
   }
 
   if (new Date(iso).getTime() <= now.getTime()) {
     return geraEnvio
       ? "Essa data já passou. A peça não entra na fila — nada é agendado para trás. Os envios já agendados dela são cancelados."
-      : "Essa data já passou. A peça não entra na fila — nada é agendado para trás.";
+      : "Essa data já passou. O toque continua na campanha, mas fica no passado do Calendário.";
   }
 
   return "";

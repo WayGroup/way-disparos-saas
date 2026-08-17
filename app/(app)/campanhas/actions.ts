@@ -19,6 +19,7 @@ import { dropAlreadyLive, partitionSchedulable } from "@/lib/sends/reschedule";
 import { dispatchDue } from "@/lib/sends/dispatch";
 import { buildManualGroupPost, type ManualPostInput } from "@/lib/campaign-manual-post";
 import { buildManualTouch, type ManualTouchInput } from "@/lib/campaign-manual-touch";
+import { resolverAncora } from "@/lib/campaign-piece-fields";
 
 type GenLog = { campaign_id?: string; recipe_id: string; kind: string; ok: boolean; error?: string; duration_ms: number };
 
@@ -87,8 +88,7 @@ export async function generateCampaignAction(
     throw e;
   }
 
-  const anchorLabel = recipe.inputs.find((i) => i.is_anchor)?.label;
-  const anchorValue = anchorLabel ? (inputs[anchorLabel] ?? "") : "";
+  const anchorValue = resolverAncora({ inputs }, recipe);
   const apiSlots = recipe.slots.filter((s) => s.track === "api");
   const gruposSlots = recipe.slots.filter((s) => s.track === "grupos");
 
@@ -310,7 +310,7 @@ export async function refineCampaignAction(
   // para datar peças novas; a receita pode ter sido apagada (recipe_id null).
   const recipe = campaign.recipe_id ? await getRecipe(campaign.recipe_id) : null;
   const anchorLabel = recipe?.inputs.find((i) => i.is_anchor)?.label ?? "";
-  const anchorValue = anchorLabel ? (campaign.inputs[anchorLabel] ?? "") : "";
+  const anchorValue = resolverAncora(campaign, recipe);
 
   const result = await refineCampaign(campaign, trimmed, brandText, anchorLabel, anchorValue);
 
@@ -653,7 +653,7 @@ export async function duplicateCampaignAction(campaignId: string, newAnchor: str
   const anchorLabel = recipe?.inputs.find((i) => i.is_anchor)?.label;
   const inputs = { ...src.inputs };
   if (anchorLabel && newAnchor) inputs[anchorLabel] = newAnchor;
-  const anchorValue = anchorLabel ? (inputs[anchorLabel] ?? "") : "";
+  const anchorValue = resolverAncora({ inputs }, recipe);
   const apiSlots = recipe?.slots.filter((s) => s.track === "api") ?? [];
   const gruposSlots = recipe?.slots.filter((s) => s.track === "grupos") ?? [];
 
@@ -803,8 +803,7 @@ export async function createGroupPostAction(
   if (!campaign) throw new Error("Campanha não encontrada.");
 
   const recipe = campaign.recipe_id ? await getRecipe(campaign.recipe_id) : null;
-  const anchorLabel = recipe?.inputs.find((i) => i.is_anchor)?.label ?? "";
-  const anchorValue = anchorLabel ? (campaign.inputs[anchorLabel] ?? "") : "";
+  const anchorValue = resolverAncora(campaign, recipe);
 
   const draft = buildManualGroupPost(
     { ...input, role, copy },
@@ -865,8 +864,7 @@ export async function createTouchAction(
   if (!campaign) throw new Error("Campanha não encontrada.");
 
   const recipe = campaign.recipe_id ? await getRecipe(campaign.recipe_id) : null;
-  const anchorLabel = recipe?.inputs.find((i) => i.is_anchor)?.label ?? "";
-  const anchorValue = anchorLabel ? (campaign.inputs[anchorLabel] ?? "") : "";
+  const anchorValue = resolverAncora(campaign, recipe);
 
   const draft = buildManualTouch(
     { ...input, role, template_body: templateBody },

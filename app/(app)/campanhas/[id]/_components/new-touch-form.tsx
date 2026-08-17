@@ -24,8 +24,11 @@ export function NewTouchForm({
     template_body: "",
     offset_time: "",
   });
-  // Guardado como texto: <input type="number"> descarta o "-" enquanto se digita, e
-  // "negativo = antes da âncora" é o caso de uso do campo.
+  // Guardado como string, não number: um <input type="number"> controlado com
+  // Number(e.target.value) || 0 come o sinal de negativo — ao teclar só o "-", o navegador
+  // devolve "", o handler gravaria 0, e o React reescreveria o campo por cima do que a
+  // pessoa está digitando. "Negativo = antes da âncora" é o caso de uso do campo, então a
+  // conversão para número só acontece na hora de montar o ManualTouchInput.
   const [diasStr, setDiasStr] = useState("0");
 
   const offsetDays = Number(diasStr) || 0;
