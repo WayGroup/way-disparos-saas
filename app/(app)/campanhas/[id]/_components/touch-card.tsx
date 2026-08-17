@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import type { CampaignTouch, Asset } from "@/lib/db/types";
 import { updateTouchAction, setTouchStepAssetAction, deleteTouchAction, type TouchFields } from "../../actions";
 import { CopyButton } from "./copy-button";
-import { formatSendAt } from "@/lib/schedule";
+import { avisoDeData, formatSendAt, fromDatetimeLocal, toDatetimeLocal } from "@/lib/schedule";
 import { utilityAltName } from "@/lib/campaign-touch";
 import { MediaPicker } from "./media-picker";
 
@@ -19,8 +19,12 @@ export function TouchCard({ campaignId, touch, assets, highlight = false }: { ca
     offset_label: touch.offset_label, role: touch.role, meta_category: touch.meta_category,
     template_body: touch.template_body, buttons: touch.buttons, window_steps: touch.window_steps,
     fallback_copy: touch.fallback_copy, crm_action: touch.crm_action, risk_flag: touch.risk_flag,
-    template_name: touch.template_name, utility_alt: touch.utility_alt,
+    template_name: touch.template_name, utility_alt: touch.utility_alt, send_at: touch.send_at,
   });
+
+  // `false`: toque nunca entra na fila, então nenhuma frase pode prometer cancelamento de
+  // envio. Nada disto bloqueia o Salvar.
+  const avisoData = avisoDeData(f.send_at, new Date(), false);
 
   function save() {
     startTransition(async () => {
@@ -204,6 +208,16 @@ export function TouchCard({ campaignId, touch, assets, highlight = false }: { ca
       </div>
       <label className="block"><span className="text-[10px] font-mono uppercase text-muted">Fallback</span><textarea value={f.fallback_copy} onChange={(e) => setF({ ...f, fallback_copy: e.target.value })} rows={2} className="mt-1 w-full rounded-lg border border-line p-2 text-sm" /></label>
       <label className="block"><span className="text-[10px] font-mono uppercase text-muted">Ação de CRM</span><input value={f.crm_action} onChange={(e) => setF({ ...f, crm_action: e.target.value })} className="mt-1 w-full rounded-lg border border-line p-2 text-sm" /></label>
+      <label className="block">
+        <span className="text-[10px] font-mono uppercase text-muted">Data e hora do envio (horário de Brasília)</span>
+        <input
+          type="datetime-local"
+          value={toDatetimeLocal(f.send_at)}
+          onChange={(e) => setF({ ...f, send_at: fromDatetimeLocal(e.target.value) })}
+          className="mt-1 w-full rounded-lg border border-line p-2 text-sm font-mono"
+        />
+      </label>
+      {avisoData && <p className="text-xs text-risk">{avisoData}</p>}
       <label className="flex items-center gap-2 text-sm text-muted"><input type="checkbox" checked={f.risk_flag} onChange={(e) => setF({ ...f, risk_flag: e.target.checked })} className="accent-emerald" /> marcar risco de reclassificação</label>
       {f.utility_alt && (
         <label className="block"><span className="text-[10px] font-mono uppercase text-muted">Corpo da versão UTILITY</span><textarea value={f.utility_alt.template_body} onChange={(e) => setF({ ...f, utility_alt: f.utility_alt ? { ...f.utility_alt, template_body: e.target.value } : null })} rows={3} className="mt-1 w-full rounded-lg border border-line p-2 text-sm" /></label>
