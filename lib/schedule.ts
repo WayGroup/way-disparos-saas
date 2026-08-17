@@ -65,3 +65,28 @@ export function formatSendAt(value: string): string {
   const dow = new Date(Number(y), Number(mo) - 1, Number(d)).getDay();
   return `${DIAS[dow]} ${d}/${mo} · ${hh}:${mm}`;
 }
+
+/**
+ * O formato da agenda editorial ("2026-08-18 19:07") e o do seletor nativo
+ * ("2026-08-18T19:07") são a mesma informação com separador diferente. Uma regex serve às
+ * duas direções: aceita espaço ou T, e tolera os segundos que alguns navegadores mandam.
+ */
+const DATETIME_RE = /^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2})(?::\d{2})?$/;
+
+/** "2026-08-18 19:07" → "2026-08-18T19:07", que é o que `<input type="datetime-local">` lê. */
+export function toDatetimeLocal(sendAt: string): string {
+  const m = sendAt.match(DATETIME_RE);
+  return m ? `${m[1]}T${m[2]}` : "";
+}
+
+/**
+ * "2026-08-18T19:07" → "2026-08-18 19:07", o formato guardado.
+ *
+ * Valor que não casa devolve "" em vez da string original: um send_at malformado no banco
+ * só apareceria na validação da aprovação, longe da causa. Vazio é resposta honesta —
+ * peça sem data existe, apenas fica fora da fila.
+ */
+export function fromDatetimeLocal(value: string): string {
+  const m = value.match(DATETIME_RE);
+  return m ? `${m[1]} ${m[2]}` : "";
+}

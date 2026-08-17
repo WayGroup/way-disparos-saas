@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { computeSendAt, formatSendAt, toInstant } from "@/lib/schedule";
+import {
+  computeSendAt,
+  formatSendAt,
+  fromDatetimeLocal,
+  toDatetimeLocal,
+  toInstant,
+} from "@/lib/schedule";
 
 describe("toInstant", () => {
   it("converte o horário de São Paulo no instante UTC", () => {
@@ -71,5 +77,45 @@ describe("formatSendAt", () => {
   });
   it("vazio retorna vazio", () => {
     expect(formatSendAt("")).toBe("");
+  });
+});
+
+describe("toDatetimeLocal", () => {
+  it("troca o espaço pelo T que o seletor do navegador espera", () => {
+    expect(toDatetimeLocal("2026-08-18 19:07")).toBe("2026-08-18T19:07");
+  });
+
+  it("data vazia devolve vazio — peça sem data é estado válido", () => {
+    expect(toDatetimeLocal("")).toBe("");
+  });
+
+  it("valor malformado devolve vazio, não ele mesmo", () => {
+    // Devolver a string original encheria o campo do formulário com lixo que o
+    // navegador ignora — e o usuário salvaria sem perceber.
+    expect(toDatetimeLocal("18/08/2026 19:07")).toBe("");
+    expect(toDatetimeLocal("amanhã")).toBe("");
+  });
+});
+
+describe("fromDatetimeLocal", () => {
+  it("troca o T pelo espaço do formato guardado", () => {
+    expect(fromDatetimeLocal("2026-08-18T19:07")).toBe("2026-08-18 19:07");
+  });
+
+  it("descarta os segundos que alguns navegadores acrescentam", () => {
+    expect(fromDatetimeLocal("2026-08-18T19:07:00")).toBe("2026-08-18 19:07");
+  });
+
+  it("valor vazio devolve vazio", () => {
+    expect(fromDatetimeLocal("")).toBe("");
+  });
+
+  it("valor malformado devolve vazio", () => {
+    expect(fromDatetimeLocal("2026-08-18")).toBe("");
+  });
+
+  it("ida e volta preserva a data guardada", () => {
+    const guardado = "2026-08-17 14:00";
+    expect(fromDatetimeLocal(toDatetimeLocal(guardado))).toBe(guardado);
   });
 });
