@@ -11,7 +11,7 @@ import { SendNowButton } from "./send-now-button";
 
 const COPY_REVEAL = "opacity-0 group-hover:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100 transition-opacity";
 
-export function PostCard({ campaignId, post, assets, groups, aprovada, highlight = false }: { campaignId: string; post: CampaignGroupPost; assets: Asset[]; groups: Community[]; aprovada: boolean; highlight?: boolean }) {
+export function PostCard({ campaignId, post, assets, groups, highlight = false }: { campaignId: string; post: CampaignGroupPost; assets: Asset[]; groups: Community[]; highlight?: boolean }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -37,14 +37,15 @@ export function PostCard({ campaignId, post, assets, groups, aprovada, highlight
   }
 
   function excluir() {
-    // O texto muda com a consequência real: numa campanha aprovada, o cascade leva junto
-    // a fila E o histórico de envios desta peça.
+    // Aviso incondicional: mesmo campanha em rascunho pode ter mensagens que já saíram de
+    // verdade, via "Enviar agora" (grava com forced: true, furando o portão da aprovação).
+    // O status da campanha não é um proxy confiável de "esta peça tem envios" — então o
+    // texto não varia com ele. Numa peça recém-criada as duas cláusulas são vacuamente
+    // verdadeiras (não há pendente nem enviado); nunca erra para o lado perigoso.
     const go = confirm(
-      aprovada
-        ? "Excluir esta peça?\n\n" +
-          "Ela some da campanha, os envios pendentes dela são cancelados, e o histórico do que já saiu por esta peça some junto.\n\n" +
-          "Não tem desfazer."
-        : "Excluir esta peça?\n\nEla some da campanha.\n\nNão tem desfazer.",
+      "Excluir esta peça?\n\n" +
+        "Ela some da campanha, os envios pendentes dela são cancelados, e o histórico do que já saiu por esta peça some junto.\n\n" +
+        "Não tem desfazer.",
     );
     if (!go) return;
     startTransition(async () => {

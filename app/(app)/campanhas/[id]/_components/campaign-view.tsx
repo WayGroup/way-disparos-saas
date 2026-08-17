@@ -41,6 +41,7 @@ export function CampaignView({
   const [error, setError] = useState<string | null>(null);
   const [limpando, setLimpando] = useState(false);
   const [confirmacao, setConfirmacao] = useState("");
+  const [erroTrilha, setErroTrilha] = useState<string | null>(null);
   const [criando, setCriando] = useState(false);
   const [pendingTrilha, startTrilha] = useTransition();
 
@@ -69,11 +70,19 @@ export function CampaignView({
   }
 
   function limparTrilha() {
+    setErroTrilha(null);
     startTrilha(async () => {
-      await clearTrackAction(campaign.id, track);
-      setLimpando(false);
-      setConfirmacao("");
-      router.refresh();
+      try {
+        await clearTrackAction(campaign.id, track);
+        setLimpando(false);
+        setConfirmacao("");
+        router.refresh();
+      } catch (e) {
+        // Erro na tela, não tela de erro: o modal fica aberto, com a mensagem dentro dele,
+        // para a pessoa cancelar ou tentar de novo com contexto — mesma convenção do
+        // approveAndSchedule.
+        setErroTrilha(e instanceof Error ? e.message : "Falha ao limpar a trilha. Tente de novo.");
+      }
     });
   }
 
@@ -173,7 +182,10 @@ export function CampaignView({
           </button>
         </div>
         <button
-          onClick={() => setLimpando(true)}
+          onClick={() => {
+            setErroTrilha(null);
+            setLimpando(true);
+          }}
           className="font-mono text-xs text-muted hover:text-risk"
         >
           limpar trilha
@@ -205,7 +217,7 @@ export function CampaignView({
               ) : (
                 <div className="space-y-5 max-w-3xl">
                   {campaign.group_posts.map((p) => (
-                    <PostCard key={p.id} campaignId={campaign.id} post={p} assets={assets} groups={groups} aprovada={campaign.status === "aprovada"} />
+                    <PostCard key={p.id} campaignId={campaign.id} post={p} assets={assets} groups={groups} />
                   ))}
                   {criando ? (
                     <NewGroupPostForm
@@ -245,7 +257,6 @@ export function CampaignView({
           campaignId={campaign.id}
           assets={assets}
           groups={groups}
-          aprovada={campaign.status === "aprovada"}
           onClose={() => setSelected(null)}
         />
       )}
@@ -260,7 +271,10 @@ export function CampaignView({
               Isso apaga as{" "}
               {track === "api" ? campaign.touches.length : campaign.group_posts.length} peça(s)
               desta trilha. Não tem desfazer.
-              {track === "grupos" && campaign.status === "aprovada" && (
+              {/* Aviso incondicional: mesmo campanha em rascunho pode ter envios reais via
+                  "Enviar agora" (forced: true), então o status aprovada/rascunho não é um
+                  proxy confiável de "existem envios a perder". */}
+              {track === "grupos" && (
                 <> Os envios pendentes delas são cancelados, e o histórico do que já saiu some junto.</>
               )}
               {track === "api" && (
@@ -273,11 +287,15 @@ export function CampaignView({
               placeholder="Digite Limpar"
               className="mt-3 w-full rounded-lg border border-line p-2 text-sm"
             />
+            {erroTrilha && (
+              <p className="mt-3 rounded-lg border border-risk/30 bg-risk/5 p-3 text-sm text-risk">{erroTrilha}</p>
+            )}
             <div className="mt-3 flex justify-end gap-2">
               <button
                 onClick={() => {
                   setLimpando(false);
                   setConfirmacao("");
+                  setErroTrilha(null);
                 }}
                 className="rounded-lg border border-line px-3 py-1.5 text-sm"
               >

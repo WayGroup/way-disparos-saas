@@ -17,24 +17,30 @@ export function NewGroupPostForm({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [erro, setErro] = useState<string | null>(null);
-  const [f, setF] = useState<ManualPostInput>({
+  const [f, setF] = useState<Omit<ManualPostInput, "offset_days">>({
     offset_label: "",
     role: "",
     copy: "",
     media: "",
-    offset_days: 0,
     offset_time: "",
   });
+  // Guardado como string, não number: um <input type="number"> controlado com
+  // Number(e.target.value) || 0 come o sinal de negativo — ao teclar só o "-", o navegador
+  // devolve "", o handler gravaria 0, e o React reescreveria o campo por cima do que a
+  // pessoa está digitando. "Negativo = antes da âncora" é o caso de uso do campo, então a
+  // conversão para número só acontece na hora de montar o ManualPostInput.
+  const [diasStr, setDiasStr] = useState("0");
+  const offsetDays = Number(diasStr) || 0;
 
   // "1 dia antes às 14:00" vira uma data concreta antes de salvar — é o que a pessoa
   // consegue conferir. Mesma função que o servidor usa, então a prévia não mente.
-  const previsto = computeSendAt(anchor, f.offset_days, f.offset_time);
+  const previsto = computeSendAt(anchor, offsetDays, f.offset_time);
 
   function salvar() {
     setErro(null);
     startTransition(async () => {
       try {
-        await createGroupPostAction(campaignId, f);
+        await createGroupPostAction(campaignId, { ...f, offset_days: offsetDays });
         onClose();
         router.refresh();
       } catch (e) {
@@ -69,7 +75,7 @@ export function NewGroupPostForm({
       <div className="grid grid-cols-2 gap-3">
         <label className="block">
           <span className="text-[10px] font-mono uppercase text-muted">Dias (negativo = antes)</span>
-          <input type="number" value={f.offset_days} onChange={(e) => setF({ ...f, offset_days: Number(e.target.value) || 0 })} className="mt-1 w-full rounded-lg border border-line p-2 text-sm" />
+          <input type="text" inputMode="numeric" value={diasStr} onChange={(e) => setDiasStr(e.target.value)} className="mt-1 w-full rounded-lg border border-line p-2 text-sm" />
         </label>
         <label className="block">
           <span className="text-[10px] font-mono uppercase text-muted">Hora (HH:mm)</span>

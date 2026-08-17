@@ -736,7 +736,11 @@ export async function deleteTouchAction(campaignId: string, sortOrder: number): 
  */
 export async function deleteGroupPostAction(campaignId: string, postId: string): Promise<void> {
   const supabase = await createServerSupabase();
-  const { error } = await supabase.from("campaign_group_posts").delete().eq("id", postId);
+  const { error } = await supabase
+    .from("campaign_group_posts")
+    .delete()
+    .eq("id", postId)
+    .eq("campaign_id", campaignId);
   if (error) throw new Error(`Falha ao excluir a peça: ${error.message}`);
   await rescheduleCampaign(campaignId);
   revalidatePath(`/campanhas/${campaignId}`);
@@ -801,7 +805,13 @@ export async function createGroupPostAction(
     const { error: e2 } = await supabase
       .from("campaign_group_post_communities")
       .insert(community_ids.map((community_id) => ({ post_id: data.id as string, community_id })));
-    if (e2) throw new Error(`Peça criada, mas os grupos não foram vinculados: ${e2.message}`);
+    if (e2) {
+      // rollback compensatório: remove a peça órfã antes de propagar o erro — do contrário
+      // o throw acontece antes do revalidatePath, a tela nunca sabe que ela nasceu, e a
+      // pessoa clica em "Criar peça" de novo, duplicando.
+      await supabase.from("campaign_group_posts").delete().eq("id", data.id as string);
+      throw new Error(`Falha ao vincular grupos: ${e2.message}`);
+    }
   }
 
   await rescheduleCampaign(campaignId);
