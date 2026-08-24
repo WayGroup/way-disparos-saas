@@ -15,11 +15,6 @@ export type TouchUpdate = {
   fallback_copy: string;
   crm_action: string;
   risk_flag: boolean;
-  utility_alt: {
-    template_body: string;
-    buttons: { type: "quick_reply" | "url"; text: string; url: string }[];
-    risk_flag: boolean;
-  } | null;
 };
 
 export type GroupPostUpdate = {
@@ -43,11 +38,6 @@ export type NewTouch = {
   fallback_copy: string;
   crm_action: string;
   risk_flag: boolean;
-  utility_alt: {
-    template_body: string;
-    buttons: { type: "quick_reply" | "url"; text: string; url: string }[];
-    risk_flag: boolean;
-  } | null;
 };
 
 export type NewGroupPost = {
