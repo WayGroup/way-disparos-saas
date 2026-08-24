@@ -67,9 +67,13 @@ export async function refineCampaign(
 ): Promise<RefineResult> {
   const client = new Anthropic(); // lê ANTHROPIC_API_KEY do ambiente (servidor)
   // Streaming evita timeout de request em refinos longos; finalMessage() junta tudo.
+  // max_tokens alto porque `thinking: adaptive` consome do MESMO orçamento: num pedido
+  // criativo ("deixe as copys maiores"), o raciocínio + os textos longos passavam de
+  // 16000 e o JSON saía cortado no meio (JSON.parse → "Unterminated string"). 32000 é o
+  // teto do Opus 4.x e dá folga pro raciocínio E pra resposta.
   const params = {
     model: "claude-opus-4-8",
-    max_tokens: 16000,
+    max_tokens: 32000,
     thinking: { type: "adaptive" },
     system: SYSTEM_PROMPT,
     messages: [{ role: "user", content: buildRefinePrompt(campaign, userMessage, brandText, anchorLabel, anchorValue) }],
@@ -78,9 +82,27 @@ export async function refineCampaign(
   const stream = client.messages.stream(params as Parameters<typeof client.messages.stream>[0]);
   const response = await stream.finalMessage();
 
+  // Se bateu o teto de tokens, o JSON vem truncado — um JSON.parse aqui estouraria com
+  // "Unterminated string" e viraria erro genérico de render na tela. Melhor falhar com
+  // uma mensagem que o usuário entende e sabe o que fazer.
+  if (response.stop_reason === "max_tokens") {
+    throw new Error(
+      "O ajuste ficou grande demais e a resposta foi cortada. Peça em partes — " +
+        "ex.: um bloco de peças por vez, ou 'reescreva só os toques de quarta' — em vez de tudo de uma vez.",
+    );
+  }
+
   const textBlock = response.content.find((b) => b.type === "text");
   if (!textBlock || textBlock.type !== "text") {
     throw new Error("O refino não retornou conteúdo de texto.");
   }
-  return JSON.parse(textBlock.text) as RefineResult;
+  try {
+    return JSON.parse(textBlock.text) as RefineResult;
+  } catch {
+    // Rede de segurança: qualquer JSON malformado que escape do check acima vira uma
+    // mensagem clara em vez de um SyntaxError cru atravessando a Server Action.
+    throw new Error(
+      "A IA devolveu uma resposta incompleta. Tente pedir o ajuste de novo, de preferência em partes menores.",
+    );
+  }
 }
