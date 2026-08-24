@@ -41,3 +41,13 @@ export function formatAddedSeal(addedPosts: number, addedTouches: number): strin
   const plural = addedPosts + addedTouches > 1;
   return `✓ ${parts.join(" e ")} adicionado${plural ? "s" : ""}.\n\n`;
 }
+
+/** Selo factual do que o refino removeu; "" quando nada foi excluído. */
+export function formatRemovedSeal(removedPosts: number, removedTouches: number): string {
+  const parts: string[] = [];
+  if (removedPosts > 0) parts.push(`${removedPosts} ${removedPosts > 1 ? "posts" : "post"}`);
+  if (removedTouches > 0) parts.push(`${removedTouches} ${removedTouches > 1 ? "toques" : "toque"}`);
+  if (parts.length === 0) return "";
+  const plural = removedPosts + removedTouches > 1;
+  return `🗑 ${parts.join(" e ")} removido${plural ? "s" : ""}.\n\n`;
+}

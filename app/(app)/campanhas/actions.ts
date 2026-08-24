@@ -9,7 +9,7 @@ import { generateCampaign } from "@/lib/ai/generate";
 import { refineCampaign } from "@/lib/ai/refine";
 import { buildCode } from "@/lib/ai/nomenclature";
 import { computeSendAt } from "@/lib/schedule";
-import { nextSortOrder, pickReferenceGroups, slugCode, formatAddedSeal } from "@/lib/campaign-refine";
+import { nextSortOrder, pickReferenceGroups, slugCode, formatAddedSeal, formatRemovedSeal } from "@/lib/campaign-refine";
 import { listActiveGroups } from "@/lib/db/communities";
 import { listAssets } from "@/lib/db/assets";
 import { publicAssetUrl } from "@/lib/campaign-pieces";
@@ -407,8 +407,41 @@ export async function refineCampaignAction(
     }
   }
 
-  // Selo factual: o que foi REALMENTE inserido, não o que a IA disse.
-  const finalReply = formatAddedSeal(addedPosts, addedTouches) + result.reply;
+  // Exclusão de peças por (campaign_id, sort_order). O cascade em
+  // campaign_group_post_communities/scheduled_sends remove vínculos e fila junto.
+  // Feito por último: os sort_order pedidos referem-se ao estado ANTES do refino, e as
+  // peças novas nascem com sort_order acima de qualquer existente (nextSortOrder = max+1),
+  // então nunca colidem com o que está sendo apagado.
+  let removedTouches = 0;
+  let removedPosts = 0;
+
+  if (result.deleted_touches.length > 0) {
+    const { data, error } = await supabase
+      .from("campaign_touches")
+      .delete()
+      .eq("campaign_id", campaignId)
+      .in("sort_order", result.deleted_touches)
+      .select("id");
+    if (error) throw new Error(`Falha ao remover toques: ${error.message}`);
+    removedTouches = data?.length ?? 0;
+  }
+
+  if (result.deleted_group_posts.length > 0) {
+    const { data, error } = await supabase
+      .from("campaign_group_posts")
+      .delete()
+      .eq("campaign_id", campaignId)
+      .in("sort_order", result.deleted_group_posts)
+      .select("id");
+    if (error) throw new Error(`Falha ao remover posts: ${error.message}`);
+    removedPosts = data?.length ?? 0;
+  }
+
+  // Selo factual: o que foi REALMENTE inserido/removido, não o que a IA disse.
+  const finalReply =
+    formatAddedSeal(addedPosts, addedTouches) +
+    formatRemovedSeal(removedPosts, removedTouches) +
+    result.reply;
 
   // Persiste reply do assistente
   const { error: e2 } = await supabase.from("chat_messages").insert({

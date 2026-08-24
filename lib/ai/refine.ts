@@ -56,6 +56,8 @@ export type RefineResult = {
   group_post_updates: GroupPostUpdate[];
   new_touches: NewTouch[];
   new_group_posts: NewGroupPost[];
+  deleted_touches: number[];
+  deleted_group_posts: number[];
 };
 
 export async function refineCampaign(

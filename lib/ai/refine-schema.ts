@@ -8,7 +8,7 @@
 export const REFINE_SCHEMA = {
   type: "object",
   additionalProperties: false,
-  required: ["reply", "touch_updates", "group_post_updates", "new_touches", "new_group_posts"],
+  required: ["reply", "touch_updates", "group_post_updates", "new_touches", "new_group_posts", "deleted_touches", "deleted_group_posts"],
   properties: {
     reply: { type: "string" },
     touch_updates: {
@@ -125,5 +125,9 @@ export const REFINE_SCHEMA = {
         },
       },
     },
+    // Exclusão de peças: sort_order das que devem ser removidas (trilha API / Grupos).
+    // Arrays simples de inteiros — custo de grammar desprezível.
+    deleted_touches: { type: "array", items: { type: "integer" } },
+    deleted_group_posts: { type: "array", items: { type: "integer" } },
   },
 } as const;
