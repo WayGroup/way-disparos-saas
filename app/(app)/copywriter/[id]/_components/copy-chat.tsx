@@ -3,6 +3,7 @@ import { useState, useTransition, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import type { CopyMessage } from "@/lib/db/types";
 import type { Attachment } from "@/lib/ai/copy-chat";
+import { parseCopySegments } from "@/lib/ai/copy-segments";
 import { createBrowserSupabase } from "@/lib/supabase/client";
 import { buildStoragePath } from "@/lib/assets/storage-path";
 import { assetKindFromMime } from "@/lib/assets/kind";
@@ -102,7 +103,37 @@ export function CopyChat({
             Ex.: &quot;me dá 5 destaques pro Instagram sobre o método&quot;, &quot;uma bio curta&quot;, &quot;legenda de carrossel sobre erro de FBA&quot;.
           </p>
         )}
-        {initialMessages.map((m) => (
+        {initialMessages.map((m) => {
+          // Assistente com copies demarcadas ([[COPY]]…): renderiza cada peça num cartão
+          // com botão próprio, pra copiar uma de cada vez sem pegar comentário nem rótulo.
+          if (m.role === "assistant") {
+            const segments = parseCopySegments(m.content);
+            if (segments.some((s) => s.type === "copy")) {
+              return (
+                <div key={m.id} className="mr-auto flex max-w-[92%] flex-col gap-2">
+                  {segments.map((s, i) =>
+                    s.type === "text" ? (
+                      <div
+                        key={i}
+                        className="rounded-xl bg-line/40 px-3 py-2 text-sm leading-relaxed text-ink whitespace-pre-wrap"
+                      >
+                        {s.text}
+                      </div>
+                    ) : (
+                      <div key={i} className="rounded-xl border border-emerald/40 bg-paper px-3 py-2">
+                        <p className="text-sm leading-relaxed text-ink whitespace-pre-wrap">{s.text}</p>
+                        <div className="mt-1.5 flex justify-end border-t border-line pt-1.5">
+                          <CopyButton text={s.text} label="copiar esta" />
+                        </div>
+                      </div>
+                    ),
+                  )}
+                </div>
+              );
+            }
+          }
+
+          return (
           <div key={m.id} className="flex flex-col">
             <div
               className={`rounded-xl px-3 py-2 text-sm leading-relaxed whitespace-pre-wrap max-w-[92%] ${
@@ -148,7 +179,8 @@ export function CopyChat({
               </div>
             )}
           </div>
-        ))}
+          );
+        })}
         {pending && (
           <div className="mr-auto bg-line/40 text-ink2 rounded-xl px-3 py-2 text-sm font-mono animate-pulse">
             Pensando…
