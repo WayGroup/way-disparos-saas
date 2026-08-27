@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { CRIAR_RECEITA_TOOL, type RecipeDraft } from "@/lib/ai/recipe-tool";
+import { friendlyAnthropicError } from "@/lib/ai/anthropic-error";
 
 export type Attachment = {
   kind: "image" | "pdf";
@@ -111,10 +112,16 @@ export async function generateCopyReply(
   const createdRecipes: { id: string; name: string }[] = [];
 
   for (let i = 0; i < 6; i++) {
-    const stream = client.messages.stream(
-      { ...params, messages: msgs } as Parameters<typeof client.messages.stream>[0],
-    );
-    const resp = await stream.finalMessage();
+    let resp;
+    try {
+      const stream = client.messages.stream(
+        { ...params, messages: msgs } as Parameters<typeof client.messages.stream>[0],
+      );
+      resp = await stream.finalMessage();
+    } catch (e) {
+      // Erro da API (sem créditos, rate limit, chave inválida) vira mensagem clara.
+      throw friendlyAnthropicError(e);
+    }
     lastContent = resp.content;
 
     // web_search/web_fetch (tools nativas): a Anthropic executa e pausa — só continuamos.

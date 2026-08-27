@@ -3,6 +3,7 @@ import type { CampaignWithContent } from "@/lib/db/types";
 import { SYSTEM_PROMPT } from "@/lib/ai/prompt";
 import { REFINE_SCHEMA } from "@/lib/ai/refine-schema";
 import { buildRefinePrompt } from "@/lib/ai/refine-prompt";
+import { friendlyAnthropicError } from "@/lib/ai/anthropic-error";
 
 export type TouchUpdate = {
   sort_order: number;
@@ -81,8 +82,15 @@ export async function refineCampaign(
     messages: [{ role: "user", content: buildRefinePrompt(campaign, userMessage, brandText, anchorLabel, anchorValue) }],
     output_config: { format: { type: "json_schema", schema: REFINE_SCHEMA } },
   };
-  const stream = client.messages.stream(params as Parameters<typeof client.messages.stream>[0]);
-  const response = await stream.finalMessage();
+  let response;
+  try {
+    const stream = client.messages.stream(params as Parameters<typeof client.messages.stream>[0]);
+    response = await stream.finalMessage();
+  } catch (e) {
+    // Erro da API (sem créditos, rate limit, chave inválida) vira mensagem clara em vez
+    // do críptico "Server Components render".
+    throw friendlyAnthropicError(e);
+  }
 
   // Se bateu o teto de tokens, o JSON vem truncado — um JSON.parse aqui estouraria com
   // "Unterminated string" e viraria erro genérico de render na tela. Melhor falhar com
