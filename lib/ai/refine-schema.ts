@@ -1,7 +1,14 @@
+// NOTA (grammar): a saída estruturada da Anthropic compila este schema numa grammar de
+// decodificação restrita, que tem limite de tamanho. Este schema carrega o toque completo
+// DUAS vezes (touch_updates E new_touches). Incluir "utility_alt" (objeto aninhado com um
+// 2º array de botões) nos dois lugares estourou o limite ("compiled grammar is too large")
+// e derrubava TODO refino em produção. Por isso o refino NÃO gerencia utility_alt: um
+// update de toque preserva o utility_alt existente (não vem no payload → não sobrescreve) e
+// um toque novo nasce sem alt. A GERAÇÃO (schema.ts) segue gerando utility_alt normalmente.
 export const REFINE_SCHEMA = {
   type: "object",
   additionalProperties: false,
-  required: ["reply", "touch_updates", "group_post_updates", "new_touches", "new_group_posts"],
+  required: ["reply", "touch_updates", "group_post_updates", "new_touches", "new_group_posts", "deleted_touches", "deleted_group_posts"],
   properties: {
     reply: { type: "string" },
     touch_updates: {
@@ -9,7 +16,7 @@ export const REFINE_SCHEMA = {
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["sort_order", "offset_label", "role", "meta_category", "template_body", "buttons", "window_steps", "fallback_copy", "crm_action", "risk_flag", "utility_alt"],
+        required: ["sort_order", "offset_label", "role", "meta_category", "template_body", "buttons", "window_steps", "fallback_copy", "crm_action", "risk_flag"],
         properties: {
           sort_order: { type: "integer" },
           offset_label: { type: "string" },
@@ -41,28 +48,6 @@ export const REFINE_SCHEMA = {
           fallback_copy: { type: "string" },
           crm_action: { type: "string" },
           risk_flag: { type: "boolean" },
-          utility_alt: {
-            type: ["object", "null"],
-            additionalProperties: false,
-            required: ["template_body", "buttons", "risk_flag"],
-            properties: {
-              template_body: { type: "string" },
-              buttons: {
-                type: "array",
-                items: {
-                  type: "object",
-                  additionalProperties: false,
-                  required: ["type", "text", "url"],
-                  properties: {
-                    type: { type: "string", enum: ["quick_reply", "url"] },
-                    text: { type: "string" },
-                    url: { type: "string" },
-                  },
-                },
-              },
-              risk_flag: { type: "boolean" },
-            },
-          },
         },
       },
     },
@@ -87,7 +72,7 @@ export const REFINE_SCHEMA = {
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["offset_label", "offset_days", "offset_time", "role", "meta_category", "template_body", "buttons", "window_steps", "fallback_copy", "crm_action", "risk_flag", "utility_alt"],
+        required: ["offset_label", "offset_days", "offset_time", "role", "meta_category", "template_body", "buttons", "window_steps", "fallback_copy", "crm_action", "risk_flag"],
         properties: {
           offset_label: { type: "string" },
           offset_days: { type: "integer" },
@@ -120,28 +105,6 @@ export const REFINE_SCHEMA = {
           fallback_copy: { type: "string" },
           crm_action: { type: "string" },
           risk_flag: { type: "boolean" },
-          utility_alt: {
-            type: ["object", "null"],
-            additionalProperties: false,
-            required: ["template_body", "buttons", "risk_flag"],
-            properties: {
-              template_body: { type: "string" },
-              buttons: {
-                type: "array",
-                items: {
-                  type: "object",
-                  additionalProperties: false,
-                  required: ["type", "text", "url"],
-                  properties: {
-                    type: { type: "string", enum: ["quick_reply", "url"] },
-                    text: { type: "string" },
-                    url: { type: "string" },
-                  },
-                },
-              },
-              risk_flag: { type: "boolean" },
-            },
-          },
         },
       },
     },
@@ -162,5 +125,9 @@ export const REFINE_SCHEMA = {
         },
       },
     },
+    // Exclusão de peças: sort_order das que devem ser removidas (trilha API / Grupos).
+    // Arrays simples de inteiros — custo de grammar desprezível.
+    deleted_touches: { type: "array", items: { type: "integer" } },
+    deleted_group_posts: { type: "array", items: { type: "integer" } },
   },
 } as const;

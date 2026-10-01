@@ -3,6 +3,7 @@ import type { CampaignWithContent } from "@/lib/db/types";
 import { SYSTEM_PROMPT } from "@/lib/ai/prompt";
 import { REFINE_SCHEMA } from "@/lib/ai/refine-schema";
 import { buildRefinePrompt } from "@/lib/ai/refine-prompt";
+import { friendlyAnthropicError } from "@/lib/ai/anthropic-error";
 
 export type TouchUpdate = {
   sort_order: number;
@@ -15,11 +16,6 @@ export type TouchUpdate = {
   fallback_copy: string;
   crm_action: string;
   risk_flag: boolean;
-  utility_alt: {
-    template_body: string;
-    buttons: { type: "quick_reply" | "url"; text: string; url: string }[];
-    risk_flag: boolean;
-  } | null;
 };
 
 export type GroupPostUpdate = {
@@ -43,11 +39,6 @@ export type NewTouch = {
   fallback_copy: string;
   crm_action: string;
   risk_flag: boolean;
-  utility_alt: {
-    template_body: string;
-    buttons: { type: "quick_reply" | "url"; text: string; url: string }[];
-    risk_flag: boolean;
-  } | null;
 };
 
 export type NewGroupPost = {
@@ -66,6 +57,8 @@ export type RefineResult = {
   group_post_updates: GroupPostUpdate[];
   new_touches: NewTouch[];
   new_group_posts: NewGroupPost[];
+  deleted_touches: number[];
+  deleted_group_posts: number[];
 };
 
 export async function refineCampaign(
@@ -77,20 +70,49 @@ export async function refineCampaign(
 ): Promise<RefineResult> {
   const client = new Anthropic(); // lê ANTHROPIC_API_KEY do ambiente (servidor)
   // Streaming evita timeout de request em refinos longos; finalMessage() junta tudo.
+  // max_tokens alto porque `thinking: adaptive` consome do MESMO orçamento: num pedido
+  // criativo ("deixe as copys maiores"), o raciocínio + os textos longos passavam de
+  // 16000 e o JSON saía cortado no meio (JSON.parse → "Unterminated string"). 32000 é o
+  // teto do Opus 4.x e dá folga pro raciocínio E pra resposta.
   const params = {
     model: "claude-opus-4-8",
-    max_tokens: 16000,
+    max_tokens: 32000,
     thinking: { type: "adaptive" },
     system: SYSTEM_PROMPT,
     messages: [{ role: "user", content: buildRefinePrompt(campaign, userMessage, brandText, anchorLabel, anchorValue) }],
     output_config: { format: { type: "json_schema", schema: REFINE_SCHEMA } },
   };
-  const stream = client.messages.stream(params as Parameters<typeof client.messages.stream>[0]);
-  const response = await stream.finalMessage();
+  let response;
+  try {
+    const stream = client.messages.stream(params as Parameters<typeof client.messages.stream>[0]);
+    response = await stream.finalMessage();
+  } catch (e) {
+    // Erro da API (sem créditos, rate limit, chave inválida) vira mensagem clara em vez
+    // do críptico "Server Components render".
+    throw friendlyAnthropicError(e);
+  }
+
+  // Se bateu o teto de tokens, o JSON vem truncado — um JSON.parse aqui estouraria com
+  // "Unterminated string" e viraria erro genérico de render na tela. Melhor falhar com
+  // uma mensagem que o usuário entende e sabe o que fazer.
+  if (response.stop_reason === "max_tokens") {
+    throw new Error(
+      "O ajuste ficou grande demais e a resposta foi cortada. Peça em partes — " +
+        "ex.: um bloco de peças por vez, ou 'reescreva só os toques de quarta' — em vez de tudo de uma vez.",
+    );
+  }
 
   const textBlock = response.content.find((b) => b.type === "text");
   if (!textBlock || textBlock.type !== "text") {
     throw new Error("O refino não retornou conteúdo de texto.");
   }
-  return JSON.parse(textBlock.text) as RefineResult;
+  try {
+    return JSON.parse(textBlock.text) as RefineResult;
+  } catch {
+    // Rede de segurança: qualquer JSON malformado que escape do check acima vira uma
+    // mensagem clara em vez de um SyntaxError cru atravessando a Server Action.
+    throw new Error(
+      "A IA devolveu uma resposta incompleta. Tente pedir o ajuste de novo, de preferência em partes menores.",
+    );
+  }
 }

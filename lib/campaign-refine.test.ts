@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { nextSortOrder, pickReferenceGroups, slugCode, formatAddedSeal } from "@/lib/campaign-refine";
+import { nextSortOrder, pickReferenceGroups, slugCode, formatAddedSeal, formatRemovedSeal } from "@/lib/campaign-refine";
 
 describe("nextSortOrder", () => {
   it("vazio → 0", () => expect(nextSortOrder([])).toBe(0));
@@ -40,4 +40,14 @@ describe("formatAddedSeal", () => {
     expect(formatAddedSeal(1, 0)).toBe("✓ 1 post adicionado.\n\n"));
   it("um toque só → singular", () =>
     expect(formatAddedSeal(0, 1)).toBe("✓ 1 toque adicionado.\n\n"));
+});
+
+describe("formatRemovedSeal", () => {
+  it("nada → string vazia", () => expect(formatRemovedSeal(0, 0)).toBe(""));
+  it("posts e toques → plural", () =>
+    expect(formatRemovedSeal(3, 2)).toBe("🗑 3 posts e 2 toques removidos.\n\n"));
+  it("um post só → singular", () =>
+    expect(formatRemovedSeal(1, 0)).toBe("🗑 1 post removido.\n\n"));
+  it("um toque só → singular", () =>
+    expect(formatRemovedSeal(0, 1)).toBe("🗑 1 toque removido.\n\n"));
 });

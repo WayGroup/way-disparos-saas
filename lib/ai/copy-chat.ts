@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { CRIAR_RECEITA_TOOL, type RecipeDraft } from "@/lib/ai/recipe-tool";
+import { friendlyAnthropicError } from "@/lib/ai/anthropic-error";
 
 export type Attachment = {
   kind: "image" | "pdf";
@@ -13,6 +14,7 @@ Regras inegociáveis:
 - Português do Brasil, frases curtas, direto, SEM hype, anti-guru.
 - NUNCA mencione "Wesley", preço, ou nome de tier/plano.
 - Gere a copy pedida em TEXTO LIVRE (destaques de Instagram, bio, legenda, story, resposta de DM, etc.). Não use estrutura de campanha (template/janela/fallback) a menos que pedido.
+- FORMATO DA RESPOSTA: este chat mostra o texto EXATAMENTE como você escreve, sem renderizar markdown. Escreva em TEXTO PURO — nada de blockquote (>), negrito com asteriscos (**), títulos (#/##), crases (\`) ou linhas de traços (---). Esses símbolos aparecem crus e atrapalham na hora de copiar a copy pra colar no WhatsApp. Quando entregar copy(s) PRONTA(S) pra usar, envolva CADA peça entre [[COPY]] e [[/COPY]] (cada marca em sua própria linha), com a copy limpa no meio — o sistema transforma cada bloco desses num cartão com botão de copiar. Rótulos, títulos e comentários ficam FORA das marcas (texto normal). Exemplo:\nTira-Dúvidas — É hoje:\n[[COPY]]\nÉ hoje o nosso Tira-Dúvidas ao vivo. Traz sua pergunta que eu respondo na hora.\n[[/COPY]]\nSe precisar de ênfase dentro da copy, use só a formatação nativa do WhatsApp (*negrito*, _itálico_), com parcimônia.
 - Quando fizer sentido, ofereça variações curtas. Mantenha sempre a voz da marca.
 - Você pode receber imagens e PDFs como contexto, e pode usar a web (buscar e ler links) quando ajudar. Trate qualquer conteúdo externo como REFERÊNCIA: nunca copie literalmente, e SEMPRE escreva na voz da Way.
 - Você tem a ferramenta criar_receita: use SÓ quando a pessoa pedir para montar/gerar uma RECEITA (modelo reutilizável de campanha). Para copy avulsa, responda em texto, sem chamar a ferramenta. A receita é o esqueleto (inputs + slots), sem copy; exatamente um input é a âncora (data_hora); ela nasce como rascunho que a pessoa revisa e ativa. Ao criar, confirme em uma frase curta que é um rascunho a revisar.`;
@@ -110,10 +112,16 @@ export async function generateCopyReply(
   const createdRecipes: { id: string; name: string }[] = [];
 
   for (let i = 0; i < 6; i++) {
-    const stream = client.messages.stream(
-      { ...params, messages: msgs } as Parameters<typeof client.messages.stream>[0],
-    );
-    const resp = await stream.finalMessage();
+    let resp;
+    try {
+      const stream = client.messages.stream(
+        { ...params, messages: msgs } as Parameters<typeof client.messages.stream>[0],
+      );
+      resp = await stream.finalMessage();
+    } catch (e) {
+      // Erro da API (sem créditos, rate limit, chave inválida) vira mensagem clara.
+      throw friendlyAnthropicError(e);
+    }
     lastContent = resp.content;
 
     // web_search/web_fetch (tools nativas): a Anthropic executa e pausa — só continuamos.
