@@ -1,6 +1,5 @@
-import { buildCode } from "@/lib/ai/nomenclature";
-import { computeSendAt } from "@/lib/schedule";
-import { nextSortOrder, pickReferenceGroups, slugCode } from "@/lib/campaign-refine";
+import { pickReferenceGroups } from "@/lib/campaign-refine";
+import { derivarCampos } from "@/lib/campaign-piece-fields";
 
 export type ManualPostInput = {
   offset_label: string;
@@ -40,8 +39,9 @@ export function buildManualGroupPost(
     anchor: string;
   },
 ): ManualPostDraft {
+  const { sort_order, code, send_at } = derivarCampos(input, ctx);
   return {
-    sort_order: nextSortOrder(ctx.existing),
+    sort_order,
     offset_label: input.offset_label,
     role: input.role,
     // `communities` é a sugestão em texto livre da IA. Peça à mão não tem sugestão, e
@@ -49,8 +49,8 @@ export function buildManualGroupPost(
     communities: "",
     copy: input.copy,
     media: input.media,
-    message_code: buildCode(ctx.recipeType, slugCode(input.role), ctx.anchor),
-    send_at: computeSendAt(ctx.anchor, input.offset_days, input.offset_time),
+    message_code: code,
+    send_at,
     community_ids: pickReferenceGroups(ctx.existing),
   };
 }

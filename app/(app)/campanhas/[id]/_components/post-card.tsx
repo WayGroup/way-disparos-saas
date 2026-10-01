@@ -24,7 +24,7 @@ export function PostCard({ campaignId, post, assets, groups, highlight = false }
   // por estados intermediários. O aviso só torna visível o que o agendamento já faz em
   // silêncio — nada é agendado para trás, peça sem data (ou com data inválida) fica fora
   // da fila, e replanejamento cancela os envios pendentes dela.
-  const avisoData = avisoDeData(f.send_at, new Date());
+  const avisoData = avisoDeData(f.send_at, new Date(), true);
 
   function save() {
     startTransition(async () => {

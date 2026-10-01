@@ -18,6 +18,8 @@ import { planSends, validateSchedulable, type ScheduleIssue } from "@/lib/sends/
 import { dropAlreadyLive, partitionSchedulable } from "@/lib/sends/reschedule";
 import { dispatchDue } from "@/lib/sends/dispatch";
 import { buildManualGroupPost, type ManualPostInput } from "@/lib/campaign-manual-post";
+import { buildManualTouch, type ManualTouchInput } from "@/lib/campaign-manual-touch";
+import { resolverAncora } from "@/lib/campaign-piece-fields";
 
 type GenLog = { campaign_id?: string; recipe_id: string; kind: string; ok: boolean; error?: string; duration_ms: number };
 
@@ -50,6 +52,7 @@ export type TouchFields = {
     buttons: { type: "quick_reply" | "url"; text: string; url: string }[];
     risk_flag: boolean;
   } | null;
+  send_at: string;
 };
 
 export type PostFields = {
@@ -85,8 +88,7 @@ export async function generateCampaignAction(
     throw e;
   }
 
-  const anchorLabel = recipe.inputs.find((i) => i.is_anchor)?.label;
-  const anchorValue = anchorLabel ? (inputs[anchorLabel] ?? "") : "";
+  const anchorValue = resolverAncora({ inputs }, recipe);
   const apiSlots = recipe.slots.filter((s) => s.track === "api");
   const gruposSlots = recipe.slots.filter((s) => s.track === "grupos");
 
@@ -308,7 +310,7 @@ export async function refineCampaignAction(
   // para datar peças novas; a receita pode ter sido apagada (recipe_id null).
   const recipe = campaign.recipe_id ? await getRecipe(campaign.recipe_id) : null;
   const anchorLabel = recipe?.inputs.find((i) => i.is_anchor)?.label ?? "";
-  const anchorValue = anchorLabel ? (campaign.inputs[anchorLabel] ?? "") : "";
+  const anchorValue = resolverAncora(campaign, recipe);
 
   const result = await refineCampaign(campaign, trimmed, brandText, anchorLabel, anchorValue);
 
@@ -684,7 +686,7 @@ export async function duplicateCampaignAction(campaignId: string, newAnchor: str
   const anchorLabel = recipe?.inputs.find((i) => i.is_anchor)?.label;
   const inputs = { ...src.inputs };
   if (anchorLabel && newAnchor) inputs[anchorLabel] = newAnchor;
-  const anchorValue = anchorLabel ? (inputs[anchorLabel] ?? "") : "";
+  const anchorValue = resolverAncora({ inputs }, recipe);
   const apiSlots = recipe?.slots.filter((s) => s.track === "api") ?? [];
   const gruposSlots = recipe?.slots.filter((s) => s.track === "grupos") ?? [];
 
@@ -834,8 +836,7 @@ export async function createGroupPostAction(
   if (!campaign) throw new Error("Campanha não encontrada.");
 
   const recipe = campaign.recipe_id ? await getRecipe(campaign.recipe_id) : null;
-  const anchorLabel = recipe?.inputs.find((i) => i.is_anchor)?.label ?? "";
-  const anchorValue = anchorLabel ? (campaign.inputs[anchorLabel] ?? "") : "";
+  const anchorValue = resolverAncora(campaign, recipe);
 
   const draft = buildManualGroupPost(
     { ...input, role, copy },
@@ -870,5 +871,48 @@ export async function createGroupPostAction(
   }
 
   await rescheduleCampaign(campaignId);
+  revalidatePath(`/campanhas/${campaignId}`);
+}
+
+/**
+ * Cria um toque à mão.
+ *
+ * SEM `rescheduleCampaign`: a trilha API individual é manual e nunca entra na fila
+ * (`buildGroupPieces` só monta a trilha Grupos). Criar toque não mexe em envio nenhum.
+ *
+ * Os campos que o formulário enxuto não pede — botões, janela de 24h, fallback, ação de
+ * CRM, risco e variante utility — nascem vazios pelo default da tabela e se preenchem no
+ * editor, que já sabe editar todos eles.
+ */
+export async function createTouchAction(
+  campaignId: string,
+  input: ManualTouchInput,
+): Promise<void> {
+  const role = input.role.trim();
+  const templateBody = input.template_body.trim();
+  if (!role) throw new Error("O toque precisa de um papel.");
+  if (!templateBody) throw new Error("O toque precisa de um corpo de template.");
+
+  const campaign = await getCampaign(campaignId);
+  if (!campaign) throw new Error("Campanha não encontrada.");
+
+  const recipe = campaign.recipe_id ? await getRecipe(campaign.recipe_id) : null;
+  const anchorValue = resolverAncora(campaign, recipe);
+
+  const draft = buildManualTouch(
+    { ...input, role, template_body: templateBody },
+    {
+      existing: campaign.touches,
+      recipeType: recipe?.recipe_type ?? "",
+      anchor: anchorValue,
+    },
+  );
+
+  const supabase = await createServerSupabase();
+  const { error } = await supabase
+    .from("campaign_touches")
+    .insert({ campaign_id: campaignId, ...draft });
+  if (error) throw new Error(`Falha ao criar o toque: ${error.message}`);
+
   revalidatePath(`/campanhas/${campaignId}`);
 }

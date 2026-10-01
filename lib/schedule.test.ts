@@ -125,17 +125,17 @@ describe("avisoDeData", () => {
   const now = new Date("2026-08-17T12:00:00-03:00");
 
   it("sem nada a avisar, devolve vazio", () => {
-    expect(avisoDeData("2026-08-18 19:07", now)).toBe("");
+    expect(avisoDeData("2026-08-18 19:07", now, true)).toBe("");
   });
 
   it("sem data: avisa que a peça fica fora da fila e cancela o que já estava agendado", () => {
-    expect(avisoDeData("", now)).toBe(
+    expect(avisoDeData("", now, true)).toBe(
       "Sem data: a peça não entra na fila até você marcar um horário. Os envios já agendados dela são cancelados.",
     );
   });
 
   it("data já passou: avisa e cancela o que já estava agendado", () => {
-    expect(avisoDeData("2026-08-10 08:00", now)).toBe(
+    expect(avisoDeData("2026-08-10 08:00", now, true)).toBe(
       "Essa data já passou. A peça não entra na fila — nada é agendado para trás. Os envios já agendados dela são cancelados.",
     );
   });
@@ -145,8 +145,32 @@ describe("avisoDeData", () => {
     // com 4 dígitos), mas toInstant rejeita por causa da regra legada de ano de 2 dígitos
     // do JS (Date.UTC(26, ...) vira 1926). É o caso que hoje não gera nenhum aviso.
     expect(toInstant("0026-08-18 19:07")).toBeNull();
-    expect(avisoDeData("0026-08-18 19:07", now)).toBe(
+    expect(avisoDeData("0026-08-18 19:07", now, true)).toBe(
       "Data inválida — confira o ano. A peça não entra na fila, e os envios já agendados dela são cancelados.",
     );
+  });
+
+  it("com geraEnvio false, os avisos falam do Pipeline e do Calendário, não da fila", () => {
+    const agora = new Date("2026-08-18T12:00:00-03:00");
+    const semData = avisoDeData("", agora, false);
+    const invalida = avisoDeData("0026-08-18 19:07", agora, false);
+    const passada = avisoDeData("2026-08-17 14:00", agora, false);
+
+    expect(semData).toBe("Sem data: o toque não aparece no Pipeline nem no Calendário até você marcar um horário.");
+    expect(invalida).toBe("Data inválida — confira o ano. O toque não aparece no Pipeline nem no Calendário.");
+    expect(passada).toBe("Essa data já passou. O toque continua na campanha, mas fica no passado do Calendário.");
+  });
+
+  it("com geraEnvio true, as frases continuam as de hoje", () => {
+    const agora = new Date("2026-08-18T12:00:00-03:00");
+    expect(avisoDeData("", agora, true)).toBe(
+      "Sem data: a peça não entra na fila até você marcar um horário. Os envios já agendados dela são cancelados.",
+    );
+  });
+
+  it("data valida no futuro nao avisa nada, com ou sem envio", () => {
+    const agora = new Date("2026-08-18T12:00:00-03:00");
+    expect(avisoDeData("2026-08-19 10:00", agora, true)).toBe("");
+    expect(avisoDeData("2026-08-19 10:00", agora, false)).toBe("");
   });
 });

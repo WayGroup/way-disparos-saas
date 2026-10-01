@@ -147,7 +147,10 @@ uma hora ou um dia, em silêncio.
   possível excluir e criar peças (2026-08-14), as posições desalinham: duplicar uma campanha
   depois de excluir uma peça do meio dá data e código de mensagem errados em todas as peças
   seguintes, em silêncio. **Não é corrigido aqui** — é outro escopo, e merece o seu próprio
-  spec.
+  spec. A entrega de "criar toque à mão" (2026-08-17) ampliou o alcance: o mesmo casamento
+  por posição existe também na trilha API (`apiSlots[idx]`), e um toque criado à mão não tem
+  slot nenhum na receita — na duplicação ele recebe `apiSlots[idx] === undefined`, ficando
+  com código de segmento vazio e com a data da própria âncora, no lugar da que ele tinha.
 - **Fuso.** O campo é lido e gravado como texto local, sem conversão de fuso, exatamente
   como o resto da agenda editorial. Quem abrir o app fora do horário de Brasília vê e digita
   o horário de Brasília — que é o correto para este produto, e é o que `BR_OFFSET` já assume.

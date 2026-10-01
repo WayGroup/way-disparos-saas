@@ -14,6 +14,7 @@ import { CalendarView } from "./calendar-view";
 import { PieceDetailModal } from "./piece-detail-modal";
 import { CampaignGroupsBar } from "./campaign-groups-bar";
 import { NewGroupPostForm } from "./new-group-post-form";
+import { NewTouchForm } from "./new-touch-form";
 
 type View = "lista" | "pipeline" | "calendario";
 
@@ -188,10 +189,10 @@ export function CampaignView({
           ))}
         </div>
         <div className="flex gap-1 bg-line/40 rounded-lg p-1 w-fit">
-          <button onClick={() => setTrack("api")} className={`rounded-md px-3 py-1.5 text-sm font-medium ${track === "api" ? "bg-white shadow-sm" : "text-muted"}`}>
+          <button onClick={() => { setTrack("api"); setCriando(false); }} className={`rounded-md px-3 py-1.5 text-sm font-medium ${track === "api" ? "bg-white shadow-sm" : "text-muted"}`}>
             API individual <span className="font-mono text-xs text-muted">· {campaign.touches.length}</span>
           </button>
-          <button onClick={() => setTrack("grupos")} className={`rounded-md px-3 py-1.5 text-sm font-medium ${track === "grupos" ? "bg-white shadow-sm" : "text-muted"}`}>
+          <button onClick={() => { setTrack("grupos"); setCriando(false); }} className={`rounded-md px-3 py-1.5 text-sm font-medium ${track === "grupos" ? "bg-white shadow-sm" : "text-muted"}`}>
             Grupos <span className="font-mono text-xs text-muted">· {campaign.group_posts.length}</span>
           </button>
         </div>
@@ -204,21 +205,19 @@ export function CampaignView({
         >
           limpar trilha
         </button>
-        {track === "grupos" && (
-          <button
-            onClick={() => {
-              // O botão vive fora do ramo `view === "lista"`, mas o formulário só existe
-              // lá dentro: sem trocar de visão, `setCriando(true)` rodaria com a tela em
-              // Pipeline ou Calendário e não haveria nada para abrir nem para onde rolar.
-              setView("lista");
-              setCriando(true);
-              setCriarPedido((n) => n + 1);
-            }}
-            className="font-mono text-xs text-muted hover:text-emeraldd"
-          >
-            + nova peça
-          </button>
-        )}
+        <button
+          onClick={() => {
+            // O botão vive fora do ramo `view === "lista"`, mas o formulário só existe
+            // lá dentro: sem trocar de visão, `setCriando(true)` rodaria com a tela em
+            // Pipeline ou Calendário e não haveria nada para abrir nem para onde rolar.
+            setView("lista");
+            setCriando(true);
+            setCriarPedido((n) => n + 1);
+          }}
+          className="font-mono text-xs text-muted hover:text-emeraldd"
+        >
+          + nova peça
+        </button>
       </div>
 
       {/* Alvo da trilha Grupos: editor em massa. Só faz sentido nesta trilha. */}
@@ -242,6 +241,22 @@ export function CampaignView({
                   {campaign.touches.map((t) => (
                     <TouchCard key={t.id} campaignId={campaign.id} touch={t} assets={assets} />
                   ))}
+                  {criando ? (
+                    <div ref={formularioRef}>
+                      <NewTouchForm
+                        campaignId={campaign.id}
+                        anchor={anchor}
+                        onClose={() => setCriando(false)}
+                      />
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setCriando(true)}
+                      className="w-full rounded-xl border border-dashed border-line py-3 text-sm font-medium text-muted hover:border-emerald/40 hover:text-emeraldd"
+                    >
+                      + Novo toque à mão
+                    </button>
+                  )}
                 </div>
               ) : (
                 <div className="space-y-5 max-w-3xl">
@@ -307,9 +322,6 @@ export function CampaignView({
                   proxy confiável de "existem envios a perder". */}
               {track === "grupos" && (
                 <> Os envios pendentes delas são cancelados, e o histórico do que já saiu some junto.</>
-              )}
-              {track === "api" && (
-                <> Só o chat de refino recria peças desta trilha — não existe criar toque à mão.</>
               )}
             </p>
             <input
